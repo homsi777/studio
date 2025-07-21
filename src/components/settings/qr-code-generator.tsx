@@ -23,6 +23,15 @@ interface GeneratedCode {
     path: string;
 }
 
+// Mock function to generate UUIDs
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+
 export function QrCodeGenerator() {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
@@ -69,7 +78,7 @@ export function QrCodeGenerator() {
         return true;
     }
 
-    const generateQRCode = () => {
+    const generateQRCode = async () => {
         if (target === 'customer' && !validateTableNumber(tableNumber)) {
              toast({
                 variant: "destructive",
@@ -82,26 +91,35 @@ export function QrCodeGenerator() {
         let path = '';
         let title = '';
 
-        switch(target) {
-            case 'customer':
-                if (!tableNumber) return;
-                path = `/menu/${tableNumber}`;
-                title = `${t('الطاولة', 'Table')} ${tableNumber}`;
-                break;
-            case 'chef':
-                path = '/chef';
-                title = t('واجهة الشيف', 'Chef Interface');
-                break;
-            case 'cashier':
-                path = '/pos';
-                title = t('نقطة البيع السريعة', 'Quick POS');
-                break;
+        // This simulates the backend generating a secure URL with a UUID
+        // In a real app, this would be an API call.
+        const simulateBackendUrlGeneration = (target: QrTarget, tableNumber?: string): {path: string, title: string} => {
+            switch(target) {
+                case 'customer':
+                    if (!tableNumber) return {path: '', title: ''};
+                    // Backend would associate this UUID with the table number
+                    const tableUuid = generateUUID(); 
+                    return {
+                        path: `/menu/${tableUuid}`,
+                        title: `${t('الطاولة', 'Table')} ${tableNumber}`
+                    }
+                case 'chef':
+                    return { path: '/chef', title: t('واجهة الشيف', 'Chef Interface') };
+                case 'cashier':
+                    return { path: '/pos', title: t('نقطة البيع السريعة', 'Quick POS') };
+                default:
+                    return {path: '', title: ''};
+            }
         }
+        
+        const { path: securePath, title: codeTitle } = simulateBackendUrlGeneration(target, tableNumber);
+        
+        if (!securePath) return;
 
-        const fullUrl = `${baseUrl}${path}`;
+        const fullUrl = `${baseUrl}${securePath}`;
         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(fullUrl)}`;
         
-        setGeneratedCode({ url: qrApiUrl, title, path });
+        setGeneratedCode({ url: qrApiUrl, title: codeTitle, path: securePath });
     };
     
     const handlePrint = () => {
