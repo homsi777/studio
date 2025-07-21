@@ -39,6 +39,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Search } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const mockMenuItems: MenuItem[] = [
     { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "syrian food" },
@@ -103,71 +104,79 @@ export default function MenuManagementPage() {
                 </Button>
             </div>
             
-            <div className="mb-4 flex items-center gap-4">
-                <div className="relative flex-1">
-                     <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder={t('ابحث عن صنف...', 'Search for an item...')} className="ltr:pl-10 rtl:pr-10" />
-                </div>
-                 <Select defaultValue="all">
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder={t('التصنيف', 'Category')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">{t('كل التصنيفات', 'All Categories')}</SelectItem>
-                        <SelectItem value="main">{t('أطباق رئيسية', 'Main Courses')}</SelectItem>
-                        <SelectItem value="appetizer">{t('مقبلات', 'Appetizers')}</SelectItem>
-                        <SelectItem value="drink">{t('مشروبات', 'Drinks')}</SelectItem>
-                        <SelectItem value="dessert">{t('حلويات', 'Desserts')}</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div className="border rounded-lg overflow-hidden">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[80px]">{t('صورة', 'Image')}</TableHead>
-                            <TableHead>{t('الاسم', 'Name')}</TableHead>
-                            <TableHead>{t('التصنيف', 'Category')}</TableHead>
-                            <TableHead>{t('السعر', 'Price')}</TableHead>
-                            <TableHead className="w-[50px]">{t('أدوات', 'Actions')}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {items.map(item => (
-                            <TableRow key={item.id}>
-                                <TableCell>
-                                    <Image src={item.image || 'https://placehold.co/600x400'} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item['data-ai-hint']} />
-                                </TableCell>
-                                <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
-                                <TableCell>
-                                    <Badge variant="outline">{categoryMap[item.category][language]}</Badge>
-                                </TableCell>
-                                <TableCell>{item.price.toLocaleString()} {t('ل.س', 'SYP')}</TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
-                                            <DropdownMenuItem onClick={() => handleEdit(item)}>
-                                                <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                {t('تعديل', 'Edit')}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-500">
-                                                <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                {t('حذف', 'Delete')}
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>{t('جميع الأصناف', 'All Items')}</CardTitle>
+                        <div className="flex items-center gap-2">
+                             <div className="relative w-full max-w-sm">
+                                <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder={t('ابحث عن صنف...', 'Search for an item...')} className="ltr:pl-10 rtl:pr-10" />
+                            </div>
+                             <Select defaultValue="all">
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder={t('التصنيف', 'Category')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{t('كل التصنيفات', 'All Categories')}</SelectItem>
+                                    <SelectItem value="main">{t('أطباق رئيسية', 'Main Courses')}</SelectItem>
+                                    <SelectItem value="appetizer">{t('مقبلات', 'Appetizers')}</SelectItem>
+                                    <SelectItem value="drink">{t('مشروبات', 'Drinks')}</SelectItem>
+                                    <SelectItem value="dessert">{t('حلويات', 'Desserts')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[80px]">{t('صورة', 'Image')}</TableHead>
+                                    <TableHead>{t('الاسم', 'Name')}</TableHead>
+                                    <TableHead>{t('التصنيف', 'Category')}</TableHead>
+                                    <TableHead>{t('السعر', 'Price')}</TableHead>
+                                    <TableHead className="w-[50px]">{t('أدوات', 'Actions')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {items.map(item => (
+                                    <TableRow key={item.id}>
+                                        <TableCell>
+                                            <Image src={item.image || 'https://placehold.co/600x400'} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item['data-ai-hint']} />
+                                        </TableCell>
+                                        <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline">{categoryMap[item.category][language]}</Badge>
+                                        </TableCell>
+                                        <TableCell>{item.price.toLocaleString()} {t('ل.س', 'SYP')}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
+                                                    <DropdownMenuItem onClick={() => handleEdit(item)}>
+                                                        <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                                        {t('تعديل', 'Edit')}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-500 hover:!text-red-500">
+                                                        <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                                        {t('حذف', 'Delete')}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
 
             <MenuItemFormDialog 
                 isOpen={isDialogOpen} 
