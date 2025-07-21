@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { BellRing, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const initialOrders: Order[] = [
+const getInitialOrders = (): Order[] => [
   { id: 'ORD-001', tableId: 1, items: [{ id: 'item-1', name: 'مشويات مشكلة', quantity: 1, price: 0, category: 'main', image: '' }, { id: 'item-2', name: 'حمص', quantity: 2, price: 0, category: 'appetizer', image: '' }], total: 0, status: 'new', timestamp: Date.now() - 60000 * 2 },
   { id: 'ORD-002', tableId: 7, items: [{ id: 'item-6', name: 'شيش طاووق', quantity: 2, price: 0, category: 'main', image: '' }], total: 0, status: 'new', timestamp: Date.now() - 60000 * 5 },
   { id: 'ORD-003', tableId: 2, items: [{ id: 'item-4', name: 'كبة مقلية', quantity: 1, price: 0, category: 'appetizer', image: '' }], total: 0, status: 'in_progress', timestamp: Date.now() - 60000 * 8 },
@@ -21,9 +21,13 @@ const initialOrders: Order[] = [
 
 
 export default function ChefPage() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const { toast } = useToast();
   const sensors = useSensors(useSensor(PointerSensor));
+
+  useEffect(() => {
+    setOrders(getInitialOrders());
+  }, []);
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     setOrders(prevOrders => prevOrders.map(order => 
