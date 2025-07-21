@@ -1,6 +1,7 @@
 
 "use client";
 import { useState, useMemo, useRef } from 'react';
+import { useParams } from 'next/navigation';
 import { type MenuItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,7 +27,9 @@ const menuItems: MenuItem[] = [
 
 const USD_TO_SYP_RATE = 15000;
 
-export default function MenuPage({ params }: { params: { tableId: string } }) {
+export default function MenuPage() {
+    const params = useParams();
+    const tableId = params.tableId as string;
     const { language, dir } = useLanguage();
     const { settings } = useRestaurantSettings();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
@@ -68,7 +71,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
 
     const handleSendOrder = () => {
         setOrderState('sending');
-        console.log('Sending order:', { tableId: params.tableId, cart, total });
+        console.log('Sending order:', { tableId: tableId, cart, total });
         setTimeout(() => {
             setOrderState('confirmed');
         }, 2000);
@@ -101,7 +104,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                 <div className="container mx-auto flex justify-between items-center gap-4">
                     <div className="text-center">
                         <h1 className="font-headline text-2xl font-bold text-primary">{settings.restaurantName}</h1>
-                        <p className="text-sm text-muted-foreground">{t('الطاولة رقم', 'Table No.')} {params.tableId}</p>
+                        <p className="text-sm text-muted-foreground">{t('الطاولة رقم', 'Table No.')} {tableId}</p>
                     </div>
                     <div className="flex items-center gap-4">
                         <DigitalClock />
@@ -184,7 +187,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                     </SheetTrigger>
                     <SheetContent side="bottom" className="h-[90vh] flex flex-col" dir={dir}>
                         <SheetHeader className="text-right">
-                            <SheetTitle className="font-headline text-2xl">{t('طلبك من الطاولة', 'Your order from Table')} {params.tableId}</SheetTitle>
+                            <SheetTitle className="font-headline text-2xl">{t('طلبك من الطاولة', 'Your order from Table')} {tableId}</SheetTitle>
                         </SheetHeader>
                         <div className="flex-1 overflow-y-auto py-4">
                            <AnimatePresence>
@@ -235,3 +238,5 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
     );
 }
 
+
+    
