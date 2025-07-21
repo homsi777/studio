@@ -129,7 +129,7 @@ export default function MenuPage() {
         { title: t('الأطباق الرئيسية', 'Main Courses'), items: menuItems.filter(i => i.category === 'main') },
         { title: t('المشروبات', 'Drinks'), items: menuItems.filter(i => i.category === 'drink') },
         { title: t('الحلويات', 'Desserts'), items: menuItems.filter(i => i.category === 'dessert') }
-    ], [language, t]);
+    ], [language]);
     
     if (currentOrder) {
         if (currentOrder.status === 'pending_chef_approval' || currentOrder.status === 'pending_cashier_approval') {
@@ -206,7 +206,7 @@ export default function MenuPage() {
                         className="fixed z-50 rounded-lg overflow-hidden shadow-xl"
                         style={{ width: 48, height: 48 }}
                     >
-                       {item.image && <Image src={item.image} alt="flying item" width={48} height={48} className="object-cover w-full h-full" data-ai-hint={item.image_hint}/>}
+                       {item.image && <Image src={item.image} alt="flying item" width={48} height={48} className="object-cover w-full h-full" data-ai-hint={item.image_hint || ''}/>}
                     </motion.div>
                 ))}
             </AnimatePresence>
@@ -230,8 +230,8 @@ export default function MenuPage() {
                                 <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                                     <Card className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 h-full relative border bg-card shadow-md">
                                         {item.image && (
-                                            <div className="relative aspect-[4/3] w-full">
-                                                <Image src={item.image} alt={item.name} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item.image_hint} />
+                                            <div className="relative aspect-w-4 aspect-h-3 w-full">
+                                                <Image src={item.image} alt={item.name} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item.image_hint || ''} />
                                                 {item.offer && (
                                                     <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground text-xs shadow-lg" variant="destructive">
                                                         <Flame className="w-3 h-3 ltr:mr-1 rtl:ml-1" /> {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
@@ -303,7 +303,7 @@ export default function MenuPage() {
                                     transition={{ duration: 0.3 }}
                                     className="flex items-center gap-4"
                                 >
-                                     {item.image && <Image src={item.image} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item.image_hint}/>}
+                                     {item.image && <Image src={item.image} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item.image_hint || ''}/>}
                                     <div className="flex-1">
                                         <p className="font-bold">{language === 'ar' ? item.name : (item.name_en || item.name)}</p>
                                         <p className="text-sm text-primary font-semibold">{formatCurrency(item.price)}</p>
@@ -337,5 +337,3 @@ export default function MenuPage() {
         </div>
     );
 }
-
-    
