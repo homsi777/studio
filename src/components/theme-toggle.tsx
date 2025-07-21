@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const [theme, setTheme] = React.useState("light");
+  const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
-    // Set light theme by default
+    setIsClient(true);
+    // Set light theme by default from client
     const root = window.document.documentElement;
     root.classList.remove("dark");
     setTheme('light');
@@ -24,6 +26,10 @@ export function ThemeToggle() {
       return newTheme;
     });
   };
+
+  if (!isClient) {
+    return <div className="h-8 w-8" />; // Return a placeholder of the same size
+  }
 
   return (
     <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8">

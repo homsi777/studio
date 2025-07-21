@@ -7,6 +7,15 @@ import { cn } from "@/lib/utils";
 
 export function LanguageToggle() {
   const { language, setLanguage } = useLanguage();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return <div className="h-8 w-[58px] rounded-md bg-muted/60" />; // Return a placeholder of the same size
+  }
 
   return (
     <div className="flex items-center gap-1 rounded-md p-1 bg-muted/60">
