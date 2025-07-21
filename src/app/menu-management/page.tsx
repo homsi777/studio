@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -38,29 +38,32 @@ import {
 } from "@/components/ui/select"
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Search } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { useLanguage } from '@/hooks/use-language';
 
 const mockMenuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "syrian food" },
-    { id: 'item-4', name: 'كبة مقلية', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kibbeh food" },
-    { id: 'item-5', name: 'فتوش', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "fattoush salad" },
-    { id: 'item-6', name: 'شيش طاووق', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "shish taouk" },
-    { id: 'item-7', name: 'بيبسي', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "pepsi can" },
-    { id: 'item-8', name: 'عصير برتقال طازج', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "orange juice" },
-    { id: 'item-9', name: 'كنافة بالجبن', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', category: 'dessert', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kunafa cheese" },
+    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "syrian food" },
+    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', description_en: '4 pieces of kibbeh stuffed with meat and walnuts.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kibbeh food" },
+    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', description_en: 'Fresh vegetable salad with toasted bread and pomegranate molasses.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "fattoush salad" },
+    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', description_en: 'Marinated and charcoal-grilled chicken skewers.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "shish taouk" },
+    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', description_en: 'Refreshing soft drink.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "pepsi can" },
+    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', description_en: 'Natural orange juice, squeezed to order.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "orange juice" },
+    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', description_en: 'A layer of soft kunafa with sweet cheese.', category: 'dessert', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kunafa cheese" },
 ];
 
-const categoryMap: Record<MenuItemCategory, string> = {
-    main: 'طبق رئيسي',
-    appetizer: 'مقبلات',
-    drink: 'مشروب',
-    dessert: 'حلويات',
+const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
+    main: { ar: 'طبق رئيسي', en: 'Main Course' },
+    appetizer: { ar: 'Appetizer', en: 'Appetizer' },
+    drink: { ar: 'مشروب', en: 'Drink' },
+    dessert: { ar: 'حلويات', en: 'Dessert' },
 };
 
 export default function MenuManagementPage() {
+    const { language } = useLanguage();
     const [items, setItems] = useState<MenuItem[]>(mockMenuItems);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+
+    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const handleAddNew = () => {
         setEditingItem(null);
@@ -91,30 +94,30 @@ export default function MenuManagementPage() {
     };
 
     return (
-        <main className="flex-1 p-4 sm:p-6" dir="rtl">
+        <main className="flex-1 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
-                <h1 className="font-headline text-3xl font-bold text-foreground">إدارة القائمة</h1>
+                <h1 className="font-headline text-3xl font-bold text-foreground">{t('إدارة القائمة', 'Menu Management')}</h1>
                 <Button onClick={handleAddNew}>
-                    <PlusCircle className="ml-2 h-4 w-4" />
-                    إضافة صنف جديد
+                    <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                    {t('إضافة صنف جديد', 'Add New Item')}
                 </Button>
             </div>
             
             <div className="mb-4 flex items-center gap-4">
                 <div className="relative flex-1">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="ابحث عن صنف..." className="pl-10" />
+                     <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder={t('ابحث عن صنف...', 'Search for an item...')} className="ltr:pl-10 rtl:pr-10" />
                 </div>
                  <Select defaultValue="all">
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="التصنيف" />
+                        <SelectValue placeholder={t('التصنيف', 'Category')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">كل التصنيفات</SelectItem>
-                        <SelectItem value="main">أطباق رئيسية</SelectItem>
-                        <SelectItem value="appetizer">مقبلات</SelectItem>
-                        <SelectItem value="drink">مشروبات</SelectItem>
-                        <SelectItem value="dessert">حلويات</SelectItem>
+                        <SelectItem value="all">{t('كل التصنيفات', 'All Categories')}</SelectItem>
+                        <SelectItem value="main">{t('أطباق رئيسية', 'Main Courses')}</SelectItem>
+                        <SelectItem value="appetizer">{t('مقبلات', 'Appetizers')}</SelectItem>
+                        <SelectItem value="drink">{t('مشروبات', 'Drinks')}</SelectItem>
+                        <SelectItem value="dessert">{t('حلويات', 'Desserts')}</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -123,11 +126,11 @@ export default function MenuManagementPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[80px]">صورة</TableHead>
-                            <TableHead>الاسم</TableHead>
-                            <TableHead>التصنيف</TableHead>
-                            <TableHead>السعر</TableHead>
-                            <TableHead className="w-[50px]">أدوات</TableHead>
+                            <TableHead className="w-[80px]">{t('صورة', 'Image')}</TableHead>
+                            <TableHead>{t('الاسم', 'Name')}</TableHead>
+                            <TableHead>{t('التصنيف', 'Category')}</TableHead>
+                            <TableHead>{t('السعر', 'Price')}</TableHead>
+                            <TableHead className="w-[50px]">{t('أدوات', 'Actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -136,11 +139,11 @@ export default function MenuManagementPage() {
                                 <TableCell>
                                     <Image src={item.image} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item['data-ai-hint']} />
                                 </TableCell>
-                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
                                 <TableCell>
-                                    <Badge variant="outline">{categoryMap[item.category]}</Badge>
+                                    <Badge variant="outline">{categoryMap[item.category][language]}</Badge>
                                 </TableCell>
-                                <TableCell>{item.price.toLocaleString()} ل.س</TableCell>
+                                <TableCell>{item.price.toLocaleString()} {t('ل.س', 'SYP')}</TableCell>
                                 <TableCell>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -150,12 +153,12 @@ export default function MenuManagementPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem onClick={() => handleEdit(item)}>
-                                                <FilePenLine className="ml-2 h-4 w-4" />
-                                                تعديل
+                                                <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                                {t('تعديل', 'Edit')}
                                             </DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-500">
-                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                حذف
+                                                <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                                {t('حذف', 'Delete')}
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -185,6 +188,9 @@ interface MenuItemFormDialogProps {
 }
 
 function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemFormDialogProps) {
+    const { language } = useLanguage();
+    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+
     const [formData, setFormData] = useState<Omit<MenuItem, 'id' | 'quantity'>>({
         name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', image: 'https://placehold.co/600x400'
     });
@@ -211,6 +217,11 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
         const { id, value } = e.target;
         setFormData(prev => ({ ...prev, [id]: value }));
     };
+    
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value } = e.target;
+        setFormData(prev => ({...prev, [id]: parseFloat(value) || 0 }));
+    }
 
     const handleCategoryChange = (value: MenuItemCategory) => {
         setFormData(prev => ({ ...prev, category: value }));
@@ -222,60 +233,60 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]" dir="rtl">
+            <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle className="font-headline">{item ? 'تعديل الصنف' : 'إضافة صنف جديد'}</DialogTitle>
+                    <DialogTitle className="font-headline">{item ? t('تعديل الصنف', 'Edit Item') : t('إضافة صنف جديد', 'Add New Item')}</DialogTitle>
                     <DialogDescription>
-                        املأ التفاصيل أدناه لحفظ الصنف في قائمة الطعام.
+                        {t('املأ التفاصيل أدناه لحفظ الصنف في قائمة الطعام.', 'Fill in the details below to save the item to the menu.')}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
                          <div className="space-y-2">
-                            <Label htmlFor="name">الاسم (بالعربية)</Label>
+                            <Label htmlFor="name">{t('الاسم (بالعربية)', 'Name (Arabic)')}</Label>
                             <Input id="name" value={formData.name} onChange={handleChange} />
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="name_en">الاسم (بالإنجليزية)</Label>
+                            <Label htmlFor="name_en">{t('الاسم (بالإنجليزية)', 'Name (English)')}</Label>
                             <Input id="name_en" value={formData.name_en} onChange={handleChange} />
                         </div>
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="description">الوصف (بالعربية)</Label>
+                        <Label htmlFor="description">{t('الوصف (بالعربية)', 'Description (Arabic)')}</Label>
                         <Textarea id="description" value={formData.description} onChange={handleChange} />
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="description_en">الوصف (بالإنجليزية)</Label>
+                        <Label htmlFor="description_en">{t('الوصف (بالإنجليزية)', 'Description (English)')}</Label>
                         <Textarea id="description_en" value={formData.description_en} onChange={handleChange} />
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                          <div className="space-y-2">
-                            <Label htmlFor="price">السعر (ل.س)</Label>
-                            <Input id="price" type="number" value={formData.price} onChange={handleChange}/>
+                            <Label htmlFor="price">{t('السعر (ل.س)', 'Price (SYP)')}</Label>
+                            <Input id="price" type="number" value={formData.price} onChange={handlePriceChange}/>
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="category">التصنيف</Label>
+                            <Label htmlFor="category">{t('التصنيف', 'Category')}</Label>
                             <Select value={formData.category} onValueChange={handleCategoryChange}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="اختر تصنيفاً" />
+                                    <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="appetizer">مقبلات</SelectItem>
-                                    <SelectItem value="main">طبق رئيسي</SelectItem>
-                                    <SelectItem value="drink">مشروب</SelectItem>
-                                    <SelectItem value="dessert">حلويات</SelectItem>
+                                    <SelectItem value="appetizer">{t('مقبلات', 'Appetizer')}</SelectItem>
+                                    <SelectItem value="main">{t('طبق رئيسي', 'Main Course')}</SelectItem>
+                                    <SelectItem value="drink">{t('مشروب', 'Drink')}</SelectItem>
+                                    <SelectItem value="dessert">{t('حلويات', 'Dessert')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="image">رابط الصورة</Label>
+                        <Label htmlFor="image">{t('رابط الصورة', 'Image URL')}</Label>
                         <Input id="image" value={formData.image} onChange={handleChange} />
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="secondary" onClick={() => onOpenChange(false)}>إلغاء</Button>
-                    <Button onClick={handleSubmit}>حفظ الصنف</Button>
+                    <Button variant="secondary" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
+                    <Button onClick={handleSubmit}>{t('حفظ الصنف', 'Save Item')}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
