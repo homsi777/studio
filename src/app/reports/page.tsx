@@ -7,6 +7,8 @@ import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { FileText, FileSpreadsheet, FileWord, Printer } from "lucide-react"
 
 const salesData = [
   { date: "Sat", date_ar: "السبت", sales: 400000, expenses: 150000 },
@@ -40,19 +42,19 @@ export default function ReportsPage() {
     const chartConfig = {
       sales: {
         label: t("المبيعات", "Sales"),
-        color: "hsl(var(--primary))",
+        color: "hsl(var(--chart-1))",
       },
       expenses: {
         label: t("المصاريف", "Expenses"),
-        color: "hsl(var(--accent))",
+        color: "hsl(var(--chart-2))",
       },
     }
 
   return (
     <main className="flex-1 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
-            <h1 className="font-headline text-3xl font-bold text-foreground">{t("التقارير", "Reports")}</h1>
-            <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+            <h1 className="font-headline text-3xl font-bold text-foreground">{t("التقارير التحليلية", "Analytical Reports")}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
                 <Select defaultValue="weekly">
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder={t("عرض حسب", "View by")} />
@@ -61,19 +63,34 @@ export default function ReportsPage() {
                         <SelectItem value="daily">{t("يومي", "Daily")}</SelectItem>
                         <SelectItem value="weekly">{t("أسبوعي", "Weekly")}</SelectItem>
                         <SelectItem value="monthly">{t("شهري", "Monthly")}</SelectItem>
+                        <SelectItem value="yearly">{t("سنوي", "Yearly")}</SelectItem>
                     </SelectContent>
                 </Select>
+                 <div className="flex items-center gap-1">
+                    <Button variant="outline" size="icon" aria-label={t("تصدير PDF", "Export PDF")}>
+                        <FileText className="h-4 w-4" />
+                    </Button>
+                     <Button variant="outline" size="icon" aria-label={t("تصدير Excel", "Export Excel")}>
+                        <FileSpreadsheet className="h-4 w-4" />
+                    </Button>
+                     <Button variant="outline" size="icon" aria-label={t("تصدير Word", "Export Word")}>
+                        <FileWord className="h-4 w-4" />
+                    </Button>
+                     <Button variant="outline" size="icon" aria-label={t("طباعة", "Print")}>
+                        <Printer className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-             <Card className="lg:col-span-2">
+             <Card className="lg:col-span-3">
                 <CardHeader>
                     <CardTitle>{t("ملخص الأداء المالي", "Financial Performance Summary")}</CardTitle>
                     <CardDescription>{t("مقارنة بين إجمالي المبيعات والمصاريف خلال آخر 7 أيام.", "Sales vs. expenses over the last 7 days.")}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                    <ChartContainer config={chartConfig} className="h-[350px] w-full">
                         <BarChart data={salesData} accessibilityLayer>
                             <CartesianGrid vertical={false} />
                             <XAxis
@@ -84,23 +101,26 @@ export default function ReportsPage() {
                             />
                              <YAxis
                                 tickFormatter={(value) => `${Number(value) / 1000}k`}
+                                axisLine={false}
+                                tickLine={false}
                             />
                             <Tooltip 
-                                cursor={{ fill: 'hsl(var(--muted))' }}
+                                cursor={false}
                                 content={<ChartTooltipContent 
                                     formatter={(value, name) => `${(typeof value === 'number' ? value.toLocaleString() : value)} ${t('ل.س', 'SYP')}`}
-                                    labelClassName="font-bold"
+                                    labelClassName="font-bold text-lg"
+                                    indicator="dot"
                                 />} 
                             />
-                            <Legend />
-                            <Bar dataKey="sales" fill="var(--color-sales)" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]} />
+                            <Legend contentStyle={{fontFamily: 'Alegreya'}} />
+                            <Bar dataKey="sales" fill="var(--color-sales)" radius={[4, 4, 0, 0]} name={chartConfig.sales.label} />
+                            <Bar dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]} name={chartConfig.expenses.label}/>
                         </BarChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>{t("الأصناف الأكثر مبيعاً", "Top Selling Items")}</CardTitle>
                     <CardDescription>{t("الأصناف الأكثر طلباً هذا الأسبوع.", "Most ordered items this week.")}</CardDescription>
@@ -118,7 +138,7 @@ export default function ReportsPage() {
                                 <TableRow key={item.name}>
                                     <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
                                     <TableCell className="text-center">
-                                         <Badge>{item.count}</Badge>
+                                         <Badge variant="secondary">{item.count}</Badge>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -127,23 +147,49 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle>{t("تقرير حالة المطبخ", "Kitchen Status Report")}</CardTitle>
-                    <CardDescription>{t("نظرة عامة على أداء المطبخ.", "Overview of kitchen performance.")}</CardDescription>
+                    <CardTitle>{t("تقارير إضافية", "Additional Reports")}</CardTitle>
+                    <CardDescription>{t("نظرة عامة على جوانب أخرى من أداء المطعم.", "Overview of other aspects of restaurant performance.")}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">{t("متوسط وقت التحضير", "Avg. Preparation Time")}</span>
-                        <span className="font-bold">{kitchenReportData.avgPreparationTime} {t("دقيقة", "min")}</span>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-bold mb-2">{t("تقرير حالة المطبخ", "Kitchen Status Report")}</h4>
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t("متوسط وقت التحضير", "Avg. Prep Time")}</span>
+                                <span className="font-bold">{kitchenReportData.avgPreparationTime} {t("دقيقة", "min")}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t("ساعات الذروة", "Peak Hours")}</span>
+                                <span className="font-bold">{language === 'ar' ? kitchenReportData.peakHours_ar : kitchenReportData.peakHours}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t("إجمالي الطلبات اليوم", "Total Orders Today")}</span>
+                                <span className="font-bold">{kitchenReportData.orderCount}</span>
+                            </div>
+                        </div>
                     </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">{t("ساعات الذروة", "Peak Hours")}</span>
-                        <span className="font-bold">{language === 'ar' ? kitchenReportData.peakHours_ar : kitchenReportData.peakHours}</span>
+                     <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-bold mb-2">{t("تقرير الزبائن", "Customer Report")}</h4>
+                         <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t("الزبائن الجدد", "New Customers")}</span>
+                                <span className="font-bold">15</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t("متوسط قيمة الطلب", "Avg. Order Value")}</span>
+                                <span className="font-bold">150,000 {t("ل.س", "SYP")}</span>
+                            </div>
+                        </div>
                     </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">{t("إجمالي الطلبات اليوم", "Total Orders Today")}</span>
-                        <span className="font-bold">{kitchenReportData.orderCount}</span>
+                     <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-bold mb-2">{t("تقرير الموظفين", "Employee Report")}</h4>
+                        <p className="text-sm text-muted-foreground">{t("سيتم عرض بيانات أداء الموظفين هنا.", "Employee performance data will be displayed here.")}</p>
+                    </div>
+                     <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-bold mb-2">{t("تقرير المخزون", "Inventory Report")}</h4>
+                        <p className="text-sm text-muted-foreground">{t("سيتم عرض بيانات الصادر والوارد هنا.", "Incoming and outgoing stock data will be displayed here.")}</p>
                     </div>
                 </CardContent>
             </Card>

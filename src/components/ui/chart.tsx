@@ -153,12 +153,14 @@ const ChartTooltipContent = React.forwardRef<
           </div>
         )
       }
+      
+      const formattedLabel = payload[0].payload[labelKey || 'date_ar'] || payload[0].payload[labelKey || 'date'] || label;
 
-      if (!value) {
+      if (!formattedLabel) {
         return null
       }
 
-      return <div className={cn("font-medium", labelClassName)}>{value}</div>
+      return <div className={cn("font-medium", labelClassName)}>{formattedLabel}</div>
     }, [
       label,
       labelFormatter,
@@ -306,7 +308,7 @@ const ChartLegendContent = React.forwardRef<
                   }}
                 />
               )}
-              {itemConfig?.label}
+              {itemConfig?.label || item.value}
             </div>
           )
         })}
