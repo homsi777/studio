@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { type MenuItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,21 +19,42 @@ const menuItems: MenuItem[] = [
 
 const USD_TO_SYP_RATE = 15000;
 
+interface FlyingItem {
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 export default function MenuPage({ params }: { params: { tableId: string } }) {
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [currency, setCurrency] = useState<'SYP' | 'USD'>('SYP');
     const [orderState, setOrderState] = useState<'idle' | 'sending' | 'confirmed'>('idle');
+    const [flyingItem, setFlyingItem] = useState<FlyingItem | null>(null);
 
-    const addToCart = (item: MenuItem) => {
-        setCart(prevCart => {
-            const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
-            if (existingItem) {
-                return prevCart.map(cartItem =>
-                    cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
-                );
-            }
-            return [...prevCart, { ...item, quantity: 1 }];
-        });
+    const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const cartRef = useRef<HTMLDivElement | null>(null);
+
+    const addToCart = (item: MenuItem, e: React.MouseEvent<HTMLButtonElement>) => {
+        const itemCard = (e.currentTarget as HTMLElement).closest('.menu-item-card');
+
+        if (itemCard && cartRef.current) {
+            const rect = itemCard.getBoundingClientRect();
+            setFlyingItem({ id: item.id + Date.now(), x: rect.left, y: rect.top, width: rect.width, height: rect.height });
+        }
+
+        setTimeout(() => {
+            setCart(prevCart => {
+                const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
+                if (existingItem) {
+                    return prevCart.map(cartItem =>
+                        cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
+                    );
+                }
+                return [...prevCart, { ...item, quantity: 1 }];
+            });
+        }, 100); // Small delay to let the flying animation start
     };
 
     const updateQuantity = (itemId: string, newQuantity: number) => {
@@ -57,7 +78,6 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
 
     const handleSendOrder = () => {
         setOrderState('sending');
-        // Simulate API call
         console.log('Sending order:', { tableId: params.tableId, cart, total });
         setTimeout(() => {
             setOrderState('confirmed');
@@ -84,6 +104,23 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
 
     return (
         <div className="bg-background min-h-screen font-body" dir="rtl">
+            <AnimatePresence>
+                {flyingItem && cartRef.current && (
+                    <motion.div
+                        className="fixed z-50 rounded-lg bg-card border border-primary/50"
+                        initial={{ x: flyingItem.x, y: flyingItem.y, width: flyingItem.width, height: flyingItem.height, opacity: 1 }}
+                        animate={{
+                            x: cartRef.current.getBoundingClientRect().left + (cartRef.current.getBoundingClientRect().width / 2),
+                            y: cartRef.current.getBoundingClientRect().top + (cartRef.current.getBoundingClientRect().height / 2),
+                            width: 0,
+                            height: 0,
+                            opacity: 0,
+                        }}
+                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                        onAnimationComplete={() => setFlyingItem(null)}
+                    />
+                )}
+            </AnimatePresence>
             <header className="p-4 border-b sticky top-0 bg-background/80 backdrop-blur-sm z-10">
                 <div className="container mx-auto flex justify-between items-center">
                     <div className="text-center">
@@ -102,7 +139,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                         <h2 className="font-headline text-3xl font-bold mb-6 text-primary">{section.title}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {section.items.map(item => (
-                                <Card key={item.id} className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-lg hover:border-primary/50">
+                                <Card key={item.id} ref={el => itemRefs.current[item.id] = el} className="menu-item-card overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50">
                                     <CardHeader>
                                         <CardTitle className="font-headline text-xl">{item.name}</CardTitle>
                                     </CardHeader>
@@ -111,7 +148,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                                     </CardContent>
                                     <CardFooter className="flex justify-between items-center mt-auto bg-muted/20 pt-6">
                                         <span className="font-bold text-lg text-primary">{formatCurrency(item.price)}</span>
-                                        <Button onClick={() => addToCart(item)} variant="default">
+                                        <Button onClick={(e) => addToCart(item, e)} variant="default">
                                             <PlusCircle className="mr-2 h-4 w-4"/> إضافة للسلة
                                         </Button>
                                     </CardFooter>
@@ -135,10 +172,20 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                     <SheetTrigger asChild>
                          <div className="bg-card border-t p-4 shadow-lg cursor-pointer">
                             <div className="container mx-auto flex justify-between items-center">
-                                <div className="flex items-center gap-4">
-                                    <ShoppingCart className="text-primary"/>
+                                <div className="flex items-center gap-4" ref={cartRef}>
+                                    <div className="relative">
+                                        <ShoppingCart className="text-primary h-8 w-8"/>
+                                        <motion.div
+                                             key={cart.reduce((acc, item) => acc + item.quantity, 0)}
+                                             initial={{ scale: 1.5, opacity: 0 }}
+                                             animate={{ scale: 1, opacity: 1 }}
+                                             className="absolute -top-2 -right-2 bg-accent text-accent-foreground rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold"
+                                        >
+                                            {cart.reduce((acc, item) => acc + item.quantity, 0)}
+                                        </motion.div>
+                                    </div>
                                     <div>
-                                        <p className="font-bold">سلة الطلبات ({cart.reduce((acc, item) => acc + item.quantity, 0)} صنف)</p>
+                                        <p className="font-bold">سلة الطلبات</p>
                                         <p className="text-sm font-bold text-primary">{formatCurrency(total)}</p>
                                     </div>
                                 </div>
