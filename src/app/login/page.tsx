@@ -1,8 +1,6 @@
-// This is a new file
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/hooks/use-language';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -19,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { IconLogo } from '@/components/icons';
 import { LanguageToggle } from '@/components/language-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -62,6 +60,10 @@ export default function LoginPage() {
             <div className="absolute top-4 right-4 flex items-center gap-2">
                 <LanguageToggle />
                 <ThemeToggle />
+            </div>
+            <div className='text-center mb-8'>
+                <h1 className='font-headline text-4xl font-bold text-primary tracking-wider'>العالمية جروب</h1>
+                <p className='text-muted-foreground'>{t('حلول ذكية ومتكاملة لإدارة المطاعم', 'Smart and Integrated Restaurant Management Solutions')}</p>
             </div>
             <Card className="w-full max-w-sm" dir={dir}>
                 <CardHeader className="text-center">
