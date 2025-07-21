@@ -24,6 +24,7 @@ export type Order = {
   tableId?: number;
   status?: OrderStatus;
   timestamp?: number;
+  confirmationTimestamp?: number; // Added to track when the chef confirms the order
 };
 
 export type Table = {
@@ -31,7 +32,7 @@ export type Table = {
   status: TableStatus;
   order: Order | null;
   seatingDuration?: string;
-  chefConfirmationTime?: string;
+  chefConfirmationTimestamp?: number; // Changed from string to number for calculations
 };
 
 export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies';

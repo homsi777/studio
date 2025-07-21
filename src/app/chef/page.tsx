@@ -11,12 +11,12 @@ import { Button } from '@/components/ui/button';
 import { BellRing, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const getInitialOrders = (): Order[] => [
+const initialOrders: Order[] = [
   { id: 'ORD-001', tableId: 1, items: [{ id: 'item-1', name: 'مشويات مشكلة', quantity: 1, price: 0, category: 'main', image: '' }, { id: 'item-2', name: 'حمص', quantity: 2, price: 0, category: 'appetizer', image: '' }], total: 0, status: 'new', timestamp: Date.now() - 60000 * 2 },
   { id: 'ORD-002', tableId: 7, items: [{ id: 'item-6', name: 'شيش طاووق', quantity: 2, price: 0, category: 'main', image: '' }], total: 0, status: 'new', timestamp: Date.now() - 60000 * 5 },
-  { id: 'ORD-003', tableId: 2, items: [{ id: 'item-4', name: 'كبة مقلية', quantity: 1, price: 0, category: 'appetizer', image: '' }], total: 0, status: 'in_progress', timestamp: Date.now() - 60000 * 8 },
-  { id: 'ORD-004', tableId: 6, items: [{ id: 'item-1', name: 'مشويات مشكلة', quantity: 2, price: 0, category: 'main', image: '' }, { id: 'item-7', name: 'بيبسي', quantity: 4, price: 0, category: 'drink', image: '' }], total: 0, status: 'in_progress', timestamp: Date.now() - 60000 * 12 },
-  { id: 'ORD-005', tableId: 11, items: [{ id: 'item-8', name: 'عصير برتقال طازج', quantity: 3, price: 0, category: 'drink', image: '' }], total: 0, status: 'ready', timestamp: Date.now() - 60000 * 15 },
+  { id: 'ORD-003', tableId: 2, items: [{ id: 'item-4', name: 'كبة مقلية', quantity: 1, price: 0, category: 'appetizer', image: '' }], total: 0, status: 'in_progress', timestamp: Date.now() - 60000 * 8, confirmationTimestamp: Date.now() - 60000 * 3 },
+  { id: 'ORD-004', tableId: 6, items: [{ id: 'item-1', name: 'مشويات مشكلة', quantity: 2, price: 0, category: 'main', image: '' }, { id: 'item-7', name: 'بيبسي', quantity: 4, price: 0, category: 'drink', image: '' }], total: 0, status: 'in_progress', timestamp: Date.now() - 60000 * 12, confirmationTimestamp: Date.now() - 60000 * 7 },
+  { id: 'ORD-005', tableId: 11, items: [{ id: 'item-8', name: 'عصير برتقال طازج', quantity: 3, price: 0, category: 'drink', image: '' }], total: 0, status: 'ready', timestamp: Date.now() - 60000 * 15, confirmationTimestamp: Date.now() - 60000 * 9 },
 ];
 
 
@@ -26,13 +26,21 @@ export default function ChefPage() {
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
-    setOrders(getInitialOrders());
+    // Initialize orders on the client to avoid hydration issues with Date.now()
+    setOrders(initialOrders);
   }, []);
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prevOrders => prevOrders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+    setOrders(prevOrders => prevOrders.map(order => {
+        if (order.id === orderId) {
+            const updatedOrder = { ...order, status: newStatus };
+            if (newStatus === 'in_progress') {
+                updatedOrder.confirmationTimestamp = Date.now();
+            }
+            return updatedOrder;
+        }
+        return order;
+    }));
   };
   
   const handleDragEnd = (event: DragEndEvent) => {

@@ -7,8 +7,16 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Hash, Check, ArrowLeft, GripVertical } from 'lucide-react';
+import { Clock, Hash, Check, ArrowLeft, GripVertical, ChefHat } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+
+const formatDuration = (seconds: number): string => {
+    if (seconds < 60) return `${Math.floor(seconds)} ثا`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes} د ${remainingSeconds} ثا`;
+};
 
 interface ChefOrderCardProps {
   order: Order;
@@ -25,46 +33,41 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
   };
 
   const [timeAgo, setTimeAgo] = useState('');
+  const [confirmationTimer, setConfirmationTimer] = useState('');
 
   useEffect(() => {
-    const updateTimestamp = () => {
-        if (!order.timestamp) {
+    const updateTimestamps = () => {
+        // Time since order was placed
+        if (order.timestamp) {
+            const seconds = Math.floor((Date.now() - order.timestamp) / 1000);
+            let interval = seconds / 31536000;
+            if (interval > 1) { setTimeAgo(`قبل ${Math.floor(interval)} سنة`); return; }
+            interval = seconds / 2592000;
+            if (interval > 1) { setTimeAgo(`قبل ${Math.floor(interval)} شهر`); return; }
+            interval = seconds / 86400;
+            if (interval > 1) { setTimeAgo(`قبل ${Math.floor(interval)} يوم`); return; }
+            interval = seconds / 3600;
+            if (interval > 1) { setTimeAgo(`قبل ${Math.floor(interval)} ساعة`); return; }
+            interval = seconds / 60;
+            if (interval > 1) { setTimeAgo(`قبل ${Math.floor(interval)} دقيقة`); return; }
+            setTimeAgo(`قبل ${Math.floor(seconds)} ثانية`);
+        } else {
             setTimeAgo('');
-            return;
-        };
-        const seconds = Math.floor((Date.now() - order.timestamp) / 1000);
-        let interval = seconds / 31536000;
-        if (interval > 1) {
-            setTimeAgo(`قبل ${Math.floor(interval)} سنة`);
-            return;
         }
-        interval = seconds / 2592000;
-        if (interval > 1) {
-            setTimeAgo(`قبل ${Math.floor(interval)} شهر`);
-            return;
+
+        // Timer since confirmation
+        if (order.status === 'in_progress' && order.confirmationTimestamp) {
+            const secondsSinceConfirmation = Math.floor((Date.now() - order.confirmationTimestamp) / 1000);
+            setConfirmationTimer(formatDuration(secondsSinceConfirmation));
+        } else {
+            setConfirmationTimer('');
         }
-        interval = seconds / 86400;
-        if (interval > 1) {
-            setTimeAgo(`قبل ${Math.floor(interval)} يوم`);
-            return;
-        }
-        interval = seconds / 3600;
-        if (interval > 1) {
-            setTimeAgo(`قبل ${Math.floor(interval)} ساعة`);
-            return;
-        }
-        interval = seconds / 60;
-        if (interval > 1) {
-            setTimeAgo(`قبل ${Math.floor(interval)} دقيقة`);
-            return;
-        }
-        setTimeAgo(`قبل ${Math.floor(seconds)} ثانية`);
     };
 
-    updateTimestamp();
-    const timer = setInterval(updateTimestamp, 60000); // Update every minute
+    updateTimestamps();
+    const timer = setInterval(updateTimestamps, 1000); // Update every second for the timer
     return () => clearInterval(timer);
-}, [order.timestamp]);
+}, [order.timestamp, order.confirmationTimestamp, order.status]);
 
 
   const nextAction = {
@@ -110,6 +113,15 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
                     </div>
                 ))}
             </div>
+            {order.status === 'in_progress' && confirmationTimer && (
+                <>
+                <Separator className="my-3"/>
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-yellow-600 animate-pulse">
+                    <ChefHat className="h-4 w-4" />
+                    <span>وقت التحضير: {confirmationTimer}</span>
+                </div>
+                </>
+            )}
         </CardContent>
         {nextAction[order.status!] && (
              <CardFooter className="p-2 bg-muted/40">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { type Table } from "@/types";
 import {
   Sheet,
@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Hash, UtensilsCrossed, Printer, Coins } from "lucide-react";
+import { Clock, Hash, UtensilsCrossed, Printer, Coins, ChefHat } from "lucide-react";
 
 interface OrderDetailsSheetProps {
   table: Table | null;
@@ -32,8 +32,39 @@ const statusMap: Record<string, { text: string; className: string }> = {
 
 const USD_TO_SYP_RATE = 15000;
 
+const formatTimeAgo = (timestamp?: number): string => {
+    if (!timestamp) return '';
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return `قبل ${Math.floor(interval)} سنة`;
+    interval = seconds / 2592000;
+    if (interval > 1) return `قبل ${Math.floor(interval)} شهر`;
+    interval = seconds / 86400;
+    if (interval > 1) return `قبل ${Math.floor(interval)} يوم`;
+    interval = seconds / 3600;
+    if (interval > 1) return `قبل ${Math.floor(interval)} ساعة`;
+    interval = seconds / 60;
+    if (interval > 1) return `قبل ${Math.floor(interval)} دقيقة`;
+    return `قبل ${Math.floor(seconds)} ثانية`;
+};
+
 export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsSheetProps) {
   const [currency, setCurrency] = useState<'SYP' | 'USD'>('SYP');
+  const [chefConfirmationTimeAgo, setChefConfirmationTimeAgo] = useState('');
+
+  useEffect(() => {
+    const updateTimer = () => {
+      if (open && table?.chefConfirmationTimestamp) {
+        setChefConfirmationTimeAgo(formatTimeAgo(table.chefConfirmationTimestamp));
+      }
+    };
+    
+    updateTimer();
+    const intervalId = setInterval(updateTimer, 60000); // Update every minute
+
+    return () => clearInterval(intervalId);
+  }, [table, open]);
+
 
   if (!table) return null;
 
@@ -94,10 +125,10 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
                   <span>مدة الجلوس: {table.seatingDuration}</span>
                 </div>
               )}
-              {table.chefConfirmationTime && (
+              {table.chefConfirmationTimestamp && (
                 <div className="flex items-center gap-2">
-                  <UtensilsCrossed className="h-4 w-4" />
-                  <span>تأكيد الشيف: {table.chefConfirmationTime}</span>
+                  <ChefHat className="h-4 w-4" />
+                  <span>تأكيد الشيف: {chefConfirmationTimeAgo}</span>
                 </div>
               )}
                {table.order?.id && (
