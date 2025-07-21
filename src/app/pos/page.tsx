@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins, FilePenLine } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,6 +21,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { cn } from '@/lib/utils';
+
 
 const menuItems: MenuItem[] = [
     { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, category: 'main', quantity: 0 },
@@ -109,13 +110,21 @@ export default function QuickPOSPage() {
                         </Link>
                     </Button>
                 </div>
-                <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as MenuItemCategory | 'all')} className="w-full">
-                    <TabsList className="grid w-full grid-cols-5 mb-4 h-12">
-                        {categories.map(cat => (
-                            <TabsTrigger key={cat.value} value={cat.value} className="text-base">{t(cat.ar, cat.en)}</TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
+                <div className="flex items-center gap-3 mb-4 flex-wrap">
+                    {categories.map(cat => (
+                        <Button 
+                            key={cat.value} 
+                            variant={activeCategory === cat.value ? 'default' : 'outline'}
+                            onClick={() => setActiveCategory(cat.value)}
+                            className={cn(
+                                "py-6 px-5 text-base font-semibold transition-all duration-200 transform hover:scale-105",
+                                activeCategory === cat.value ? 'shadow-lg bg-primary text-primary-foreground' : 'bg-card text-card-foreground shadow-md'
+                            )}
+                        >
+                            {t(cat.ar, cat.en)}
+                        </Button>
+                    ))}
+                </div>
                 <ScrollArea className="flex-1 -m-2 p-2">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {filteredItems.map(item => (
@@ -203,3 +212,5 @@ export default function QuickPOSPage() {
         </main>
     );
 }
+
+    
