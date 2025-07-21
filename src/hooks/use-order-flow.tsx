@@ -75,7 +75,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             tableId: tableId,
             tableUuid: tableUuid,
             sessionId: dummySessionId,
-            items: [{ id: 'item-5', name: 'فتوش', quantity: 1, price: 20000, category: 'appetizer' }],
+            items: [{ id: 'item-5', name: 'فتوش', quantity: 1, price: 20000, category: 'appetizer', name_en: 'Fattoush' }],
             total: 20000,
         };
         submitOrder(dummyOrder);

@@ -26,6 +26,7 @@ import { LanguageToggle } from '@/components/language-toggle';
 import { Button } from '@/components/ui/button';
 import { LogOut, MoreHorizontal } from 'lucide-react';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
+import { DigitalClock } from '@/components/digital-clock';
 
 export function AppContent({
   children,
@@ -115,7 +116,7 @@ export function AppContent({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton href="/menu/1" tooltip={t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')} target="_blank">
+                    <SidebarMenuButton href="/menu/a1b2c3d4-e5f6-7890-1234-567890abcdef" tooltip={t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')} target="_blank">
                       <IconUsers />
                       <span>{t('عرض قائمة الزبون', 'View Customer Menu')}</span>
                     </SidebarMenuButton>
@@ -183,6 +184,9 @@ export function AppContent({
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
           <SidebarTrigger className="md:hidden" />
           <h1 className="font-headline text-xl font-semibold">{pageTitle}</h1>
+          <div className="ml-auto">
+            <DigitalClock />
+          </div>
           </header>
           {children}
       </SidebarInset>

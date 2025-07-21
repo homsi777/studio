@@ -1,4 +1,4 @@
-// This is a new file
+
 "use client";
 
 import React, { useState } from 'react';
@@ -111,7 +111,7 @@ export function UserManagement() {
     }
 
     return (
-        <Card className="lg:col-span-2">
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle>{t('إدارة المستخدمين', 'User Management')}</CardTitle>
