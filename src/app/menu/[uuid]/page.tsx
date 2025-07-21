@@ -70,10 +70,10 @@ export default function MenuPage() {
         if (fromRect && toRect) {
             const newFlyingItem = {
                 id: Date.now(),
-                x: fromRect.left,
-                y: fromRect.top,
-                destX: toRect.left + toRect.width / 2 - 16,
-                destY: toRect.top + toRect.height / 2 - 16,
+                x: fromRect.left + fromRect.width / 2,
+                y: fromRect.top + fromRect.height / 2,
+                destX: toRect.left + toRect.width / 2,
+                destY: toRect.top + toRect.height / 2,
                 image: item.image,
             };
             setFlyingItems(prev => [...prev, newFlyingItem]);
@@ -187,16 +187,26 @@ export default function MenuPage() {
                 {flyingItems.map(item => (
                     <motion.div
                         key={item.id}
-                        initial={{ x: item.x, y: item.y, opacity: 1, scale: 1 }}
-                        animate={{ x: item.destX, y: item.destY, opacity: 0, scale: 0.2 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 50, mass: 0.5 }}
+                        initial={{ x: item.x, y: item.y, opacity: 1, scale: 0.5 }}
+                        animate={{ 
+                            x: item.destX, 
+                            y: item.destY, 
+                            opacity: 0, 
+                            scale: 0,
+                            transition: {
+                                type: 'spring',
+                                stiffness: 400,
+                                damping: 50,
+                                mass: 0.5
+                            }
+                        }}
                         onAnimationComplete={() => {
                             setFlyingItems(prev => prev.filter(f => f.id !== item.id));
                         }}
                         className="fixed z-50 rounded-lg overflow-hidden shadow-xl"
-                        style={{ width: 64, height: 48 }}
+                        style={{ width: 48, height: 48 }}
                     >
-                       {item.image && <Image src={item.image} alt="flying item" width={64} height={48} className="object-cover w-full h-full" data-ai-hint={item.image_hint}/>}
+                       {item.image && <Image src={item.image} alt="flying item" width={48} height={48} className="object-cover w-full h-full" data-ai-hint={item.image_hint}/>}
                     </motion.div>
                 ))}
             </AnimatePresence>
@@ -210,34 +220,33 @@ export default function MenuPage() {
                 </div>
             </header>
 
-            <main className="container mx-auto p-4 pb-32">
+            <main className="container mx-auto p-2 sm:p-4 pb-32">
                  {sections.map(section => (
                     section.items.length > 0 &&
                     <section key={section.title} className="mb-12">
-                        <h2 className="font-headline text-3xl font-bold mb-6 text-foreground">{section.title}</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <h2 className="font-headline text-3xl font-bold mb-6 text-foreground px-2">{section.title}</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {section.items.map(item => (
                                 <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                                    <Card className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 h-full relative border-2 border-transparent bg-card">
+                                    <Card className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 h-full relative border bg-card shadow-md">
                                         {item.image && (
-                                            <div className="relative h-48 w-full">
+                                            <div className="relative aspect-[4/3] w-full">
                                                 <Image src={item.image} alt={item.name} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item.image_hint} />
                                                 {item.offer && (
-                                                    <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs shadow-lg" variant="destructive">
+                                                    <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground text-xs shadow-lg" variant="destructive">
                                                         <Flame className="w-3 h-3 ltr:mr-1 rtl:ml-1" /> {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
                                                     </Badge>
                                                 )}
                                             </div>
                                         )}
-                                        <CardContent className="p-4 flex-grow flex flex-col">
+                                        <CardContent className="p-3 flex-grow flex flex-col">
                                             <div className="flex-1">
-                                                <h3 className="font-headline text-xl h-14">{language === 'ar' ? item.name : (item.name_en || item.name)}</h3>
-                                                <p className="text-muted-foreground text-sm mt-1 h-10">{language === 'ar' ? item.description : (item.description_en || item.description)}</p>
+                                                <h3 className="font-headline text-base sm:text-lg leading-tight h-10">{language === 'ar' ? item.name : (item.name_en || item.name)}</h3>
                                             </div>
-                                            <div className="flex justify-between items-center mt-4 pt-4 border-t border-dashed">
-                                                <span className="font-bold text-lg text-primary">{formatCurrency(item.price)}</span>
-                                                <Button ref={el => addToCartRefs.current[item.id] = el} onClick={() => addToCart(item, item.id)} variant="default" size="sm" className="shadow-lg hover:shadow-primary/50 transition-shadow">
-                                                    <Plus className="ltr:mr-2 rtl:ml-2 h-4 w-4"/> {t('إضافة', 'Add')}
+                                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed">
+                                                <span className="font-bold text-sm sm:text-base text-primary">{formatCurrency(item.price)}</span>
+                                                <Button ref={el => addToCartRefs.current[item.id] = el} onClick={() => addToCart(item, item.id)} variant="default" size="sm" className="shadow-lg hover:shadow-primary/50 transition-shadow text-xs h-8">
+                                                    <Plus className="ltr:mr-1 rtl:ml-1 h-4 w-4"/> {t('إضافة', 'Add')}
                                                 </Button>
                                             </div>
                                         </CardContent>
@@ -260,7 +269,13 @@ export default function MenuPage() {
             >
                 <Sheet>
                     <SheetTrigger asChild>
-                        <Button ref={cartRef} size="lg" className="rounded-full h-16 w-16 shadow-2xl bg-primary hover:bg-primary/90 relative">
+                         <motion.button 
+                           ref={cartRef} 
+                           className="rounded-full h-16 w-16 shadow-2xl bg-primary hover:bg-primary/90 relative flex items-center justify-center text-primary-foreground"
+                           whileTap={{ scale: 0.9 }}
+                           key={cart.length}
+                           animate={{ scale: [1, 1.1, 1], transition: { duration: 0.3 } }}
+                         >
                              <ShoppingCart className="h-8 w-8"/>
                              <motion.div
                                  key={cart.reduce((acc, item) => acc + item.quantity, 0)}
@@ -270,7 +285,7 @@ export default function MenuPage() {
                             >
                                 {cart.reduce((acc, item) => acc + item.quantity, 0)}
                             </motion.div>
-                        </Button>
+                        </motion.button>
                     </SheetTrigger>
                     <SheetContent side={language === 'ar' ? 'left' : 'right'} className="w-full sm:max-w-md flex flex-col" dir={dir}>
                         <SheetHeader className="text-start">
@@ -322,3 +337,5 @@ export default function MenuPage() {
         </div>
     );
 }
+
+    
