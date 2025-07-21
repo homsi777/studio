@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { IconChart, IconChefHat, IconCoin, IconLogo, IconMenu, IconPOS, IconTable } from '@/components/icons';
+import { IconChart, IconChefHat, IconCoin, IconLogo, IconMenu, IconPOS, IconSettings, IconTable } from '@/components/icons';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -58,7 +58,7 @@ export default function RootLayout({
             <SidebarContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="لوحة التحكم" isActive>
+                  <SidebarMenuButton href="/" tooltip="لوحة التحكم">
                     <IconTable />
                     <span>لوحة التحكم</span>
                   </SidebarMenuButton>
@@ -97,6 +97,14 @@ export default function RootLayout({
               </SidebarMenu>
             </SidebarContent>
             <SidebarFooter>
+               <SidebarMenu>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/settings" tooltip="الإعدادات">
+                    <IconSettings />
+                    <span>الإعدادات</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+               </SidebarMenu>
               <div className="flex items-center justify-between p-2">
                  <LanguageToggle />
                  <ThemeToggle />

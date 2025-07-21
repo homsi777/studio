@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { type Table } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
 import { OrderDetailsSheet } from '@/components/dashboard/order-details-sheet';
+import { usePathname } from 'next/navigation';
 
 const mockTables: Table[] = [
   { id: 1, status: 'new_order', order: { id: 'ORD-001', items: [{ id: 'item-1', name: 'مشويات مشكلة', price: 85000, quantity: 1 }, { id: 'item-2', name: 'حمص', price: 15000, quantity: 2 }, { id: 'item-3', name: 'مياه معدنية', price: 5000, quantity: 4 }], total: 135000 }, seatingDuration: '25 دقيقة' },
@@ -23,7 +24,7 @@ const mockTables: Table[] = [
 
 export default function DashboardPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-
+  
   const handleSelectTable = (table: Table) => {
     if(table.status !== 'available') {
       setSelectedTable(table);
