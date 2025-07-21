@@ -1,3 +1,4 @@
+
 export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" | "needs_attention" | "paying";
 
 export type OrderStatus = 'new' | 'in_progress' | 'ready';
@@ -26,7 +27,7 @@ export type Order = {
   tableId?: number;
   status?: OrderStatus;
   timestamp?: number;
-  confirmationTimestamp?: number; // Added to track when the chef confirms the order
+  confirmationTimestamp?: number;
 };
 
 export type Table = {
@@ -55,4 +56,6 @@ export type User = {
     username: string;
     role: UserRole;
 };
+    
+
     
