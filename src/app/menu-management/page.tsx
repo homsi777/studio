@@ -1,16 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +30,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Search } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const mockMenuItems: MenuItem[] = [
     { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', quantity: 0 },
@@ -62,6 +55,8 @@ export default function MenuManagementPage() {
     const [items, setItems] = useState<MenuItem[]>(mockMenuItems);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeCategory, setActiveCategory] = useState<MenuItemCategory | 'all'>('all');
 
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -92,86 +87,84 @@ export default function MenuManagementPage() {
         }
         setDialogOpen(false);
     };
+    
+    const filteredItems = useMemo(() =>
+        items.filter(item =>
+            (activeCategory === 'all' || item.category === activeCategory) &&
+            ((t(item.name, item.name_en || item.name).toLowerCase().includes(searchTerm.toLowerCase())))
+        ), [items, searchTerm, activeCategory, language, t]);
+
 
     return (
         <main className="flex-1 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                 <h1 className="font-headline text-3xl font-bold text-foreground">{t('إدارة القائمة', 'Menu Management')}</h1>
-                <Button onClick={handleAddNew}>
-                    <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                    {t('إضافة صنف جديد', 'Add New Item')}
-                </Button>
+                 <div className="flex items-center gap-2 flex-wrap">
+                     <div className="relative w-full max-w-sm">
+                        <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder={t('ابحث عن صنف...', 'Search for an item...')} 
+                            className="ltr:pl-10 rtl:pr-10" 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                     <Select value={activeCategory} onValueChange={(value) => setActiveCategory(value as any)}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder={t('التصنيف', 'Category')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">{t('كل التصنيفات', 'All Categories')}</SelectItem>
+                            <SelectItem value="main">{t('أطباق رئيسية', 'Main Courses')}</SelectItem>
+                            <SelectItem value="appetizer">{t('مقبلات', 'Appetizers')}</SelectItem>
+                            <SelectItem value="drink">{t('مشروبات', 'Drinks')}</SelectItem>
+                            <SelectItem value="dessert">{t('حلويات', 'Desserts')}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                     <Button onClick={handleAddNew}>
+                        <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                        {t('إضافة صنف جديد', 'Add New Item')}
+                    </Button>
+                </div>
             </div>
             
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>{t('جميع الأصناف', 'All Items')}</CardTitle>
-                        <div className="flex items-center gap-2">
-                             <div className="relative w-full max-w-sm">
-                                <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder={t('ابحث عن صنف...', 'Search for an item...')} className="ltr:pl-10 rtl:pr-10" />
-                            </div>
-                             <Select defaultValue="all">
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder={t('التصنيف', 'Category')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">{t('كل التصنيفات', 'All Categories')}</SelectItem>
-                                    <SelectItem value="main">{t('أطباق رئيسية', 'Main Courses')}</SelectItem>
-                                    <SelectItem value="appetizer">{t('مقبلات', 'Appetizers')}</SelectItem>
-                                    <SelectItem value="drink">{t('مشروبات', 'Drinks')}</SelectItem>
-                                    <SelectItem value="dessert">{t('حلويات', 'Desserts')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('الاسم', 'Name')}</TableHead>
-                                    <TableHead>{t('التصنيف', 'Category')}</TableHead>
-                                    <TableHead>{t('السعر', 'Price')}</TableHead>
-                                    <TableHead className="w-[50px]">{t('أدوات', 'Actions')}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {items.map(item => (
-                                    <TableRow key={item.id}>
-                                        <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">{categoryMap[item.category][language]}</Badge>
-                                        </TableCell>
-                                        <TableCell>{item.price.toLocaleString()} {t('ل.س', 'SYP')}</TableCell>
-                                        <TableCell>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
-                                                    <DropdownMenuItem onClick={() => handleEdit(item)}>
-                                                        <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('تعديل', 'Edit')}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-500 hover:!text-red-500">
-                                                        <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('حذف', 'Delete')}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <AnimatePresence>
+                {filteredItems.map(item => (
+                    <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+                        <Card className="h-full flex flex-col">
+                             <CardHeader className="flex-row items-start justify-between">
+                                <CardTitle className="font-headline text-xl flex-1">{language === 'ar' ? item.name : (item.name_en || item.name)}</CardTitle>
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 -mt-2 -mr-2">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
+                                        <DropdownMenuItem onClick={() => handleEdit(item)}>
+                                            <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                            {t('تعديل', 'Edit')}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-500 hover:!text-red-500">
+                                            <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                            {t('حذف', 'Delete')}
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground">{language === 'ar' ? item.description : (item.description_en || item.description)}</p>
+                            </CardContent>
+                            <CardFooter className="flex justify-between items-center bg-muted/20 pt-4">
+                                <Badge variant="outline">{categoryMap[item.category][language]}</Badge>
+                                <span className="font-bold text-lg text-primary">{item.price.toLocaleString()} {t('ل.س', 'SYP')}</span>
+                            </CardFooter>
+                        </Card>
+                    </motion.div>
+                ))}
+                </AnimatePresence>
+            </div>
 
             <MenuItemFormDialog 
                 isOpen={isDialogOpen} 
