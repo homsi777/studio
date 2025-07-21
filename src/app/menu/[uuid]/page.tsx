@@ -6,14 +6,13 @@ import Image from 'next/image';
 import type { MenuItem, Order } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Flame, Loader2, PartyPopper, Check, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useOrderFlow } from '@/hooks/use-order-flow';
 import { uuidToTableMap } from '@/lib/utils';
-import { Card } from '@/components/ui/card';
+import { MenuItemCard } from '@/components/menu/menu-item-card';
 
 
 const menuItems: MenuItem[] = [
@@ -224,31 +223,13 @@ export default function MenuPage() {
                         <h2 className="font-headline text-3xl font-bold mb-6 text-foreground px-2">{section.title}</h2>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                             {section.items.map(item => (
-                                <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                                    <Card className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 h-full relative border bg-card shadow-md">
-                                        {item.image && (
-                                            <div className="relative aspect-w-4 aspect-h-3 w-full">
-                                                <Image src={item.image} alt={t(item.name, item.name_en || '')} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item.image_hint || ''} />
-                                                {item.offer && (
-                                                    <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground text-xs shadow-lg" variant="destructive">
-                                                        <Flame className="w-3 h-3 ltr:mr-1 rtl:ml-1" /> {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        )}
-                                        <div className="p-2 sm:p-3 flex-grow flex flex-col">
-                                            <div className="flex-1">
-                                                <h3 className="font-headline text-sm sm:text-base leading-tight h-10">{language === 'ar' ? item.name : (item.name_en || item.name)}</h3>
-                                            </div>
-                                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed">
-                                                <span className="font-bold text-xs sm:text-base text-primary">{formatCurrency(item.price)}</span>
-                                                <Button ref={el => addToCartRefs.current[item.id] = el} onClick={() => addToCart(item, item.id)} variant="default" size="sm" className="shadow-lg hover:shadow-primary/50 transition-shadow text-xs h-8 px-2 sm:px-3">
-                                                    <Plus className="ltr:mr-1 rtl:ml-1" /> {t('إضافة', 'Add')}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                </motion.div>
+                                <MenuItemCard
+                                    key={item.id}
+                                    item={item}
+                                    onAddToCart={addToCart}
+                                    formatCurrency={formatCurrency}
+                                    ref={el => addToCartRefs.current[item.id] = el}
+                                />
                             ))}
                         </div>
                     </section>
