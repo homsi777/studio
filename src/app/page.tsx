@@ -10,7 +10,7 @@ const mockTables: Table[] = [
   { id: 1, status: 'new_order', order: { id: 'ORD-001', items: [{ id: 'item-1', name: 'مشويات مشكلة', price: 85000, quantity: 1, category: 'main' }, { id: 'item-2', name: 'حمص', price: 15000, quantity: 2, category: 'appetizer' }, { id: 'item-3', name: 'مياه معدنية', price: 5000, quantity: 4, category: 'drink' }], total: 135000 }, seatingDuration: '25 دقيقة' },
   { id: 2, status: 'confirmed', order: { id: 'ORD-002', items: [{ id: 'item-4', name: 'كبة مقلية', price: 25000, quantity: 1, category: 'appetizer' }, { id: 'item-5', name: 'فتوش', price: 20000, quantity: 1, category: 'appetizer' }], total: 45000 }, seatingDuration: '15 دقيقة', chefConfirmationTimestamp: Date.now() - (1000 * 60 * 3) },
   { id: 3, status: 'available', order: null },
-  { id: 4, status: 'occupied', order: null, seatingDuration: '5 دقائق' },
+  { id: 4, status: 'occupied', order: { id: 'ORD-000', items: [], total: 0 }, seatingDuration: '5 دقائق' },
   { id: 5, status: 'available', order: null },
   { id: 6, status: 'paying', order: { id: 'ORD-003', items: [{ id: 'item-6', name: 'شيش طاووق', price: 60000, quantity: 2, category: 'main' }], total: 120000 }, seatingDuration: 'ساعة و 10 دقائق' },
   { id: 7, status: 'confirmed', order: { id: 'ORD-004', items: [{ id: 'item-1', name: 'مشويات مشكلة', price: 85000, quantity: 2, category: 'main' }, { id: 'item-7', name: 'بيبسي', price: 8000, quantity: 4, category: 'drink' }], total: 202000 }, seatingDuration: '35 دقيقة', chefConfirmationTimestamp: Date.now() - (1000 * 60 * 12) },
