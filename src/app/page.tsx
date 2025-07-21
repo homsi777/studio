@@ -8,26 +8,12 @@ import { TableCard } from '@/components/dashboard/table-card';
 import { OrderDetailsSheet } from '@/components/dashboard/order-details-sheet';
 import { AuthGuard } from '@/components/auth-guard';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
-
-const mockOrders: { [key: number]: Table } = {
-  1: { id: 1, status: 'new_order', order: { id: 'ORD-001', items: [{ id: 'item-1', name: 'مشويات مشكلة', price: 85000, quantity: 1, category: 'main' }, { id: 'item-2', name: 'حمص', price: 15000, quantity: 2, category: 'appetizer' }, { id: 'item-3', name: 'مياه معدنية', price: 5000, quantity: 4, category: 'drink' }], total: 135000 }, seatingDuration: '25 دقيقة' },
-  2: { id: 2, status: 'confirmed', order: { id: 'ORD-002', items: [{ id: 'item-4', name: 'كبة مقلية', price: 25000, quantity: 1, category: 'appetizer' }, { id: 'item-5', name: 'فتوش', price: 20000, quantity: 1, category: 'appetizer' }], total: 45000 }, seatingDuration: '15 دقيقة', chefConfirmationTimestamp: Date.now() - (1000 * 60 * 3) },
-  4: { id: 4, status: 'occupied', order: { id: 'ORD-000', items: [], total: 0 }, seatingDuration: '5 دقائق' },
-  6: { id: 6, status: 'paying', order: { id: 'ORD-003', items: [{ id: 'item-6', name: 'شيش طاووق', price: 60000, quantity: 2, category: 'main' }], total: 120000 }, seatingDuration: 'ساعة و 10 دقائق' },
-  7: { id: 7, status: 'confirmed', order: { id: 'ORD-004', items: [{ id: 'item-1', name: 'مشويات مشكلة', price: 85000, quantity: 2, category: 'main' }, { id: 'item-7', name: 'بيبسي', price: 8000, quantity: 4, category: 'drink' }], total: 202000 }, seatingDuration: '35 دقيقة', chefConfirmationTimestamp: Date.now() - (1000 * 60 * 12) },
-  9: { id: 9, status: 'needs_attention', order: { id: 'ORD-005', items: [], total: 0 }, seatingDuration: '40 دقيقة' },
-  11: { id: 11, status: 'new_order', order: { id: 'ORD-006', items: [{ id: 'item-8', name: 'عصير برتقال طازج', price: 18000, quantity: 3, category: 'drink' }], total: 54000 }, seatingDuration: '7 دقائق' },
-};
-
+import { useOrderFlow } from '@/hooks/use-order-flow';
 
 function DashboardPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const { settings } = useRestaurantSettings();
-
-  const tables = Array.from({ length: settings.numberOfTables }, (_, i) => {
-    const tableId = i + 1;
-    return mockOrders[tableId] || { id: tableId, status: 'available', order: null };
-  });
+  const { tables, orders } = useOrderFlow();
 
   const handleSelectTable = (table: Table) => {
     if(table.status !== 'available') {
@@ -39,11 +25,35 @@ function DashboardPage() {
     setSelectedTable(null);
   };
 
+  const getTableData = (tableId: number): Table => {
+    const activeOrder = orders.find(o => o.tableId === tableId && o.status !== 'completed' && o.status !== 'cancelled');
+    if (activeOrder) {
+      let status: Table['status'] = 'occupied';
+      if (activeOrder.status === 'pending_chef_approval') status = 'new_order';
+      if (activeOrder.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
+      if (activeOrder.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
+      if (activeOrder.status === 'confirmed') status = 'confirmed';
+      if (activeOrder.status === 'paying') status = 'paying';
+      if (activeOrder.status === 'needs_attention') status = 'needs_attention';
+
+      return {
+        id: tableId,
+        status: status,
+        order: activeOrder,
+        seatingDuration: '10 min', // Mock data
+        chefConfirmationTimestamp: activeOrder.confirmationTimestamp
+      };
+    }
+    return { id: tableId, status: 'available', order: null };
+  };
+
+  const displayTables = Array.from({ length: settings.numberOfTables }, (_, i) => getTableData(i + 1));
+
   return (
     <main className="flex-1 p-4 sm:p-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
         <AnimatePresence>
-          {tables.map((table, i) => (
+          {displayTables.map((table, i) => (
             <motion.div
               key={table.id}
               initial={{ opacity: 0, y: 20 }}

@@ -1,7 +1,8 @@
 
-export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" | "needs_attention" | "paying";
 
-export type OrderStatus = 'new' | 'in_progress' | 'ready';
+export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" | "needs_attention" | "paying" | "pending_cashier_approval" | "awaiting_final_confirmation";
+
+export type OrderStatus = 'pending_chef_approval' | 'pending_cashier_approval' | 'pending_final_confirmation' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 
 export type MenuItemCategory = 'main' | 'appetizer' | 'drink' | 'dessert';
 
@@ -24,9 +25,9 @@ export type Order = {
   id: string;
   items: MenuItem[];
   total: number;
-  tableId?: number;
-  status?: OrderStatus;
-  timestamp?: number;
+  tableId: number;
+  status: OrderStatus;
+  timestamp: number;
   confirmationTimestamp?: number;
 };
 
@@ -56,6 +57,3 @@ export type User = {
     username: string;
     role: UserRole;
 };
-    
-
-    

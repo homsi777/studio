@@ -1,15 +1,12 @@
+
 "use client";
 import { useState, useEffect } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { type Order, type OrderStatus } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Clock, Hash, Check, ArrowLeft, GripVertical, ChefHat } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
 
 const formatDuration = (seconds: number): string => {
     if (seconds < 60) return `${Math.floor(seconds)} ثا`;
@@ -20,24 +17,16 @@ const formatDuration = (seconds: number): string => {
 
 interface ChefOrderCardProps {
   order: Order;
-  onStatusChange: (orderId: string, newStatus: OrderStatus) => void;
+  onApprove: (orderId: string) => void;
+  onReady: (orderId: string) => void;
 }
 
-export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: order.id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : 'auto',
-    opacity: isDragging ? 0.8 : 1,
-  };
-
+export function ChefOrderCard({ order, onApprove, onReady }: ChefOrderCardProps) {
   const [timeAgo, setTimeAgo] = useState('');
   const [confirmationTimer, setConfirmationTimer] = useState('');
 
   useEffect(() => {
     const updateTimestamps = () => {
-        // Time since order was placed
         if (order.timestamp) {
             const seconds = Math.floor((Date.now() - order.timestamp) / 1000);
             let interval = seconds / 31536000;
@@ -55,8 +44,7 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
             setTimeAgo('');
         }
 
-        // Timer since confirmation
-        if (order.status === 'in_progress' && order.confirmationTimestamp) {
+        if (order.status === 'confirmed' && order.confirmationTimestamp) {
             const secondsSinceConfirmation = Math.floor((Date.now() - order.confirmationTimestamp) / 1000);
             setConfirmationTimer(formatDuration(secondsSinceConfirmation));
         } else {
@@ -65,30 +53,24 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
     };
 
     updateTimestamps();
-    const timer = setInterval(updateTimestamps, 1000); // Update every second for the timer
+    const timer = setInterval(updateTimestamps, 1000);
     return () => clearInterval(timer);
 }, [order.timestamp, order.confirmationTimestamp, order.status]);
 
 
   const nextAction = {
-    new: { text: 'تأكيد وبدء التحضير', status: 'in_progress', icon: <Check/>, variant: 'default' },
-    in_progress: { text: 'الطلب جاهز للتسليم', status: 'ready', icon: <ArrowLeft/>, variant: 'secondary' },
-    ready: null,
+    pending_chef_approval: { text: 'موافقة على الطلب', handler: () => onApprove(order.id), icon: <Check/>, variant: 'default' },
+    confirmed: { text: 'الطلب جاهز للتسليم', handler: () => onReady(order.id), icon: <ArrowLeft/>, variant: 'secondary' },
   };
-
-  const handleNextAction = () => {
-    const action = nextAction[order.status!];
-    if (action) {
-      onStatusChange(order.id, action.status as OrderStatus);
-    }
-  }
+  
+  const action = order.status ? nextAction[order.status as keyof typeof nextAction] : null;
 
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="touch-none select-none">
+    <div className="touch-none select-none">
       <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow duration-200">
         <CardHeader className="p-4 flex flex-row items-center justify-between">
-          <div {...listeners} className="cursor-grab p-2 -ml-2 text-muted-foreground hover:text-foreground">
+          <div className="cursor-grab p-2 -ml-2 text-muted-foreground hover:text-foreground">
              <GripVertical className="h-5 w-5" />
           </div>
           <div>
@@ -113,7 +95,7 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
                     </div>
                 ))}
             </div>
-            {order.status === 'in_progress' && confirmationTimer && (
+            {order.status === 'confirmed' && confirmationTimer && (
                 <>
                 <Separator className="my-3"/>
                 <div className="flex items-center justify-center gap-2 text-sm font-medium text-yellow-600 animate-pulse">
@@ -123,11 +105,11 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
                 </>
             )}
         </CardContent>
-        {nextAction[order.status!] && (
+        {action && (
              <CardFooter className="p-2 bg-muted/40">
-                <Button onClick={handleNextAction} variant={nextAction[order.status!]?.variant as any} size="sm" className="w-full">
-                    {nextAction[order.status!]?.icon}
-                    {nextAction[order.status!]?.text}
+                <Button onClick={action.handler} variant={action.variant as any} size="sm" className="w-full">
+                    {action.icon}
+                    {action.text}
                 </Button>
             </CardFooter>
         )}

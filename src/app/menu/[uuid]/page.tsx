@@ -3,16 +3,17 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import type { MenuItem } from '@/types';
+import type { MenuItem, Order } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Flame } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Flame, Clock, Loader2, PartyPopper, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
+import { useOrderFlow } from '@/hooks/use-order-flow';
 
 const menuItems: MenuItem[] = [
     { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'كباب، شيش طاووق، لحم بعجين.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off', image: "https://placehold.co/600x400.png", image_hint: "mixed grill" },
@@ -30,8 +31,6 @@ const uuidToTableMap: Record<string, string> = {
     "a1b2c3d4-e5f6-7890-1234-567890abcdef": "1"
 };
 
-const USD_TO_SYP_RATE = 15000;
-
 export default function MenuPage() {
     const params = useParams();
     const tableUuid = params.uuid as string;
@@ -39,12 +38,21 @@ export default function MenuPage() {
 
     const { language, dir } = useLanguage();
     const { settings } = useRestaurantSettings();
+    const { submitOrder, confirmFinalOrder, orders } = useOrderFlow();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [flyingItems, setFlyingItems] = useState<any[]>([]);
-    const [orderState, setOrderState] = useState<'idle' | 'sending' | 'confirmed'>('idle');
+    const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+
     const cartRef = useRef<HTMLButtonElement>(null);
     const addToCartRefs = useRef<{[key: string]: HTMLButtonElement | null}>({});
+
+    // Find the current active order for this table
+    useEffect(() => {
+        const activeOrder = orders.find(o => o.tableId === parseInt(displayTableNumber) && o.status !== 'completed' && o.status !== 'cancelled');
+        setCurrentOrder(activeOrder || null);
+    }, [orders, displayTableNumber]);
 
     const addToCart = (item: MenuItem, itemId: string) => {
         const fromRect = addToCartRefs.current[itemId]?.getBoundingClientRect();
@@ -92,18 +100,15 @@ export default function MenuPage() {
     };
 
     const handleSendOrder = () => {
-        setOrderState('sending');
-        console.log('Sending order for UUID:', { tableUuid, cart, total });
-        setTimeout(() => {
-            setOrderState('confirmed');
-        }, 2000);
+        const newOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
+            tableId: parseInt(displayTableNumber),
+            items: cart,
+            total: total,
+        }
+        submitOrder(newOrder);
+        setCart([]); // Clear cart after submission
     };
     
-    const startNewOrder = () => {
-        setCart([]);
-        setOrderState('idle');
-    }
-
     const sections = useMemo(() => [
         { title: t('المقبلات', 'Appetizers'), items: menuItems.filter(i => i.category === 'appetizer') },
         { title: t('الأطباق الرئيسية', 'Main Courses'), items: menuItems.filter(i => i.category === 'main') },
@@ -111,20 +116,54 @@ export default function MenuPage() {
         { title: t('الحلويات', 'Desserts'), items: menuItems.filter(i => i.category === 'dessert') }
     ], [language, t]);
     
-    if (orderState === 'confirmed') {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
-                 <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
-                    <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
-                    <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!')}</h1>
-                    <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                        {t('الشيف قد استلم طلبكم وسيبدأ بتحضيره قريباً. شكراً لاختياركم مطعم العالمية ونتمنى لكم وقتاً ممتعاً.', 'The chef has received your order and will start preparing it soon. Thank you for choosing Al-Alamiyah Restaurant, we wish you a pleasant time.')}
-                    </p>
-                    <Button onClick={startNewOrder} size="lg">{t('بدء طلب جديد', 'Start a New Order')}</Button>
-                 </motion.div>
-            </div>
-        );
+    if (currentOrder) {
+        if (currentOrder.status === 'pending_chef_approval' || currentOrder.status === 'pending_cashier_approval') {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
+                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
+                        <Loader2 className="w-24 h-24 text-primary mx-auto mb-6 animate-spin" />
+                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('بانتظار موافقة المطعم...', 'Awaiting Restaurant Approval...')}</h1>
+                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                            {t('طلبك قيد المراجعة من قبل الشيف والمحاسب. سيتم إعلامك فوراً عند الموافقة للمتابعة.', 'Your order is being reviewed by the chef and cashier. You will be notified immediately upon approval to proceed.')}
+                        </p>
+                     </motion.div>
+                </div>
+            );
+        }
+
+        if (currentOrder.status === 'pending_final_confirmation') {
+             return (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
+                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
+                        <PartyPopper className="w-24 h-24 text-green-500 mx-auto mb-6" />
+                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تمت الموافقة على طلبك!', 'Your Order is Approved!')}</h1>
+                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                            {t('الشيف والمحاسب جاهزان. هل تود تأكيد الطلب نهائياً وإرساله إلى المطبخ؟', 'The chef and cashier are ready. Would you like to finalize the order and send it to the kitchen?')}
+                        </p>
+                        <Button onClick={() => confirmFinalOrder(currentOrder.id)} size="lg" className="h-14 text-lg">
+                            <Check className="w-6 h-6 ltr:mr-2 rtl:ml-2"/>
+                            {t('تأكيد الطلب النهائي', 'Confirm Final Order')}
+                        </Button>
+                     </motion.div>
+                </div>
+            );
+        }
+
+        if (currentOrder.status === 'confirmed') {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
+                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
+                        <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
+                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!')}</h1>
+                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                            {t('طلبك الآن قيد التحضير. نتمنى لكم وقتاً ممتعاً!', 'Your order is now being prepared. We wish you a pleasant time!')}
+                        </p>
+                     </motion.div>
+                </div>
+            );
+        }
     }
+
 
     return (
         <div className="bg-background min-h-screen font-body select-none" dir={dir}>
@@ -234,7 +273,7 @@ export default function MenuPage() {
                                     transition={{ duration: 0.3 }}
                                     className="flex items-center gap-4"
                                 >
-                                     <Image src={item.image!} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item.image_hint}/>
+                                     {item.image && <Image src={item.image} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item.image_hint}/>}
                                     <div className="flex-1">
                                         <p className="font-bold">{language === 'ar' ? item.name : (item.name_en || item.name)}</p>
                                         <p className="text-sm text-primary font-semibold">{formatCurrency(item.price)}</p>
@@ -255,8 +294,8 @@ export default function MenuPage() {
                                     <span>{t('الإجمالي:', 'Total:')}</span>
                                     <span>{formatCurrency(total)}</span>
                                 </div>
-                                <Button size="lg" className="w-full font-bold text-lg h-14" onClick={handleSendOrder} disabled={orderState === 'sending'}>
-                                    {orderState === 'sending' ? t('جارِ الإرسال...', 'Sending...') : t('تأكيد وإرسال الطلب', 'Confirm & Send Order')}
+                                <Button size="lg" className="w-full font-bold text-lg h-14" onClick={handleSendOrder}>
+                                    {t('إرسال للموافقة', 'Send for Approval')}
                                 </Button>
                             </div>
                         </SheetFooter>
@@ -268,6 +307,3 @@ export default function MenuPage() {
         </div>
     );
 }
-
-
-    

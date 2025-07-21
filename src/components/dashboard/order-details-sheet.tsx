@@ -14,9 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Hash, UtensilsCrossed, Printer, Coins, ChefHat, Building, Phone, Mail } from "lucide-react";
+import { Clock, Hash, UtensilsCrossed, Printer, Coins, ChefHat, Building, Phone, Mail, Check } from "lucide-react";
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 import { useLanguage } from "@/hooks/use-language";
+import { useOrderFlow } from "@/hooks/use-order-flow";
 
 interface OrderDetailsSheetProps {
   table: Table | null;
@@ -26,7 +27,9 @@ interface OrderDetailsSheetProps {
 
 const statusMap: Record<string, { ar: string, en: string, className: string }> = {
     new_order: { ar: "طلب جديد", en: "New Order", className: "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30" },
-    confirmed: { ar: "تم التأكيد", en: "Confirmed", className: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30" },
+    pending_cashier_approval: { ar: "بانتظار موافقة المحاسب", en: "Pending Cashier", className: "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/30" },
+    awaiting_final_confirmation: { ar: "بانتظار تأكيد الزبون", en: "Awaiting Customer", className: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30" },
+    confirmed: { ar: "مؤكد", en: "Confirmed", className: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30" },
     paying: { ar: "في مرحلة الدفع", en: "Paying", className: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30" },
     occupied: { ar: "محجوزة", en: "Occupied", className: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30" },
     needs_attention: { ar: "تحتاج مساعدة", en: "Needs Attention", className: "bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30" },
@@ -56,6 +59,7 @@ const formatTimeAgo = (timestamp: number | undefined, lang: 'ar' | 'en'): string
 export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsSheetProps) {
   const { settings } = useRestaurantSettings();
   const { language } = useLanguage();
+  const { approveOrderByCashier } = useOrderFlow();
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
   const [currency, setCurrency] = useState<'SYP' | 'USD'>('SYP');
   const [chefConfirmationTimeAgo, setChefConfirmationTimeAgo] = useState('');
@@ -98,14 +102,11 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
     const printArea = document.querySelector(`#invoice-table-${table.id}`);
     if (!printArea) return;
 
-    // We get the outerHTML of the printable area
     const printContent = printArea.innerHTML;
     
-    // We create a new window for printing
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`<html><head><title>${t('فاتورة', 'Invoice')}</title>`);
-      // We need to link the same stylesheet to preserve styles
       const stylesheets = Array.from(document.styleSheets)
         .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
         .join('');
@@ -116,10 +117,9 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
       printWindow.document.write('</body></html>');
       printWindow.document.close();
 
-      setTimeout(() => { // Timeout required for styles to load
+      setTimeout(() => {
           printWindow.focus();
           printWindow.print();
-          // printWindow.close();
       }, 500);
     }
   };
@@ -133,6 +133,13 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
     const symbol = currency === 'SYP' ? t('ل.س', 'SYP') : '$';
     const formattedAmount = currency === 'SYP' ? amount.toLocaleString('ar-SY') : amount.toFixed(2);
     return `${formattedAmount} ${symbol}`;
+  }
+
+  const handleCashierApproval = () => {
+    if (table?.order?.id) {
+        approveOrderByCashier(table.order.id);
+        onOpenChange(false); // Close sheet after approval
+    }
   }
 
   return (
@@ -219,21 +226,26 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
           </div>
         </div>
         <SheetFooter className="mt-auto no-print">
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
-            <Button variant="secondary" onClick={toggleCurrency} className="flex-1">
-              <Coins className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
-              <span>{currency === 'SYP' ? t('عرض بالدولار', 'Show in USD') : t('عرض بالليرة', 'Show in SYP')}</span>
-            </Button>
-            <Button variant="accent" className="flex-1" onClick={handlePrint}>
-              <Printer className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
-              <span>{t('طباعة الفاتورة', 'Print Invoice')}</span>
-            </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>{t('إغلاق', 'Close')}</Button>
-          </div>
+            {table.status === 'pending_cashier_approval' ? (
+                <Button onClick={handleCashierApproval} size="lg" className="w-full">
+                    <Check className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
+                    {t('موافقة المحاسب على الطلب', 'Approve Order (Cashier)')}
+                </Button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <Button variant="secondary" onClick={toggleCurrency} className="flex-1">
+                  <Coins className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                  <span>{currency === 'SYP' ? t('عرض بالدولار', 'Show in USD') : t('عرض بالليرة', 'Show in SYP')}</span>
+                </Button>
+                <Button variant="accent" className="flex-1" onClick={handlePrint}>
+                  <Printer className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                  <span>{t('طباعة الفاتورة', 'Print Invoice')}</span>
+                </Button>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>{t('إغلاق', 'Close')}</Button>
+              </div>
+            )}
         </SheetFooter>
       </SheetContent>
     </Sheet>
   );
 }
-
-    

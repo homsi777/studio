@@ -5,7 +5,7 @@ import React from 'react';
 import { type Table } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, CircleHelp } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, CircleHelp, Hourglass } from 'lucide-react';
 import { Badge } from '../ui/badge';
 
 interface TableCardProps {
@@ -13,22 +13,44 @@ interface TableCardProps {
   onSelect: (table: Table) => void;
 }
 
-const statusStyles: Record<string, { bg: string, border: string, iconColor: string, icon: React.ReactNode, text: string, badge: string, shadow: string }> = {
+const statusStyles: Record<string, { bg: string, border: string, iconColor: string, icon: React.ReactNode, text_ar: string, text_en: string, badge: string, shadow: string }> = {
   new_order: {
     bg: 'bg-card',
     border: 'border-red-500/50',
     iconColor: 'text-red-500',
     icon: <AlertCircle className="h-5 w-5" />,
-    text: 'طلب جديد',
+    text_ar: 'طلب جديد',
+    text_en: 'New Order',
     badge: 'border-transparent bg-red-500/20 text-red-500',
     shadow: 'shadow-red-900/10'
+  },
+   pending_cashier_approval: {
+    bg: 'bg-card animate-pulse',
+    border: 'border-cyan-500/50',
+    iconColor: 'text-cyan-500',
+    icon: <Hourglass className="h-5 w-5" />,
+    text_ar: 'بانتظار المحاسب',
+    text_en: 'Pending Cashier',
+    badge: 'border-transparent bg-cyan-500/20 text-cyan-500',
+    shadow: 'shadow-cyan-900/10'
+  },
+  awaiting_final_confirmation: {
+    bg: 'bg-card',
+    border: 'border-purple-500/50',
+    iconColor: 'text-purple-500',
+    icon: <CircleHelp className="h-5 w-5" />,
+    text_ar: 'بانتظار الزبون',
+    text_en: 'Awaiting Customer',
+    badge: 'border-transparent bg-purple-500/20 text-purple-500',
+    shadow: 'shadow-purple-900/10'
   },
   confirmed: {
     bg: 'bg-card',
     border: 'border-green-500/50',
     iconColor: 'text-green-500',
     icon: <CheckCircle className="h-5 w-5" />,
-    text: 'تم التأكيد',
+    text_ar: 'مؤكد',
+    text_en: 'Confirmed',
     badge: 'border-transparent bg-green-500/20 text-green-500',
     shadow: 'shadow-green-900/10'
   },
@@ -37,7 +59,8 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     border: 'border-blue-500/50',
     iconColor: 'text-blue-500',
     icon: <CreditCard className="h-5 w-5" />,
-    text: 'دفع',
+    text_ar: 'دفع',
+    text_en: 'Paying',
     badge: 'border-transparent bg-blue-500/20 text-blue-500',
     shadow: 'shadow-blue-900/10'
   },
@@ -46,7 +69,8 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     border: 'border-yellow-500/50',
     iconColor: 'text-yellow-500',
     icon: <Utensils className="h-5 w-5" />,
-    text: 'مشغولة',
+    text_ar: 'مشغولة',
+    text_en: 'Occupied',
     badge: 'border-transparent bg-yellow-500/20 text-yellow-500',
     shadow: 'shadow-yellow-900/10'
   },
@@ -55,7 +79,8 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     border: 'border-orange-500/50',
     iconColor: 'text-orange-500',
     icon: <CircleHelp className="h-5 w-5" />,
-    text: 'تحتاج مساعدة',
+    text_ar: 'تحتاج مساعدة',
+    text_en: 'Needs Attention',
     badge: 'border-transparent bg-orange-500/20 text-orange-500',
     shadow: 'shadow-orange-900/10'
   },
@@ -64,7 +89,8 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     border: 'border-dashed border-muted-foreground/20',
     iconColor: '',
     icon: null,
-    text: 'متاحة',
+    text_ar: 'متاحة',
+    text_en: 'Available',
     badge: 'border-transparent bg-muted/40 text-muted-foreground',
     shadow: 'shadow-inner'
   },
@@ -92,7 +118,7 @@ export function TableCard({ table, onSelect }: TableCardProps) {
         {styles.icon && React.cloneElement(styles.icon as React.ReactElement, { className: cn((styles.icon as React.ReactElement).props.className, styles.iconColor) })}
       </CardHeader>
       <CardContent className="p-4 pt-0 text-center flex-1 flex flex-col justify-center items-center">
-         <Badge variant="outline" className={cn('text-sm font-semibold', styles.badge)}>{styles.text}</Badge>
+         <Badge variant="outline" className={cn('text-sm font-semibold', styles.badge)}>{styles.text_ar}</Badge>
       </CardContent>
       {table.seatingDuration && (
         <CardFooter className="p-2 text-xs text-muted-foreground flex items-center justify-center gap-1 bg-black/10 dark:bg-black/20 rounded-b-xl">

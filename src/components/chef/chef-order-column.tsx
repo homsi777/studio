@@ -1,8 +1,7 @@
+
 "use client";
 
 import React from 'react';
-import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { OrderStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -15,27 +14,24 @@ interface ChefOrderColumnProps {
 }
 
 export function ChefOrderColumn({ id, title, count, children }: ChefOrderColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id });
 
-  const columnStyles: Record<OrderStatus, string> = {
-    new: 'border-red-500/50',
-    in_progress: 'border-yellow-500/50',
+  const columnStyles: Partial<Record<OrderStatus, string>> = {
+    pending_chef_approval: 'border-red-500/50',
+    confirmed: 'border-yellow-500/50',
     ready: 'border-green-500/50',
   };
 
-  const titleStyles: Record<OrderStatus, string> = {
-    new: 'text-red-600 dark:text-red-400',
-    in_progress: 'text-yellow-600 dark:text-yellow-400',
+  const titleStyles: Partial<Record<OrderStatus, string>> = {
+    pending_chef_approval: 'text-red-600 dark:text-red-400',
+    confirmed: 'text-yellow-600 dark:text-yellow-400',
     ready: 'text-green-600 dark:text-green-400',
   }
 
   return (
     <div
-      ref={setNodeRef}
       className={cn(
         "bg-card p-4 rounded-lg border-2 border-dashed flex flex-col h-full",
-        columnStyles[id],
-        isOver ? 'bg-primary/5' : 'bg-card'
+        columnStyles[id]
       )}
     >
       <div className="flex justify-between items-center mb-4">
