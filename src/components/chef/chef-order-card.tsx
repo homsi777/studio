@@ -85,8 +85,8 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
 
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="touch-none">
-      <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow duration-200 select-none">
+    <div ref={setNodeRef} style={style} {...attributes} className="touch-none select-none">
+      <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow duration-200">
         <CardHeader className="p-4 flex flex-row items-center justify-between">
           <div {...listeners} className="cursor-grab p-2 -ml-2 text-muted-foreground hover:text-foreground">
              <GripVertical className="h-5 w-5" />

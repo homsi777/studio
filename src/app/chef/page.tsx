@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { type Order, type OrderStatus } from '@/types';
 import { ChefOrderCard } from '@/components/chef/chef-order-card';
 import { ChefOrderColumn } from '@/components/chef/chef-order-column';
+import { ChefNewOrdersStack } from '@/components/chef/chef-new-orders-stack';
 import { Button } from '@/components/ui/button';
 import { BellRing, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -17,11 +18,13 @@ const initialOrders: Order[] = [
   { id: 'ORD-003', tableId: 2, items: [{ id: 'item-4', name: 'كبة مقلية', quantity: 1, price: 0, category: 'appetizer', image: '' }], total: 0, status: 'in_progress', timestamp: Date.now() - 60000 * 8, confirmationTimestamp: Date.now() - 60000 * 3 },
   { id: 'ORD-004', tableId: 6, items: [{ id: 'item-1', name: 'مشويات مشكلة', quantity: 2, price: 0, category: 'main', image: '' }, { id: 'item-7', name: 'بيبسي', quantity: 4, price: 0, category: 'drink', image: '' }], total: 0, status: 'in_progress', timestamp: Date.now() - 60000 * 12, confirmationTimestamp: Date.now() - 60000 * 7 },
   { id: 'ORD-005', tableId: 11, items: [{ id: 'item-8', name: 'عصير برتقال طازج', quantity: 3, price: 0, category: 'drink', image: '' }], total: 0, status: 'ready', timestamp: Date.now() - 60000 * 15, confirmationTimestamp: Date.now() - 60000 * 9 },
+  { id: 'ORD-006', tableId: 4, items: [{ id: 'item-9', name: 'كنافة بالجبن', name: 'Cheese Kunafa', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', category: 'dessert', quantity: 1, offer: '' }], total: 35000, status: 'new', timestamp: Date.now() - 60000 * 1 },
 ];
 
 
 export default function ChefPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [isNewOrdersExpanded, setNewOrdersExpanded] = useState(false);
   const { toast } = useToast();
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -74,6 +77,7 @@ export default function ChefPage() {
       ),
       description: `تم استلام طلب جديد من الطاولة رقم ${newOrder.tableId}.`,
     })
+    setNewOrdersExpanded(false);
   };
 
   const columns: { id: OrderStatus; title: string; }[] = [
@@ -83,6 +87,7 @@ export default function ChefPage() {
   ];
   
   const orderIds = useMemo(() => orders.map(o => o.id), [orders]);
+  const newOrders = useMemo(() => orders.filter(o => o.status === 'new').sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)), [orders]);
 
   return (
     <main className="flex-1 flex flex-col p-4 sm:p-6 bg-background/30" dir="rtl">
@@ -99,13 +104,31 @@ export default function ChefPage() {
                   {columns.map(column => (
                       <ChefOrderColumn key={column.id} id={column.id} title={column.title} count={orders.filter(o => o.status === column.id).length}>
                           <AnimatePresence>
-                              {orders.filter(order => order.status === column.id)
-                                  .sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
-                                  .map(order => (
-                                      <motion.div key={order.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}>
-                                          <ChefOrderCard order={order} onStatusChange={updateOrderStatus} />
-                                      </motion.div>
-                                  ))}
+                              {column.id === 'new' ? (
+                                  <>
+                                      {!isNewOrdersExpanded && newOrders.length > 0 && (
+                                           <ChefNewOrdersStack orders={newOrders} onClick={() => setNewOrdersExpanded(true)} />
+                                      )}
+                                      {isNewOrdersExpanded && newOrders.map(order => (
+                                          <motion.div key={order.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}>
+                                              <ChefOrderCard order={order} onStatusChange={updateOrderStatus} />
+                                          </motion.div>
+                                      ))}
+                                      {newOrders.length === 0 && (
+                                         <div className="text-center text-muted-foreground py-10">
+                                            <p>لا توجد طلبات جديدة.</p>
+                                        </div>
+                                      )}
+                                  </>
+                              ) : (
+                                  orders.filter(order => order.status === column.id)
+                                      .sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+                                      .map(order => (
+                                          <motion.div key={order.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}>
+                                              <ChefOrderCard order={order} onStatusChange={updateOrderStatus} />
+                                          </motion.div>
+                                      ))
+                              )}
                           </AnimatePresence>
                       </ChefOrderColumn>
                   ))}
