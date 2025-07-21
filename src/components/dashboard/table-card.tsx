@@ -77,11 +77,11 @@ export function TableCard({ table, onSelect }: TableCardProps) {
     <Card
       onClick={() => onSelect(table)}
       className={cn(
-        'flex flex-col justify-between h-40 transition-all duration-300 ease-in-out transform hover:-translate-y-1',
+        'flex flex-col justify-between h-40 transform hover:-translate-y-1',
         styles.bg,
         styles.border,
         styles.shadow,
-        isClickable ? 'cursor-pointer hover:shadow-lg hover:border-primary/80' : 'cursor-default'
+        isClickable ? 'cursor-pointer hover:shadow-xl hover:border-primary/80' : 'cursor-default'
       )}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
@@ -94,7 +94,7 @@ export function TableCard({ table, onSelect }: TableCardProps) {
          <Badge variant="outline" className={cn('text-sm font-semibold', styles.badge)}>{styles.text}</Badge>
       </CardContent>
       {table.seatingDuration && (
-        <CardFooter className="p-2 text-xs text-muted-foreground flex items-center justify-center gap-1 bg-black/10 dark:bg-black/20">
+        <CardFooter className="p-2 text-xs text-muted-foreground flex items-center justify-center gap-1 bg-black/10 dark:bg-black/20 rounded-b-xl">
           <Clock className="h-3 w-3" />
           <span>{table.seatingDuration}</span>
         </CardFooter>

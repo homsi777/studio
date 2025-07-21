@@ -73,7 +73,7 @@ export default function ExpensesPage() {
         <main className="flex-1 p-4 sm:p-6" dir={dir}>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="font-headline text-3xl font-bold text-foreground">{t('إدارة المصاريف', 'Expense Management')}</h1>
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => setDialogOpen(true)} size="lg" className="shadow-md">
                     <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                     {t('تسجيل مصروف جديد', 'Record New Expense')}
                 </Button>
@@ -116,7 +116,7 @@ export default function ExpensesPage() {
                                 <TableRow key={expense.id}>
                                     <TableCell className="font-medium">{language === 'ar' ? expense.description : expense.description_en}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={categoryMap[expense.category].className}>{categoryMap[expense.category][language]}</Badge>
+                                        <Badge variant="outline" className={cn("rounded-md", categoryMap[expense.category].className)}>{categoryMap[expense.category][language]}</Badge>
                                     </TableCell>
                                     <TableCell>{new Date(expense.date).toLocaleDateString(language === 'ar' ? 'ar-SY' : 'en-CA')}</TableCell>
                                     <TableCell className="text-right">{expense.amount.toLocaleString()} {t('ل.س', 'SYP')}</TableCell>
