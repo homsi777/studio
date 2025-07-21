@@ -15,6 +15,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from '@/components/ui/sidebar';
 import { IconChart, IconChefHat, IconCoin, IconLogo, IconMenu, IconPOS, IconSettings, IconTable, IconUsers } from '@/components/icons';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -82,51 +84,59 @@ export function AppContent({
           </div>
           </SidebarHeader>
           <SidebarContent>
-          <SidebarMenu>
-              <SidebarMenuItem>
-              <SidebarMenuButton href="/" tooltip={t('لوحة التحكم', 'Dashboard')} isActive={pathname === '/'}>
-                  <IconTable />
-                  <span>{t('لوحة التحكم', 'Dashboard')}</span>
-              </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-              <SidebarMenuButton href="/chef" tooltip={t('واجهة الشيف', 'Chef Interface')} isActive={pathname === '/chef'}>
-                  <IconChefHat />
-                  <span>{t('واجهة الشيف', 'Chef Interface')}</span>
-              </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton href="/menu/1" tooltip={t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')} target="_blank">
-                  <IconUsers />
-                  <span>{t('عرض قائمة الزبون', 'View Customer Menu')}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-              <SidebarMenuButton href="/pos" tooltip={t('نقطة البيع السريعة', 'Quick POS')} isActive={pathname === '/pos'}>
-                  <IconPOS />
-                  <span>{t('نقطة البيع السريعة', 'Quick POS')}</span>
-              </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarSeparator />
-              <SidebarMenuItem>
-              <SidebarMenuButton href="/menu-management" tooltip={t('إدارة القائمة', 'Menu Management')} isActive={pathname === '/menu-management'}>
-                  <IconMenu />
-                  <span>{t('إدارة القائمة', 'Menu Management')}</span>
-              </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-              <SidebarMenuButton href="/reports" tooltip={t('التقارير', 'Reports')} isActive={pathname === '/reports'}>
-                  <IconChart />
-                  <span>{t('التقارير', 'Reports')}</span>
-              </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-              <SidebarMenuButton href="/expenses" tooltip={t('المصاريف', 'Expenses')} isActive={pathname === '/expenses'}>
-                  <IconCoin />
-                  <span>{t('المصاريف', 'Expenses')}</span>
-              </SidebarMenuButton>
-              </SidebarMenuItem>
-          </SidebarMenu>
+            <SidebarGroup>
+              <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton href="/" tooltip={t('لوحة التحكم', 'Dashboard')} isActive={pathname === '/'}>
+                        <IconTable />
+                        <span>{t('لوحة التحكم', 'Dashboard')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton href="/chef" tooltip={t('واجهة الشيف', 'Chef Interface')} isActive={pathname === '/chef'}>
+                        <IconChefHat />
+                        <span>{t('واجهة الشيف', 'Chef Interface')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton href="/pos" tooltip={t('نقطة البيع السريعة', 'Quick POS')} isActive={pathname === '/pos'}>
+                        <IconPOS />
+                        <span>{t('نقطة البيع السريعة', 'Quick POS')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton href="/menu/1" tooltip={t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')} target="_blank">
+                      <IconUsers />
+                      <span>{t('عرض قائمة الزبون', 'View Customer Menu')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+            
+            <SidebarGroup>
+              <SidebarGroupLabel>{t('إدارة المطعم', 'Management')}</SidebarGroupLabel>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton href="/menu-management" tooltip={t('إدارة القائمة', 'Menu Management')} isActive={pathname === '/menu-management'}>
+                      <IconMenu />
+                      <span>{t('إدارة القائمة', 'Menu Management')}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton href="/reports" tooltip={t('التقارير', 'Reports')} isActive={pathname === '/reports'}>
+                      <IconChart />
+                      <span>{t('التقارير', 'Reports')}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton href="/expenses" tooltip={t('المصاريف', 'Expenses')} isActive={pathname === '/expenses'}>
+                      <IconCoin />
+                      <span>{t('المصاريف', 'Expenses')}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+
           </SidebarContent>
           <SidebarFooter>
           <SidebarMenu>
