@@ -1,23 +1,26 @@
+
 "use client";
 import { useState, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { type MenuItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { MinusCircle, PlusCircle, ShoppingCart, Trash2, CheckCircle } from 'lucide-react';
+import { MinusCircle, PlusCircle, ShoppingCart, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/use-language';
+import { DigitalClock } from '@/components/digital-clock';
 
 const menuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off' },
-    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', quantity: 0 },
-    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', quantity: 0 },
-    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', quantity: 0 },
-    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', quantity: 0 },
-    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', quantity: 0, offer: 'عرض خاص', offer_en: 'Special Offer' },
-    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', category: 'dessert', quantity: 0 },
+    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'كباب، شيش طاووق، لحم بعجين.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off', image: "https://placehold.co/600x400.png", image_hint: "mixed grill" },
+    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع محشوة باللحم والجوز.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "kibbeh" },
+    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'خضروات طازجة وخبز محمص.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "fattoush salad" },
+    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية.', category: 'main', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "shish tawook" },
+    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "soda can" },
+    { id: 'item-8', name: 'عصير برتقال', name_en: 'Orange Juice', price: 18000, description: 'طبيعي معصور عند الطلب.', category: 'drink', quantity: 0, offer: 'عرض خاص', offer_en: 'Special Offer', image: "https://placehold.co/600x400.png", image_hint: "orange juice" },
+    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة كنافة ناعمة مع جبنة.', category: 'dessert', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "kunafa dessert" },
 ];
 
 const USD_TO_SYP_RATE = 15000;
@@ -28,6 +31,7 @@ interface FlyingItem {
     y: number;
     width: number;
     height: number;
+    image?: string;
 }
 
 export default function MenuPage({ params }: { params: { tableId: string } }) {
@@ -46,7 +50,14 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
 
         if (itemCard && cartRef.current) {
             const rect = itemCard.getBoundingClientRect();
-            setFlyingItem({ id: item.id + Date.now(), x: rect.left, y: rect.top, width: rect.width, height: rect.height });
+            setFlyingItem({
+                id: item.id + Date.now(),
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+                image: item.image,
+            });
         }
 
         setTimeout(() => {
@@ -59,7 +70,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                 }
                 return [...prevCart, { ...item, quantity: 1 }];
             });
-        }, 100); // Small delay to let the flying animation start
+        }, 100);
     };
 
     const updateQuantity = (itemId: string, newQuantity: number) => {
@@ -89,10 +100,12 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
         }, 2000);
     };
 
-    const appetizers = menuItems.filter(item => item.category === 'appetizer');
-    const mainCourses = menuItems.filter(item => item.category === 'main');
-    const drinks = menuItems.filter(item => item.category === 'drink');
-    const desserts = menuItems.filter(item => item.category === 'dessert');
+    const sections = useMemo(() => [
+        { title: t('المقبلات', 'Appetizers'), items: menuItems.filter(i => i.category === 'appetizer') },
+        { title: t('الأطباق الرئيسية', 'Main Courses'), items: menuItems.filter(i => i.category === 'main') },
+        { title: t('المشروبات', 'Drinks'), items: menuItems.filter(i => i.category === 'drink') },
+        { title: t('الحلويات', 'Desserts'), items: menuItems.filter(i => i.category === 'dessert') }
+    ], [language]);
     
     if (orderState === 'confirmed') {
         return (
@@ -113,58 +126,66 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
             <AnimatePresence>
                 {flyingItem && cartRef.current && (
                     <motion.div
-                        className="fixed z-50 rounded-lg bg-card border border-primary/50"
+                        className="fixed z-50 rounded-lg bg-card/80 backdrop-blur-sm border border-primary/50 overflow-hidden shadow-xl"
                         initial={{ x: flyingItem.x, y: flyingItem.y, width: flyingItem.width, height: flyingItem.height, opacity: 1 }}
                         animate={{
                             x: cartRef.current.getBoundingClientRect().left + (cartRef.current.getBoundingClientRect().width / 2),
                             y: cartRef.current.getBoundingClientRect().top + (cartRef.current.getBoundingClientRect().height / 2),
-                            width: 0,
-                            height: 0,
+                            width: 50,
+                            height: 50,
                             opacity: 0,
                         }}
                         transition={{ duration: 0.6, ease: "easeInOut" }}
                         onAnimationComplete={() => setFlyingItem(null)}
-                    />
+                    >
+                        {flyingItem.image && <Image src={flyingItem.image} alt="" layout="fill" objectFit="cover" />}
+                    </motion.div>
                 )}
             </AnimatePresence>
             <header className="p-4 border-b sticky top-0 bg-background/80 backdrop-blur-sm z-10">
-                <div className="container mx-auto flex justify-between items-center">
+                <div className="container mx-auto flex justify-between items-center gap-4">
                     <div className="text-center">
                         <h1 className="font-headline text-2xl font-bold">{t('قائمة طعام العالمية', 'Al-Alamiyah Menu')}</h1>
                         <p className="text-sm text-muted-foreground">{t('الطاولة رقم', 'Table No.')} {params.tableId}</p>
                     </div>
-                     <Button variant="outline" size="sm" onClick={() => setCurrency(c => c === 'SYP' ? 'USD' : 'SYP')}>
-                        {currency === 'SYP' ? t('عرض بالـ USD', 'Show in USD') : t('عرض بالـ SYP', 'Show in SYP')}
-                    </Button>
+                    <div className="flex items-center gap-4">
+                        <DigitalClock />
+                        <Button variant="outline" size="sm" onClick={() => setCurrency(c => c === 'SYP' ? 'USD' : 'SYP')}>
+                            {currency === 'SYP' ? 'USD' : 'SYP'}
+                        </Button>
+                    </div>
                 </div>
             </header>
 
             <main className="container mx-auto p-4 pb-32">
-                 {[{ title: t('المقبلات', 'Appetizers'), items: appetizers }, { title: t('الأطباق الرئيسية', 'Main Courses'), items: mainCourses }, { title: t('المشروبات', 'Drinks'), items: drinks }, { title: t('الحلويات', 'Desserts'), items: desserts }].map(section => (
+                 {sections.map(section => (
                     section.items.length > 0 &&
                     <section key={section.title} className="mb-12">
                         <h2 className="font-headline text-3xl font-bold mb-6 text-primary">{section.title}</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {section.items.map(item => (
-                                <Card key={item.id} ref={el => itemRefs.current[item.id] = el} className="menu-item-card overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 relative select-none">
-                                    {item.offer && (
-                                        <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs shadow-lg z-10" variant="destructive">
-                                            {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
-                                        </Badge>
-                                    )}
-                                    <CardHeader>
-                                        <CardTitle className="font-headline text-xl">{language === 'ar' ? item.name : (item.name_en || item.name)}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="flex-grow">
-                                        <p className="text-muted-foreground text-sm">{language === 'ar' ? item.description : (item.description_en || item.description)}</p>
+                                <div key={item.id} ref={el => itemRefs.current[item.id] = el} className="menu-item-card select-none">
+                                <Card className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 h-full relative">
+                                    <div className="relative aspect-video">
+                                        <Image src={item.image!} alt={t(item.name, item.name_en || item.name)} data-ai-hint={item.image_hint} layout="fill" objectFit="cover" className="transition-transform duration-500 group-hover:scale-110" />
+                                        {item.offer && (
+                                            <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs shadow-lg z-10" variant="destructive">
+                                                {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <CardContent className="p-4 flex-grow flex flex-col">
+                                        <h3 className="font-headline text-xl flex-1">{language === 'ar' ? item.name : (item.name_en || item.name)}</h3>
+                                        <p className="text-muted-foreground text-sm mt-1 flex-1">{language === 'ar' ? item.description : (item.description_en || item.description)}</p>
+                                        <div className="flex justify-between items-center mt-4">
+                                            <span className="font-bold text-lg text-primary">{formatCurrency(item.price)}</span>
+                                            <Button onClick={(e) => addToCart(item, e)} variant="default">
+                                                <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4"/> {t('إضافة', 'Add')}
+                                            </Button>
+                                        </div>
                                     </CardContent>
-                                    <CardFooter className="flex justify-between items-center mt-auto bg-muted/20 pt-6">
-                                        <span className="font-bold text-lg text-primary">{formatCurrency(item.price)}</span>
-                                        <Button onClick={(e) => addToCart(item, e)} variant="default">
-                                            <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4"/> {t('إضافة للسلة', 'Add to Cart')}
-                                        </Button>
-                                    </CardFooter>
                                 </Card>
+                                </div>
                             ))}
                         </div>
                     </section>
@@ -221,9 +242,12 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                                     transition={{ duration: 0.3 }}
                                     className="flex items-center justify-between py-4"
                                 >
-                                    <div>
-                                        <p className="font-bold">{language === 'ar' ? item.name : (item.name_en || item.name)}</p>
-                                        <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
+                                    <div className="flex items-center gap-4">
+                                        <Image src={item.image!} alt={item.name} width={60} height={60} className="rounded-md" data-ai-hint={item.image_hint} />
+                                        <div>
+                                            <p className="font-bold">{language === 'ar' ? item.name : (item.name_en || item.name)}</p>
+                                            <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Button variant="ghost" size="icon" onClick={() => updateQuantity(item.id, item.quantity + 1)}><PlusCircle className="h-5 w-5"/></Button>
@@ -255,3 +279,5 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
         </div>
     );
 }
+
+    

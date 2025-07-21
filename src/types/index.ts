@@ -15,6 +15,8 @@ export type MenuItem = {
   category: MenuItemCategory;
   offer?: string;
   offer_en?: string;
+  image?: string;
+  image_hint?: string;
 };
 
 export type Order = {
@@ -45,3 +47,5 @@ export type Expense = {
     date: string;
     category: ExpenseCategory;
 };
+
+    
