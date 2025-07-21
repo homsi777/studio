@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -13,34 +14,34 @@ export function LanguageToggle() {
     setIsClient(true);
   }, []);
 
-  if (!isClient) {
-    return <div className="h-8 w-[58px] rounded-md bg-muted/60" />; // Return a placeholder of the same size
-  }
-
   return (
-    <div className="flex items-center gap-1 rounded-md p-1 bg-muted/60">
-      <Button
-        variant={language === 'ar' ? 'ghost' : 'ghost'}
-        size="sm"
-        onClick={() => setLanguage('ar')}
-        className={cn(
-          "h-6 px-2 text-xs",
-          language === 'ar' && "bg-background shadow-sm"
-        )}
-      >
-        ع
-      </Button>
-      <Button
-        variant={language === 'en' ? 'ghost' : 'ghost'}
-        size="sm"
-        onClick={() => setLanguage('en')}
-        className={cn(
-          "h-6 px-2 text-xs",
-          language === 'en' && "bg-background shadow-sm"
-        )}
-      >
-        EN
-      </Button>
+    <div className="flex items-center gap-1 rounded-md p-1 bg-muted/60 h-8 w-[58px]">
+      {isClient ? (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLanguage('ar')}
+            className={cn(
+              "h-6 px-2 text-xs",
+              language === 'ar' && "bg-background shadow-sm"
+            )}
+          >
+            ع
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLanguage('en')}
+            className={cn(
+              "h-6 px-2 text-xs",
+              language === 'en' && "bg-background shadow-sm"
+            )}
+          >
+            EN
+          </Button>
+        </>
+      ) : null}
     </div>
   );
 }

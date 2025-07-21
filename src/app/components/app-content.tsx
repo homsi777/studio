@@ -1,5 +1,4 @@
 
-
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
@@ -27,7 +26,7 @@ import { LanguageToggle } from '@/components/language-toggle';
 import { Button } from '@/components/ui/button';
 import { LogOut, MoreHorizontal } from 'lucide-react';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
-import { DigitalClock } from '../digital-clock';
+import { DigitalClock } from '@/components/digital-clock';
 
 export function AppContent({
   children,
@@ -64,7 +63,7 @@ export function AppContent({
     if (title) {
       setPageTitle(t(title.ar, title.en));
     }
-  }, [pathname, language, t, pageTitles]);
+  }, [pathname, language]);
   
 
   const isAuthPage = pathname === '/login';
