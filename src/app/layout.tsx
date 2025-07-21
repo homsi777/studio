@@ -78,26 +78,26 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                    <SidebarMenuButton href="#" tooltip="نقطة البيع السريعة">
+                    <SidebarMenuButton href="/pos" tooltip="نقطة البيع السريعة">
                         <IconPOS />
                         <span>نقطة البيع السريعة</span>
                     </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarSeparator />
                     <SidebarMenuItem>
-                    <SidebarMenuButton href="#" tooltip="إدارة القائمة">
+                    <SidebarMenuButton href="/menu-management" tooltip="إدارة القائمة">
                         <IconMenu />
                         <span>إدارة القائمة</span>
                     </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                    <SidebarMenuButton href="#" tooltip="التقارير">
+                    <SidebarMenuButton href="/reports" tooltip="التقارير">
                         <IconChart />
                         <span>التقارير</span>
                     </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                    <SidebarMenuButton href="#" tooltip="المصاريف">
+                    <SidebarMenuButton href="/expenses" tooltip="المصاريف">
                         <IconCoin />
                         <span>المصاريف</span>
                     </SidebarMenuButton>

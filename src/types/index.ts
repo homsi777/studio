@@ -2,13 +2,17 @@ export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" |
 
 export type OrderStatus = 'new' | 'in_progress' | 'ready';
 
+export type MenuItemCategory = 'main' | 'appetizer' | 'drink' | 'dessert';
+
 export type MenuItem = {
   id: string;
   name: string;
+  name_en?: string;
   price: number;
   quantity: number;
   description?: string;
-  category: 'main' | 'appetizer' | 'drink';
+  description_en?: string;
+  category: MenuItemCategory;
   image: string;
   "data-ai-hint"?: string;
 };
@@ -28,4 +32,14 @@ export type Table = {
   order: Order | null;
   seatingDuration?: string;
   chefConfirmationTime?: string;
+};
+
+export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies';
+
+export type Expense = {
+    id: string;
+    description: string;
+    amount: number;
+    date: string;
+    category: ExpenseCategory;
 };
