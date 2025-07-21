@@ -8,6 +8,7 @@ export type MenuItem = {
   description?: string;
   category: 'main' | 'appetizer' | 'drink';
   image: string;
+  "data-ai-hint"?: string;
 };
 
 export type Order = {
@@ -23,3 +24,5 @@ export type Table = {
   seatingDuration?: string;
   chefConfirmationTime?: string;
 };
+
+    

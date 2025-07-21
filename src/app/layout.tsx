@@ -78,7 +78,7 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                    <SidebarMenuButton href="#" tooltip="نقطة البيع">
+                    <SidebarMenuButton href="#" tooltip="نقطة البيع السريعة">
                         <IconPOS />
                         <span>نقطة البيع السريعة</span>
                     </SidebarMenuButton>
@@ -144,7 +144,7 @@ export default function RootLayout({
         </div>
         
         {/* Render children outside the sidebar structure if it's a customer menu page */}
-        <div className="hidden [&_[data-customer-menu]]:block">
+        <div className="hidden has-[[data-customer-menu]]:block">
             {children}
         </div>
         
@@ -153,3 +153,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    

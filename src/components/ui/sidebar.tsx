@@ -574,7 +574,7 @@ const SidebarMenuButton = React.forwardRef<
     if (typeof tooltip === "string") {
       tooltip = {
         children: tooltip,
-      }
+      } as React.ComponentProps<typeof TooltipContent>
     }
 
     return (
@@ -761,3 +761,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    

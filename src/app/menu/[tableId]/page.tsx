@@ -10,12 +10,12 @@ import { MinusCircle, PlusCircle, ShoppingCart, Trash2, CheckCircle } from 'luci
 import { AnimatePresence, motion } from 'framer-motion';
 
 const menuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0 },
-    { id: 'item-4', name: 'كبة مقلية', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0 },
-    { id: 'item-5', name: 'فتوش', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0 },
-    { id: 'item-6', name: 'شيش طاووق', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0 },
-    { id: 'item-7', name: 'بيبسي', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0 },
-    { id: 'item-8', name: 'عصير برتقال طازج', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0 },
+    { id: 'item-1', name: 'مشويات مشكلة', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "syrian food" },
+    { id: 'item-4', name: 'كبة مقلية', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kibbeh food" },
+    { id: 'item-5', name: 'فتوش', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "fattoush salad" },
+    { id: 'item-6', name: 'شيش طاووق', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "shish taouk" },
+    { id: 'item-7', name: 'بيبسي', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "pepsi can" },
+    { id: 'item-8', name: 'عصير برتقال طازج', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "orange juice" },
 ];
 
 const USD_TO_SYP_RATE = 15000;
@@ -71,7 +71,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
     
     if (orderState === 'confirmed') {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir="rtl">
                  <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
                     <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
                     <h1 className="font-headline text-3xl font-bold text-foreground mb-2">تم إرسال طلبكم بنجاح!</h1>
@@ -103,9 +103,9 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                         <h2 className="font-headline text-3xl font-bold mb-6 text-primary">{section.title}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {section.items.map(item => (
-                                <Card key={item.id} className="overflow-hidden flex flex-col group">
+                                <Card key={item.id} className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-lg hover:border-primary/50">
                                     <div className="relative h-48 w-full">
-                                        <Image src={item.image} alt={item.name} layout="fill" objectFit="cover" data-ai-hint="syrian food" className="transition-transform duration-300 group-hover:scale-105"/>
+                                        <Image src={item.image} alt={item.name} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item['data-ai-hint']}/>
                                     </div>
                                     <CardHeader>
                                         <CardTitle className="font-headline text-xl">{item.name}</CardTitle>
@@ -113,10 +113,10 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                                     <CardContent className="flex-grow">
                                         <p className="text-muted-foreground text-sm">{item.description}</p>
                                     </CardContent>
-                                    <CardFooter className="flex justify-between items-center mt-auto">
+                                    <CardFooter className="flex justify-between items-center mt-auto bg-muted/20 pt-6">
                                         <span className="font-bold text-lg text-primary">{formatCurrency(item.price)}</span>
-                                        <Button onClick={() => addToCart(item)}>
-                                            <PlusCircle className="mr-2 h-4 w-4"/> إضافة
+                                        <Button onClick={() => addToCart(item)} variant="default">
+                                            <PlusCircle className="mr-2 h-4 w-4"/> إضافة للسلة
                                         </Button>
                                     </CardFooter>
                                 </Card>
@@ -177,7 +177,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                                         <Button variant="ghost" size="icon" onClick={() => updateQuantity(item.id, item.quantity + 1)}><PlusCircle className="h-5 w-5"/></Button>
                                         <span className="font-bold text-lg w-8 text-center">{item.quantity}</span>
                                         <Button variant="ghost" size="icon" onClick={() => updateQuantity(item.id, item.quantity - 1)}><MinusCircle className="h-5 w-5"/></Button>
-                                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => updateQuantity(item.id, 0)}><Trash2 className="h-5 w-5"/></Button>
+                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => updateQuantity(item.id, 0)}><Trash2 className="h-5 w-5"/></Button>
                                     </div>
                                 </motion.div>
                             ))}
@@ -203,3 +203,5 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
         </div>
     );
 }
+
+    
