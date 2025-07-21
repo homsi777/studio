@@ -87,12 +87,12 @@ function SettingsPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="phone">{t('رقم الهاتف', 'Phone Number')}</Label>
-                            <Input id="phone" value={settings.phone} onChange={handleSettingsChange} />
+                            <Input id="phone" value={settings.phone} onChange={handleSettingsChange} dir="ltr" className="text-left"/>
                         </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="email">{t('البريد الإلكتروني (اختياري)', 'Email (Optional)')}</Label>
-                        <Input id="email" value={settings.email} onChange={handleSettingsChange} />
+                         <div className="space-y-2">
+                            <Label htmlFor="email">{t('البريد الإلكتروني (اختياري)', 'Email (Optional)')}</Label>
+                            <Input id="email" type="email" value={settings.email} onChange={handleSettingsChange} dir="ltr" className="text-left"/>
+                        </div>
                     </div>
                 </CardContent>
                 </Card>
