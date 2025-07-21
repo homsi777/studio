@@ -19,7 +19,7 @@ import {
 import { IconChart, IconChefHat, IconCoin, IconLogo, IconMenu, IconPOS, IconSettings, IconTable, IconUsers } from '@/components/icons';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 
@@ -136,7 +136,6 @@ export function AppContent({
               <SidebarSeparator />
               <div className="flex items-center gap-3 p-2">
                   <Avatar>
-                      <AvatarImage src="https://placehold.co/40x40" alt="Admin" data-ai-hint="manager profile" />
                       <AvatarFallback>AD</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">

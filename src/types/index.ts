@@ -13,8 +13,6 @@ export type MenuItem = {
   description?: string;
   description_en?: string;
   category: MenuItemCategory;
-  image?: string;
-  "data-ai-hint"?: string;
 };
 
 export type Order = {

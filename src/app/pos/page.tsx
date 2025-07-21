@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
@@ -25,13 +24,13 @@ import {
 } from "@/components/ui/alert-dialog"
 
 const menuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "syrian food" },
-    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kibbeh food" },
-    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "fattoush salad" },
-    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "shish taouk" },
-    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "pepsi can" },
-    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "orange juice" },
-    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, category: 'dessert', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kunafa cheese" },
+    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, category: 'main', quantity: 0 },
+    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, category: 'appetizer', quantity: 0 },
+    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', quantity: 0 },
+    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, category: 'main', quantity: 0 },
+    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, category: 'drink', quantity: 0 },
+    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, category: 'drink', quantity: 0 },
+    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, category: 'dessert', quantity: 0 },
 ];
 
 const categories: { value: MenuItemCategory | 'all', ar: string, en: string }[] = [
@@ -121,9 +120,6 @@ export default function QuickPOSPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {filteredItems.map(item => (
                             <Card key={item.id} className="cursor-pointer hover:border-primary active:border-primary active:scale-95 transition-all duration-100 flex flex-col" onClick={() => addToCart(item)}>
-                                <div className="relative h-28">
-                                     <Image src={item.image || 'https://placehold.co/600x400'} alt={t(item.name, item.name_en || '')} layout="fill" objectFit="cover" className="rounded-t-lg" data-ai-hint={item['data-ai-hint']} />
-                                </div>
                                 <CardContent className="p-2 text-center flex-1 flex flex-col justify-center">
                                     <p className="font-bold text-base leading-tight">{t(item.name, item.name_en || '')}</p>
                                     <p className="text-sm text-muted-foreground font-semibold">{item.price.toLocaleString()} {t('ل.س', 'SYP')}</p>
@@ -207,7 +203,3 @@ export default function QuickPOSPage() {
         </main>
     );
 }
-
-    
-
-    

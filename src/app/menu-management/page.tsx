@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,13 +41,13 @@ import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const mockMenuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "syrian food" },
-    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', description_en: '4 pieces of kibbeh stuffed with meat and walnuts.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kibbeh food" },
-    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', description_en: 'Fresh vegetable salad with toasted bread and pomegranate molasses.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "fattoush salad" },
-    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', description_en: 'Marinated and charcoal-grilled chicken skewers.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "shish taouk" },
-    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', description_en: 'Refreshing soft drink.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "pepsi can" },
-    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', description_en: 'Natural orange juice, squeezed to order.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "orange juice" },
-    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', description_en: 'A layer of soft kunafa with sweet cheese.', category: 'dessert', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kunafa cheese" },
+    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', quantity: 0 },
+    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', description_en: '4 pieces of kibbeh stuffed with meat and walnuts.', category: 'appetizer', quantity: 0 },
+    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', description_en: 'Fresh vegetable salad with toasted bread and pomegranate molasses.', category: 'appetizer', quantity: 0 },
+    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', description_en: 'Marinated and charcoal-grilled chicken skewers.', category: 'main', quantity: 0 },
+    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', description_en: 'Refreshing soft drink.', category: 'drink', quantity: 0 },
+    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', description_en: 'Natural orange juice, squeezed to order.', category: 'drink', quantity: 0 },
+    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', description_en: 'A layer of soft kunafa with sweet cheese.', category: 'dessert', quantity: 0 },
 ];
 
 const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
@@ -133,7 +132,6 @@ export default function MenuManagementPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[80px]">{t('صورة', 'Image')}</TableHead>
                                     <TableHead>{t('الاسم', 'Name')}</TableHead>
                                     <TableHead>{t('التصنيف', 'Category')}</TableHead>
                                     <TableHead>{t('السعر', 'Price')}</TableHead>
@@ -143,9 +141,6 @@ export default function MenuManagementPage() {
                             <TableBody>
                                 {items.map(item => (
                                     <TableRow key={item.id}>
-                                        <TableCell>
-                                            <Image src={item.image || 'https://placehold.co/600x400'} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item['data-ai-hint']} />
-                                        </TableCell>
                                         <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{categoryMap[item.category][language]}</Badge>
@@ -201,7 +196,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const [formData, setFormData] = useState<Omit<MenuItem, 'id' | 'quantity'>>({
-        name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', image: 'https://placehold.co/600x400'
+        name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main'
     });
 
     React.useEffect(() => {
@@ -213,11 +208,10 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                 description_en: item.description_en || '',
                 price: item.price,
                 category: item.category,
-                image: item.image || 'https://placehold.co/600x400',
             });
         } else {
             setFormData({
-                 name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', image: 'https://placehold.co/600x400'
+                 name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main'
             });
         }
     }, [item, isOpen]);
@@ -287,10 +281,6 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                                 </SelectContent>
                             </Select>
                         </div>
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="image">{t('رابط الصورة', 'Image URL')}</Label>
-                        <Input id="image" value={formData.image} onChange={handleChange} />
                     </div>
                 </div>
                 <DialogFooter>

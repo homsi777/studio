@@ -1,6 +1,5 @@
 "use client";
 import { useState, useMemo } from 'react';
-import Image from 'next/image';
 import { type MenuItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,12 +9,12 @@ import { MinusCircle, PlusCircle, ShoppingCart, Trash2, CheckCircle } from 'luci
 import { AnimatePresence, motion } from 'framer-motion';
 
 const menuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "syrian food" },
-    { id: 'item-4', name: 'كبة مقلية', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kibbeh food" },
-    { id: 'item-5', name: 'فتوش', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "fattoush salad" },
-    { id: 'item-6', name: 'شيش طاووق', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "shish taouk" },
-    { id: 'item-7', name: 'بيبسي', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "pepsi can" },
-    { id: 'item-8', name: 'عصير برتقال طازج', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "orange juice" },
+    { id: 'item-1', name: 'مشويات مشكلة', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', quantity: 0 },
+    { id: 'item-4', name: 'كبة مقلية', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', quantity: 0 },
+    { id: 'item-5', name: 'فتوش', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', quantity: 0 },
+    { id: 'item-6', name: 'شيش طاووق', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', quantity: 0 },
+    { id: 'item-7', name: 'بيبسي', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', quantity: 0 },
+    { id: 'item-8', name: 'عصير برتقال طازج', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', quantity: 0 },
 ];
 
 const USD_TO_SYP_RATE = 15000;
@@ -104,9 +103,6 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {section.items.map(item => (
                                 <Card key={item.id} className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-lg hover:border-primary/50">
-                                    <div className="relative h-48 w-full">
-                                        <Image src={item.image} alt={item.name} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item['data-ai-hint']}/>
-                                    </div>
                                     <CardHeader>
                                         <CardTitle className="font-headline text-xl">{item.name}</CardTitle>
                                     </CardHeader>
@@ -166,12 +162,9 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                                     transition={{ duration: 0.3 }}
                                     className="flex items-center justify-between py-4"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <Image src={item.image} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint="restaurant dish" />
-                                        <div>
-                                            <p className="font-bold">{item.name}</p>
-                                            <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
-                                        </div>
+                                    <div>
+                                        <p className="font-bold">{item.name}</p>
+                                        <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Button variant="ghost" size="icon" onClick={() => updateQuantity(item.id, item.quantity + 1)}><PlusCircle className="h-5 w-5"/></Button>
