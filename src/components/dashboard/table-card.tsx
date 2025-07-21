@@ -59,7 +59,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     shadow: 'shadow-md shadow-orange-900/10'
   },
   available: {
-    bg: 'bg-card/40 dark:bg-muted/10',
+    bg: 'bg-card/60 dark:bg-muted/10',
     border: 'border-dashed border-muted-foreground/20',
     iconColor: '',
     icon: null,
