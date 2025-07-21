@@ -1,88 +1,156 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { QrCode } from 'lucide-react';
+import { QrCode, Printer } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { AnimatePresence, motion } from 'framer-motion';
+
+type TargetType = 'customer' | 'chef' | 'pos';
 
 export function QrCodeGenerator() {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
-
-    const [tableCount, setTableCount] = useState(12);
+    
+    const [target, setTarget] = useState<TargetType>('customer');
+    const [tableNumber, setTableNumber] = useState<string>('1');
     const [baseUrl, setBaseUrl] = useState('');
+    const [generatedQrUrl, setGeneratedQrUrl] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
+    
+    const qrImageRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
-        // This ensures the component has mounted on the client
-        // and window object is available.
         if (typeof window !== "undefined") {
             setBaseUrl(window.location.origin);
             setIsClient(true);
         }
     }, []);
+
+    const handleGenerate = () => {
+        let path = '';
+        switch(target) {
+            case 'customer':
+                if (!tableNumber) return;
+                path = `/menu/${tableNumber}`;
+                break;
+            case 'chef':
+                path = '/chef';
+                break;
+            case 'pos':
+                path = '/pos';
+                break;
+        }
+        const fullUrl = `${baseUrl}${path}`;
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(fullUrl)}`;
+        setGeneratedQrUrl(qrApiUrl);
+    };
     
-    const generateQRCodes = () => {
+    const handlePrint = () => {
+        const qrImage = qrImageRef.current;
+        if (!qrImage) return;
+
         const printWindow = window.open('', '_blank');
         if (printWindow) {
-            printWindow.document.write('<html><head><title>QR Codes</title>');
-            printWindow.document.write('<style>body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; padding: 20px; } .qr-card { page-break-inside: avoid; text-align: center; border: 1px solid #ccc; padding: 10px; border-radius: 8px; width: 150px; display: flex; flex-direction: column; align-items: center; } img { width: 100px; height: 100px; margin-bottom: 5px; } h3 { margin: 0; font-size: 14px; font-weight: bold; } .restaurant-name { font-size: 10px; color: #555; margin-top: 5px;}</style>');
-            printWindow.document.write('</head><body>');
-            for (let i = 1; i <= tableCount; i++) {
-                const url = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/menu/${i}`)}`;
-                printWindow.document.write(
-                    `<div class="qr-card">
-                        <h3>${t('الطاولة', 'Table')} ${i}</h3>
-                        <img src="${url}" alt="QR Code for Table ${i}" />
-                        <span class="restaurant-name">${t('مطعم العالمية', 'Al-Alamiyah')}</span>
-                    </div>`
-                );
+            let title = '';
+            switch(target) {
+                case 'customer': title = `${t('الطاولة', 'Table')} ${tableNumber}`; break;
+                case 'chef': title = t('واجهة الشيف', 'Chef Interface'); break;
+                case 'pos': title = t('نقطة البيع', 'POS'); break;
             }
+
+            printWindow.document.write('<html><head><title>Print QR Code</title>');
+            printWindow.document.write('<style>body { font-family: sans-serif; text-align: center; padding-top: 50px; } img { width: 250px; height: 250px; } h2 { font-size: 24px; margin-bottom: 20px; } </style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(`<h2>${title}</h2>`);
+            printWindow.document.write(`<img src="${qrImage.src}" alt="QR Code" />`);
             printWindow.document.write('</body></html>');
             printWindow.document.close();
-            // Use a timeout to ensure images are loaded before printing
             setTimeout(() => {
                 printWindow.focus();
                 printWindow.print();
+                // printWindow.close(); // Optional: close window after printing
             }, 500);
         }
     };
-
+    
     if (!isClient) {
-        // Render a placeholder or nothing on the server to avoid hydration errors
-        return <div className="h-24 bg-muted rounded-md animate-pulse"></div>;
+        return <div className="h-64 bg-muted rounded-md animate-pulse"></div>;
     }
 
     return (
-        <div className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="table-count">{t('عدد الطاولات', 'Number of Tables')}</Label>
-                <Input 
-                    id="table-count" 
-                    type="number" 
-                    value={tableCount}
-                    onChange={(e) => setTableCount(Number(e.target.value))}
-                    min="1"
-                    placeholder={t('أدخل عدد الطاولات...', 'Enter number of tables...')}
-                />
+        <div className="space-y-6">
+            <div className="space-y-4">
+                <Label className="font-bold">{t('1. لمن موجه رمز QR؟', '1. Who is this QR code for?')}</Label>
+                <RadioGroup value={target} onValueChange={(value: TargetType) => setTarget(value)} className="flex gap-4">
+                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <RadioGroupItem value="customer" id="r-customer" />
+                        <Label htmlFor="r-customer">{t('للزبون', 'For Customer')}</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <RadioGroupItem value="chef" id="r-chef" />
+                        <Label htmlFor="r-chef">{t('للشيف', 'For Chef')}</Label>
+                    </div>
+                     <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <RadioGroupItem value="pos" id="r-pos" />
+                        <Label htmlFor="r-pos">{t('للكاشير', 'For Cashier')}</Label>
+                    </div>
+                </RadioGroup>
             </div>
-            <Button onClick={generateQRCodes} className="w-full" disabled={!baseUrl || tableCount < 1}>
+
+            <AnimatePresence>
+                {target === 'customer' && (
+                    <motion.div 
+                        key="table-input"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="space-y-2 pt-2">
+                            <Label htmlFor="table-number" className="font-bold">{t('2. حدد رقم الطاولة', '2. Specify Table Number')}</Label>
+                            <Input 
+                                id="table-number" 
+                                type="number" 
+                                value={tableNumber}
+                                onChange={(e) => setTableNumber(e.target.value)}
+                                min="1"
+                                placeholder={t('أدخل رقم الطاولة...', 'Enter table number...')}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <Button onClick={handleGenerate} className="w-full" disabled={!baseUrl || (target === 'customer' && !tableNumber)}>
                 <QrCode className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                {t('إنشاء وطباعة رموز QR', 'Generate & Print QR Codes')}
+                {t('توليد الرمز', 'Generate Code')}
             </Button>
-            <Card className="mt-4 bg-muted/40">
-                <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">
-                        {t('سيتم إنشاء رموز QR التي توجه إلى الرابط التالي:', 'QR codes will be generated pointing to the following URL:')}
-                        <span dir="ltr" className="font-mono bg-background/50 rounded p-1 block text-center mt-2">
-                            {baseUrl ? `${baseUrl}/menu/[${t('رقم_الطاولة', 'table_number')}]` : 'Loading...'}
-                        </span>
-                    </p>
-                </CardContent>
-            </Card>
+
+            <AnimatePresence>
+            {generatedQrUrl && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-4 text-center"
+                >
+                    <Card className="mt-4 bg-muted/40 inline-block p-4">
+                        <CardContent className="p-0">
+                           <img ref={qrImageRef} src={generatedQrUrl} alt="Generated QR Code" className="w-48 h-48 mx-auto rounded-md" />
+                        </CardContent>
+                    </Card>
+                    <Button onClick={handlePrint} variant="outline" className="w-full">
+                        <Printer className="ltr:mr-2 rtl:ml-2 h-4 w-4"/>
+                        {t('طباعة', 'Print')}
+                    </Button>
+                </motion.div>
+            )}
+            </AnimatePresence>
         </div>
     );
 }
