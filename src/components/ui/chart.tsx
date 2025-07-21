@@ -133,6 +133,7 @@ const ChartTooltipContent = React.forwardRef<
     ref
   ) => {
     const { config } = useChart()
+    const { language } = useLanguage ? useLanguage() : { language: 'en' };
 
     const tooltipLabel = React.useMemo(() => {
       if (hideLabel || !payload?.length) {
@@ -155,13 +156,13 @@ const ChartTooltipContent = React.forwardRef<
         )
       }
       
-      const formattedLabel = payload[0].payload[labelKey || 'date_ar'] || payload[0].payload[labelKey || 'date'] || label;
+      const labelValue = item?.payload?.[language === 'ar' ? 'date_ar' : 'date'] || label;
 
-      if (!formattedLabel) {
+      if (!labelValue) {
         return null
       }
 
-      return <div className={cn("font-medium", labelClassName)}>{formattedLabel}</div>
+      return <div className={cn("font-medium", labelClassName)}>{labelValue}</div>
     }, [
       label,
       labelFormatter,
@@ -170,6 +171,7 @@ const ChartTooltipContent = React.forwardRef<
       labelClassName,
       config,
       labelKey,
+      language
     ])
 
     if (!active || !payload?.length) {
@@ -243,7 +245,7 @@ const ChartTooltipContent = React.forwardRef<
                       </div>
                       {item.value && (
                         <span className="font-mono font-medium tabular-nums text-foreground">
-                          {item.value.toLocaleString()}
+                          {formatter ? formatter(item.value) : item.value.toLocaleString()}
                         </span>
                       )}
                     </div>

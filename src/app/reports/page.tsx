@@ -67,7 +67,7 @@ function ReportsPage() {
                 <p className="flex items-center justify-center gap-2"><Phone className="w-3 h-3"/> {settings.phone}</p>
                 {settings.email && <p className="flex items-center justify-center gap-2"><Mail className="w-3 h-3"/> {settings.email}</p>}
             </div>
-             <p className="text-sm pt-2">تاريخ الطباعة: {new Date().toLocaleDateString(language === 'ar' ? 'ar-SY' : 'en-CA')}</p>
+             <p className="text-sm pt-2">{t('تاريخ الطباعة', 'Print Date')}: {new Date().toLocaleDateString(language === 'ar' ? 'ar-SY' : 'en-CA')}</p>
         </div>
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4 report-print-hide">
             <h1 className="font-headline text-3xl font-bold text-foreground">{t("التقارير التحليلية", "Analytical Reports")}</h1>
@@ -124,7 +124,7 @@ function ReportsPage() {
                             <Tooltip 
                                 cursor={false}
                                 content={<ChartTooltipContent 
-                                    formatter={(value, name) => `${(typeof value === 'number' ? value.toLocaleString() : value)} ${t('ل.س', 'SYP')}`}
+                                    formatter={(value) => `${(typeof value === 'number' ? value.toLocaleString() : value)} ${t('ل.س', 'SYP')}`}
                                     labelClassName="font-bold text-lg"
                                     indicator="dot"
                                 />} 

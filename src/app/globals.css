@@ -111,16 +111,28 @@
     print-color-adjust: exact;
   }
 
+  .report-print-hide {
+    display: none !important;
+  }
+  
   .print-header {
-    display: none;
+    display: block !important;
+    text-align: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 1rem;
   }
-
+  .print-header-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
   @page {
-    margin-top: 1.5rem;
-    margin-bottom: 1.5rem;
+    size: A4;
+    margin: 1.5rem;
   }
 
-  /* Hide sidebar and header when printing */
+  /* Hide sidebar and main app header when printing */
   [data-sidebar="sidebar"],
   [data-sidebar="trigger"],
   header {
@@ -136,12 +148,6 @@
     border-radius: 0 !important;
   }
   
-  /* Hide buttons and other interactive elements in reports */
-  .report-print-hide {
-    display: none !important;
-  }
-  
-  /* Ensure charts and cards are visible */
   .card, .card-content, .card-header {
     break-inside: avoid;
     box-shadow: none !important;
@@ -174,18 +180,6 @@
 
   .print\:text-gray-600 {
     color: #4b5563 !important;
-  }
-  
-  .print-header {
-    display: block !important;
-    text-align: center;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #ccc;
-    margin-bottom: 1rem;
-  }
-  .print-header-title {
-    font-size: 1.5rem;
-    font-weight: bold;
   }
 }
 
