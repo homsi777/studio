@@ -19,7 +19,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 const menuItems: MenuItem[] = [
@@ -39,6 +38,7 @@ export default function QuickPOSPage() {
 
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isConfirming, setIsConfirming] = useState(false);
 
     const addToCart = (item: MenuItem) => {
         setCart(prev => {
@@ -71,6 +71,7 @@ export default function QuickPOSPage() {
         console.log("Order completed:", cart);
         // Here you would typically send the order to the backend
         setCart([]); // Clear cart after completion
+        setIsConfirming(false);
     }
 
     return (
@@ -139,30 +140,9 @@ export default function QuickPOSPage() {
                             <span>{t("الإجمالي", "Total")}</span>
                             <span>{total.toLocaleString()} {t('ل.س', 'SYP')}</span>
                         </div>
-                         <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button size="lg" className="w-full font-bold text-lg">{t("إتمام الدفع", "Complete Payment")}</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>{t("تأكيد الدفع", "Confirm Payment")}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    {t("المبلغ الإجمالي هو", "The total amount is")} {total.toLocaleString()} {t('ل.س', 'SYP')}. {t("الرجاء اختيار طريقة الدفع.", "Please choose a payment method.")}
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter className="gap-2 sm:gap-0">
-                                    <AlertDialogCancel>{t("إلغاء", "Cancel")}</AlertDialogCancel>
-                                    <AlertDialogAction onClick={completeOrder} className="bg-green-600 hover:bg-green-700">
-                                        <Coins className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                        {t("دفع نقدي", "Cash Payment")}
-                                    </AlertDialogAction>
-                                     <AlertDialogAction onClick={completeOrder}>
-                                        <CreditCard className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                        {t("دفع بالبطاقة", "Card Payment")}
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                         <Button size="lg" className="w-full font-bold text-lg" onClick={() => setIsConfirming(true)}>
+                            {t("إتمام الدفع", "Complete Payment")}
+                         </Button>
                          <Button variant="outline" size="lg" className="w-full">
                             <Printer className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                             {t("طباعة فاتورة", "Print Invoice")}
@@ -170,6 +150,27 @@ export default function QuickPOSPage() {
                     </div>
                 )}
             </aside>
+            <AlertDialog open={isConfirming} onOpenChange={setIsConfirming}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>{t("تأكيد الدفع", "Confirm Payment")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {t("المبلغ الإجمالي هو", "The total amount is")} {total.toLocaleString()} {t('ل.س', 'SYP')}. {t("الرجاء اختيار طريقة الدفع.", "Please choose a payment method.")}
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel>{t("إلغاء", "Cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={completeOrder} className="bg-green-600 hover:bg-green-700">
+                            <Coins className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                            {t("دفع نقدي", "Cash Payment")}
+                        </AlertDialogAction>
+                         <AlertDialogAction onClick={completeOrder}>
+                            <CreditCard className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                            {t("دفع بالبطاقة", "Card Payment")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </main>
     );
 }
