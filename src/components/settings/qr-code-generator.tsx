@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,13 +14,14 @@ export function QrCodeGenerator() {
 
     const [tableCount, setTableCount] = useState(12);
     const [baseUrl, setBaseUrl] = useState('');
+    const [isClient, setIsClient] = useState(false);
 
-    useState(() => {
-        // Ensure this runs only on the client
-        if (typeof window !== 'undefined') {
-            setBaseUrl(window.location.origin);
-        }
-    });
+    useEffect(() => {
+        // This ensures the component has mounted on the client
+        // and window object is available.
+        setBaseUrl(window.location.origin);
+        setIsClient(true);
+    }, []);
     
     const generateQRCodes = () => {
         const printWindow = window.open('', '_blank');
@@ -46,8 +47,9 @@ export function QrCodeGenerator() {
         }
     };
 
-    if (!baseUrl) {
-        return null; // Or a loading spinner
+    if (!isClient) {
+        // Render a placeholder or nothing on the server
+        return null;
     }
 
     return (
@@ -63,7 +65,7 @@ export function QrCodeGenerator() {
                     placeholder={t('أدخل عدد الطاولات...', 'Enter number of tables...')}
                 />
             </div>
-            <Button onClick={generateQRCodes} className="w-full">
+            <Button onClick={generateQRCodes} className="w-full" disabled={!baseUrl}>
                 <QrCode className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                 {t('إنشاء وطباعة رموز QR', 'Generate & Print QR Codes')}
             </Button>
@@ -72,7 +74,7 @@ export function QrCodeGenerator() {
                     <p className="text-xs text-muted-foreground">
                         {t('سيتم إنشاء رموز QR التي توجه إلى الرابط التالي:', 'QR codes will be generated pointing to the following URL:')}
                         <span dir="ltr" className="font-mono bg-background/50 rounded p-1 block text-center mt-2">
-                            {baseUrl}/menu/[{t('رقم_الطاولة', 'table_number')}]
+                            {baseUrl ? `${baseUrl}/menu/[${t('رقم_الطاولة', 'table_number')}]` : 'Loading...'}
                         </span>
                     </p>
                 </CardContent>
