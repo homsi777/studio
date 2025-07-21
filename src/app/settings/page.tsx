@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,11 +9,42 @@ import { Separator } from "@/components/ui/separator";
 import { QrCodeGenerator } from "@/components/settings/qr-code-generator";
 import { useLanguage } from "@/hooks/use-language";
 import { AuthGuard } from "@/components/auth-guard";
+import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
+import { Loader2, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 
 function SettingsPage() {
   const { language } = useLanguage();
   const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
+  const { toast } = useToast();
+
+  const [exchangeRate, setExchangeRate] = useState<number | null>(15000);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleFetchRate = async () => {
+    setIsLoading(true);
+    try {
+      const rate = await fetchExchangeRate();
+      setExchangeRate(rate);
+      setLastUpdated(new Date());
+      toast({
+        title: t("تم التحديث بنجاح", "Update Successful"),
+        description: t(`سعر الصرف الجديد هو ${rate} ل.س للدولار الواحد.`, `The new exchange rate is ${rate} SYP per USD.`),
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: t("فشل التحديث", "Update Failed"),
+        description: t("لم نتمكن من جلب سعر الصرف. يرجى المحاولة مرة أخرى.", "Could not fetch the exchange rate. Please try again."),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <main className="flex-1 p-4 sm:p-6">
@@ -43,16 +75,27 @@ function SettingsPage() {
                 </Card>
 
                 <Card>
-                <CardHeader>
-                    <CardTitle>{t('إعدادات العملة', 'Currency Settings')}</CardTitle>
-                    <CardDescription>{t('تحديد سعر صرف العملات.', 'Set currency exchange rates.')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                    <Label htmlFor="usd-rate">{t('سعر صرف الدولار الأمريكي (مقابل الليرة السورية)', 'USD Exchange Rate (vs. SYP)')}</Label>
-                    <Input id="usd-rate" type="number" defaultValue="15000" />
-                    </div>
-                </CardContent>
+                  <CardHeader>
+                      <CardTitle>{t('إعدادات العملة', 'Currency Settings')}</CardTitle>
+                      <CardDescription>{t('جلب آخر سعر صرف للدولار الأمريكي تلقائياً.', 'Automatically fetch the latest USD exchange rate.')}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                      <div className="flex items-end gap-4">
+                        <div className="flex-1 space-y-2">
+                          <Label htmlFor="usd-rate">{t('السعر الحالي (ل.س لكل 1$)', 'Current Rate (SYP per 1 USD)')}</Label>
+                          <Input id="usd-rate" type="number" value={exchangeRate ?? ""} readOnly disabled />
+                        </div>
+                        <Button onClick={handleFetchRate} disabled={isLoading} variant="outline" size="icon">
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                            <span className="sr-only">Refresh</span>
+                        </Button>
+                      </div>
+                      {lastUpdated && (
+                        <p className="text-xs text-muted-foreground">
+                          {t("آخر تحديث:", "Last updated:")} {lastUpdated.toLocaleString(language === 'ar' ? 'ar-SY' : 'en-US')}
+                        </p>
+                      )}
+                  </CardContent>
                 </Card>
 
                 <Card>
