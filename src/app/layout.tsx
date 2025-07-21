@@ -66,7 +66,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                    <SidebarMenuButton href="#" tooltip="واجهة الشيف">
+                    <SidebarMenuButton href="/chef" tooltip="واجهة الشيف">
                         <IconChefHat />
                         <span>واجهة الشيف</span>
                     </SidebarMenuButton>
@@ -153,5 +153,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

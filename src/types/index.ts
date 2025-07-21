@@ -1,5 +1,7 @@
 export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" | "needs_attention" | "paying";
 
+export type OrderStatus = 'new' | 'in_progress' | 'ready';
+
 export type MenuItem = {
   id: string;
   name: string;
@@ -15,6 +17,9 @@ export type Order = {
   id: string;
   items: MenuItem[];
   total: number;
+  tableId?: number;
+  status?: OrderStatus;
+  timestamp?: number;
 };
 
 export type Table = {
@@ -24,5 +29,3 @@ export type Table = {
   seatingDuration?: string;
   chefConfirmationTime?: string;
 };
-
-    
