@@ -7,14 +7,17 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { MinusCircle, PlusCircle, ShoppingCart, Trash2, CheckCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/hooks/use-language';
 
 const menuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', quantity: 0 },
-    { id: 'item-4', name: 'كبة مقلية', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', quantity: 0 },
-    { id: 'item-5', name: 'فتوش', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', quantity: 0 },
-    { id: 'item-6', name: 'شيش طاووق', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', quantity: 0 },
-    { id: 'item-7', name: 'بيبسي', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', quantity: 0 },
-    { id: 'item-8', name: 'عصير برتقال طازج', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', quantity: 0 },
+    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off' },
+    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', category: 'appetizer', quantity: 0 },
+    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', category: 'appetizer', quantity: 0 },
+    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', category: 'main', quantity: 0 },
+    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', quantity: 0 },
+    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', category: 'drink', quantity: 0, offer: 'عرض خاص', offer_en: 'Special Offer' },
+    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', category: 'dessert', quantity: 0 },
 ];
 
 const USD_TO_SYP_RATE = 15000;
@@ -28,6 +31,8 @@ interface FlyingItem {
 }
 
 export default function MenuPage({ params }: { params: { tableId: string } }) {
+    const { language, dir } = useLanguage();
+    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [currency, setCurrency] = useState<'SYP' | 'USD'>('SYP');
     const [orderState, setOrderState] = useState<'idle' | 'sending' | 'confirmed'>('idle');
@@ -87,15 +92,16 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
     const appetizers = menuItems.filter(item => item.category === 'appetizer');
     const mainCourses = menuItems.filter(item => item.category === 'main');
     const drinks = menuItems.filter(item => item.category === 'drink');
+    const desserts = menuItems.filter(item => item.category === 'dessert');
     
     if (orderState === 'confirmed') {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir="rtl">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
                  <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
                     <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
-                    <h1 className="font-headline text-3xl font-bold text-foreground mb-2">تم إرسال طلبكم بنجاح!</h1>
+                    <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!')}</h1>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                        الشيف قد استلم طلبكم وسيبدأ بتحضيره قريباً. شكراً لاختياركم مطعم المائدة ونتمنى لكم وقتاً ممتعاً.
+                        {t('الشيف قد استلم طلبكم وسيبدأ بتحضيره قريباً. شكراً لاختياركم مطعم المائدة ونتمنى لكم وقتاً ممتعاً.', 'The chef has received your order and will start preparing it soon. Thank you for choosing Al-Ma\'ida Restaurant, we wish you a pleasant time.')}
                     </p>
                  </motion.div>
             </div>
@@ -103,7 +109,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
     }
 
     return (
-        <div className="bg-background min-h-screen font-body" dir="rtl">
+        <div className="bg-background min-h-screen font-body" dir={dir}>
             <AnimatePresence>
                 {flyingItem && cartRef.current && (
                     <motion.div
@@ -124,32 +130,38 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
             <header className="p-4 border-b sticky top-0 bg-background/80 backdrop-blur-sm z-10">
                 <div className="container mx-auto flex justify-between items-center">
                     <div className="text-center">
-                        <h1 className="font-headline text-2xl font-bold">قائمة طعام المائدة</h1>
-                        <p className="text-sm text-muted-foreground">الطاولة رقم {params.tableId}</p>
+                        <h1 className="font-headline text-2xl font-bold">{t('قائمة طعام المائدة', 'Al-Ma\'ida Menu')}</h1>
+                        <p className="text-sm text-muted-foreground">{t('الطاولة رقم', 'Table No.')} {params.tableId}</p>
                     </div>
                      <Button variant="outline" size="sm" onClick={() => setCurrency(c => c === 'SYP' ? 'USD' : 'SYP')}>
-                        {currency === 'SYP' ? 'عرض بالـ USD' : 'عرض بالـ SYP'}
+                        {currency === 'SYP' ? t('عرض بالـ USD', 'Show in USD') : t('عرض بالـ SYP', 'Show in SYP')}
                     </Button>
                 </div>
             </header>
 
             <main className="container mx-auto p-4 pb-32">
-                 {[{ title: 'المقبلات', items: appetizers }, { title: 'الأطباق الرئيسية', items: mainCourses }, { title: 'المشروبات', items: drinks }].map(section => (
+                 {[{ title: t('المقبلات', 'Appetizers'), items: appetizers }, { title: t('الأطباق الرئيسية', 'Main Courses'), items: mainCourses }, { title: t('المشروبات', 'Drinks'), items: drinks }, { title: t('الحلويات', 'Desserts'), items: desserts }].map(section => (
+                    section.items.length > 0 &&
                     <section key={section.title} className="mb-12">
                         <h2 className="font-headline text-3xl font-bold mb-6 text-primary">{section.title}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {section.items.map(item => (
-                                <Card key={item.id} ref={el => itemRefs.current[item.id] = el} className="menu-item-card overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50">
+                                <Card key={item.id} ref={el => itemRefs.current[item.id] = el} className="menu-item-card overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 relative">
+                                    {item.offer && (
+                                        <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs shadow-lg z-10" variant="destructive">
+                                            {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
+                                        </Badge>
+                                    )}
                                     <CardHeader>
-                                        <CardTitle className="font-headline text-xl">{item.name}</CardTitle>
+                                        <CardTitle className="font-headline text-xl">{language === 'ar' ? item.name : (item.name_en || item.name)}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="flex-grow">
-                                        <p className="text-muted-foreground text-sm">{item.description}</p>
+                                        <p className="text-muted-foreground text-sm">{language === 'ar' ? item.description : (item.description_en || item.description)}</p>
                                     </CardContent>
                                     <CardFooter className="flex justify-between items-center mt-auto bg-muted/20 pt-6">
                                         <span className="font-bold text-lg text-primary">{formatCurrency(item.price)}</span>
                                         <Button onClick={(e) => addToCart(item, e)} variant="default">
-                                            <PlusCircle className="mr-2 h-4 w-4"/> إضافة للسلة
+                                            <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4"/> {t('إضافة للسلة', 'Add to Cart')}
                                         </Button>
                                     </CardFooter>
                                 </Card>
@@ -185,17 +197,17 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                                         </motion.div>
                                     </div>
                                     <div>
-                                        <p className="font-bold">سلة الطلبات</p>
+                                        <p className="font-bold">{t('سلة الطلبات', 'Order Cart')}</p>
                                         <p className="text-sm font-bold text-primary">{formatCurrency(total)}</p>
                                     </div>
                                 </div>
-                                <Button>{orderState === 'sending' ? 'جارِ الإرسال...' : 'عرض الطلب والتأكيد'}</Button>
+                                <Button>{orderState === 'sending' ? t('جارِ الإرسال...', 'Sending...') : t('عرض الطلب والتأكيد', 'View & Confirm Order')}</Button>
                             </div>
                         </div>
                     </SheetTrigger>
-                    <SheetContent side="bottom" className="h-[90vh] flex flex-col" dir="rtl">
+                    <SheetContent side="bottom" className="h-[90vh] flex flex-col" dir={dir}>
                         <SheetHeader className="text-right">
-                            <SheetTitle className="font-headline text-2xl">طلبك من الطاولة {params.tableId}</SheetTitle>
+                            <SheetTitle className="font-headline text-2xl">{t('طلبك من الطاولة', 'Your order from Table')} {params.tableId}</SheetTitle>
                         </SheetHeader>
                         <div className="flex-1 overflow-y-auto py-4">
                            <AnimatePresence>
@@ -210,7 +222,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                                     className="flex items-center justify-between py-4"
                                 >
                                     <div>
-                                        <p className="font-bold">{item.name}</p>
+                                        <p className="font-bold">{language === 'ar' ? item.name : (item.name_en || item.name)}</p>
                                         <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
@@ -227,11 +239,11 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                             <div className="w-full space-y-4">
                                 <Separator />
                                 <div className="flex justify-between items-center text-xl font-bold">
-                                    <span>الإجمالي:</span>
+                                    <span>{t('الإجمالي:', 'Total:')}</span>
                                     <span>{formatCurrency(total)}</span>
                                 </div>
                                 <Button size="lg" className="w-full font-bold text-lg" onClick={handleSendOrder} disabled={orderState === 'sending'}>
-                                    {orderState === 'sending' ? 'جارِ الإرسال...' : 'تأكيد وإرسال الطلب إلى المطبخ'}
+                                    {orderState === 'sending' ? t('جارِ الإرسال...', 'Sending...') : t('تأكيد وإرسال الطلب إلى المطبخ', 'Confirm & Send to Kitchen')}
                                 </Button>
                             </div>
                         </SheetFooter>

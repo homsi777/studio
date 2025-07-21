@@ -13,6 +13,8 @@ export type MenuItem = {
   description?: string;
   description_en?: string;
   category: MenuItemCategory;
+  offer?: string;
+  offer_en?: string;
 };
 
 export type Order = {
@@ -30,7 +32,7 @@ export type Table = {
   status: TableStatus;
   order: Order | null;
   seatingDuration?: string;
-  chefConfirmationTimestamp?: number; // Changed from string to number for calculations
+  chefConfirmationTimestamp?: number;
 };
 
 export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies' | 'maintenance' | 'marketing' | 'other';

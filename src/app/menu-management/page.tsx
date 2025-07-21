@@ -34,12 +34,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { AnimatePresence, motion } from 'framer-motion';
 
 const mockMenuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', quantity: 0 },
+    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off' },
     { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع من الكبة المحشوة باللحم والجوز.', description_en: '4 pieces of kibbeh stuffed with meat and walnuts.', category: 'appetizer', quantity: 0 },
     { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'سلطة خضروات طازجة مع خبز محمص ودبس رمان.', description_en: 'Fresh vegetable salad with toasted bread and pomegranate molasses.', category: 'appetizer', quantity: 0 },
     { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية على الفحم.', description_en: 'Marinated and charcoal-grilled chicken skewers.', category: 'main', quantity: 0 },
     { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', description_en: 'Refreshing soft drink.', category: 'drink', quantity: 0 },
-    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', description_en: 'Natural orange juice, squeezed to order.', category: 'drink', quantity: 0 },
+    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, description: 'عصير برتقال طبيعي معصور عند الطلب.', description_en: 'Natural orange juice, squeezed to order.', category: 'drink', quantity: 0, offer: 'عرض خاص', offer_en: 'Special Offer' },
     { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة من الكنافة الناعمة مع جبنة حلوة.', description_en: 'A layer of soft kunafa with sweet cheese.', category: 'dessert', quantity: 0 },
 ];
 
@@ -132,7 +132,12 @@ export default function MenuManagementPage() {
                 <AnimatePresence>
                 {filteredItems.map(item => (
                     <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
-                        <Card className="h-full flex flex-col">
+                        <Card className="h-full flex flex-col relative overflow-hidden">
+                             {item.offer && (
+                                <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground text-xs shadow-lg" variant="destructive">
+                                    {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
+                                </Badge>
+                             )}
                              <CardHeader className="flex-row items-start justify-between">
                                 <CardTitle className="font-headline text-xl flex-1">{language === 'ar' ? item.name : (item.name_en || item.name)}</CardTitle>
                                  <DropdownMenu>
@@ -189,7 +194,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const [formData, setFormData] = useState<Omit<MenuItem, 'id' | 'quantity'>>({
-        name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main'
+        name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', offer: '', offer_en: ''
     });
 
     React.useEffect(() => {
@@ -201,10 +206,12 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                 description_en: item.description_en || '',
                 price: item.price,
                 category: item.category,
+                offer: item.offer || '',
+                offer_en: item.offer_en || '',
             });
         } else {
             setFormData({
-                 name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main'
+                 name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', offer: '', offer_en: ''
             });
         }
     }, [item, isOpen]);
@@ -273,6 +280,16 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                                     <SelectItem value="dessert">{t('حلويات', 'Dessert')}</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="offer">{t('العرض (بالعربية)', 'Offer (Arabic)')}</Label>
+                            <Input id="offer" value={formData.offer} onChange={handleChange} placeholder="مثال: خصم 20%"/>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="offer_en">{t('العرض (بالإنجليزية)', 'Offer (English)')}</Label>
+                            <Input id="offer_en" value={formData.offer_en} onChange={handleChange} placeholder="e.g. 20% Off"/>
                         </div>
                     </div>
                 </div>
