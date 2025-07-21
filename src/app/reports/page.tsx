@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FileText, FileSpreadsheet, FileWord, Printer } from "lucide-react"
+import { FileText, FileSpreadsheet, FileCode, Printer } from "lucide-react"
 
 const salesData = [
   { date: "Sat", date_ar: "السبت", sales: 400000, expenses: 150000 },
@@ -74,7 +74,7 @@ export default function ReportsPage() {
                         <FileSpreadsheet className="h-4 w-4" />
                     </Button>
                      <Button variant="outline" size="icon" aria-label={t("تصدير Word", "Export Word")}>
-                        <FileWord className="h-4 w-4" />
+                        <FileCode className="h-4 w-4" />
                     </Button>
                      <Button variant="outline" size="icon" aria-label={t("طباعة", "Print")}>
                         <Printer className="h-4 w-4" />
