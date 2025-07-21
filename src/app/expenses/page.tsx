@@ -41,15 +41,18 @@ const mockExpenses: Expense[] = [
     { id: 'exp-5', description: 'شراء مشروبات غازية', description_en: 'Purchase of soft drinks', amount: 400000, date: '2024-06-12', category: 'supplies' },
 ];
 
-const categoryMap: Record<ExpenseCategory, { ar: string, en: string }> = {
-    rent: { ar: 'إيجار', en: 'Rent' },
-    bills: { ar: 'فواتير', en: 'Bills' },
-    salaries: { ar: 'رواتب', en: 'Salaries' },
-    supplies: { ar: 'مشتريات', en: 'Supplies' },
+const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string }> = {
+    rent: { ar: 'إيجار', en: 'Rent', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
+    bills: { ar: 'فواتير', en: 'Bills', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
+    salaries: { ar: 'رواتب', en: 'Salaries', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' },
+    supplies: { ar: 'مشتريات', en: 'Supplies', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' },
+    maintenance: { ar: 'صيانة', en: 'Maintenance', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300' },
+    marketing: { ar: 'تسويق', en: 'Marketing', className: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300' },
+    other: { ar: 'أخرى', en: 'Other', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' },
 };
 
 export default function ExpensesPage() {
-    const { language } = useLanguage();
+    const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const [expenses, setExpenses] = useState<Expense[]>(mockExpenses);
@@ -62,12 +65,12 @@ export default function ExpensesPage() {
             id: `exp-${Date.now()}`,
             ...formData,
         };
-        setExpenses(prev => [newExpense, ...prev]);
+        setExpenses(prev => [newExpense, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         setDialogOpen(false);
     };
 
     return (
-        <main className="flex-1 p-4 sm:p-6">
+        <main className="flex-1 p-4 sm:p-6" dir={dir}>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="font-headline text-3xl font-bold text-foreground">{t('إدارة المصاريف', 'Expense Management')}</h1>
                 <Button onClick={() => setDialogOpen(true)}>
@@ -76,6 +79,18 @@ export default function ExpensesPage() {
                 </Button>
             </div>
             
+             <div className="grid gap-6 md:grid-cols-3 mb-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('إجمالي المصاريف', 'Total Expenses')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold">{totalExpenses.toLocaleString()} {t('ل.س', 'SYP')}</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+
             <Card>
                 <CardHeader>
                      <div className="flex items-center justify-between">
@@ -93,7 +108,7 @@ export default function ExpensesPage() {
                                 <TableHead>{t('الوصف', 'Description')}</TableHead>
                                 <TableHead>{t('التصنيف', 'Category')}</TableHead>
                                 <TableHead>{t('التاريخ', 'Date')}</TableHead>
-                                <TableHead>{t('المبلغ', 'Amount')}</TableHead>
+                                <TableHead className="text-right">{t('المبلغ', 'Amount')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -101,10 +116,10 @@ export default function ExpensesPage() {
                                 <TableRow key={expense.id}>
                                     <TableCell className="font-medium">{language === 'ar' ? expense.description : expense.description_en}</TableCell>
                                     <TableCell>
-                                        <Badge variant="secondary">{categoryMap[expense.category][language]}</Badge>
+                                        <Badge variant="outline" className={categoryMap[expense.category].className}>{categoryMap[expense.category][language]}</Badge>
                                     </TableCell>
-                                    <TableCell>{expense.date}</TableCell>
-                                    <TableCell>{expense.amount.toLocaleString()} {t('ل.س', 'SYP')}</TableCell>
+                                    <TableCell>{new Date(expense.date).toLocaleDateString(language === 'ar' ? 'ar-SY' : 'en-CA')}</TableCell>
+                                    <TableCell className="text-right">{expense.amount.toLocaleString()} {t('ل.س', 'SYP')}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -128,30 +143,28 @@ interface ExpenseFormDialogProps {
 }
 
 function ExpenseFormDialog({ isOpen, onOpenChange, onSave }: ExpenseFormDialogProps) {
-    const { language } = useLanguage();
+    const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-
-    const [formData, setFormData] = useState<Omit<Expense, 'id'>>({
-        description: '', description_en: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'supplies'
-    });
+    const initialFormData = { description: '', description_en: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'supplies' as ExpenseCategory };
+    const [formData, setFormData] = useState<Omit<Expense, 'id'>>(initialFormData);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value, type } = e.target;
-        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) : value }));
+        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
     };
 
-    const handleCategoryChange = (value: ExpenseCategory) => {
-        setFormData(prev => ({ ...prev, category: value }));
+    const handleCategoryChange = (value: string) => {
+        setFormData(prev => ({ ...prev, category: value as ExpenseCategory }));
     }
 
     const handleSubmit = () => {
         onSave(formData);
         // Reset form
-        setFormData({ description: '', description_en: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'supplies' });
+        setFormData(initialFormData);
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <Dialog open={isOpen} onOpenChange={onOpenChange} dir={dir}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="font-headline">{t('تسجيل مصروف جديد', 'Record New Expense')}</DialogTitle>
@@ -185,10 +198,9 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave }: ExpenseFormDialogPr
                                 <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="rent">{t('إيجار', 'Rent')}</SelectItem>
-                                <SelectItem value="bills">{t('فواتير', 'Bills')}</SelectItem>
-                                <SelectItem value="salaries">{t('رواتب', 'Salaries')}</SelectItem>
-                                <SelectItem value="supplies">{t('مشتريات', 'Supplies')}</SelectItem>
+                                {(Object.keys(categoryMap) as Array<keyof typeof categoryMap>).map((cat) => (
+                                   <SelectItem key={cat} value={cat}>{t(categoryMap[cat].ar, categoryMap[cat].en)}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>

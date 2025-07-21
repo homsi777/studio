@@ -33,7 +33,7 @@ export type Table = {
   chefConfirmationTimestamp?: number; // Changed from string to number for calculations
 };
 
-export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies';
+export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies' | 'maintenance' | 'marketing' | 'other';
 
 export type Expense = {
     id: string;
