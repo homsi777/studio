@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins, FilePenLine } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     AlertDialog,
@@ -74,9 +75,8 @@ export default function QuickPOSPage() {
     const filteredItems = useMemo(() =>
         menuItems.filter(item =>
             (activeCategory === 'all' || item.category === activeCategory) &&
-            ((item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (item.name_en && item.name_en.toLowerCase().includes(searchTerm.toLowerCase())))
-        ), [searchTerm, activeCategory]);
+            ((t(item.name, item.name_en || item.name).toLowerCase().includes(searchTerm.toLowerCase())))
+        ), [searchTerm, activeCategory, language, t]);
 
     const completeOrder = () => {
         console.log("Order completed:", cart);
@@ -103,6 +103,12 @@ export default function QuickPOSPage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <Button asChild variant="outline" size="lg">
+                        <Link href="/menu-management">
+                             <FilePenLine className="ltr:mr-2 rtl:ml-2 h-5 w-5" />
+                            {t("إدارة القائمة", "Manage Menu")}
+                        </Link>
+                    </Button>
                 </div>
                 <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as MenuItemCategory | 'all')} className="w-full">
                     <TabsList className="grid w-full grid-cols-5 mb-4 h-12">
@@ -201,5 +207,7 @@ export default function QuickPOSPage() {
         </main>
     );
 }
+
+    
 
     
