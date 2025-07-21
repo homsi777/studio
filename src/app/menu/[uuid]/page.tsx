@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import type { MenuItem, Order } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Flame, Loader2, PartyPopper, Check, ArrowLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -46,7 +45,6 @@ export default function MenuPage() {
     const cartRef = useRef<HTMLButtonElement>(null);
     const addToCartRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
-    // Generate or retrieve session ID on component mount
     useEffect(() => {
         let sid = sessionStorage.getItem('session_id');
         if (!sid) {
@@ -56,7 +54,6 @@ export default function MenuPage() {
         setSessionId(sid);
     }, []);
 
-    // Find the current active order for this table/session
     useEffect(() => {
         if (!sessionId) return;
         const activeOrder = orders.find(o => o.tableUuid === tableUuid && o.sessionId === sessionId && o.status !== 'completed' && o.status !== 'cancelled');
@@ -122,7 +119,7 @@ export default function MenuPage() {
             total: total,
         }
         submitOrder(newOrder);
-        setCart([]); // Clear cart after submission
+        setCart([]);
     };
 
     const sections = useMemo(() => [
@@ -183,7 +180,6 @@ export default function MenuPage() {
 
     return (
         <div className="bg-background min-h-screen font-body select-none" dir={dir}>
-            {/* Flying items animation */}
             <AnimatePresence>
                 {flyingItems.map(item => (
                     <motion.div
@@ -226,13 +222,13 @@ export default function MenuPage() {
                     section.items.length > 0 &&
                     <section key={section.title} className="mb-12">
                         <h2 className="font-headline text-3xl font-bold mb-6 text-foreground px-2">{section.title}</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                             {section.items.map(item => (
                                 <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                                     <Card className="overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 h-full relative border bg-card shadow-md">
                                         {item.image && (
                                             <div className="relative aspect-w-4 aspect-h-3 w-full">
-                                                <Image src={item.image} alt={item.name} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item.image_hint || ''} />
+                                                <Image src={item.image} alt={t(item.name, item.name_en || '')} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={item.image_hint || ''} />
                                                 {item.offer && (
                                                     <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground text-xs shadow-lg" variant="destructive">
                                                         <Flame className="w-3 h-3 ltr:mr-1 rtl:ml-1" /> {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
@@ -240,14 +236,14 @@ export default function MenuPage() {
                                                 )}
                                             </div>
                                         )}
-                                        <div className="p-3 flex-grow flex flex-col">
+                                        <div className="p-2 sm:p-3 flex-grow flex flex-col">
                                             <div className="flex-1">
-                                                <h3 className="font-headline text-base sm:text-lg leading-tight h-10">{language === 'ar' ? item.name : (item.name_en || item.name)}</h3>
+                                                <h3 className="font-headline text-sm sm:text-base leading-tight h-10">{language === 'ar' ? item.name : (item.name_en || item.name)}</h3>
                                             </div>
                                             <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed">
-                                                <span className="font-bold text-sm sm:text-base text-primary">{formatCurrency(item.price)}</span>
-                                                <Button ref={el => addToCartRefs.current[item.id] = el} onClick={() => addToCart(item, item.id)} variant="default" size="sm" className="shadow-lg hover:shadow-primary/50 transition-shadow text-xs h-8">
-                                                    <Plus className="ltr:mr-1 rtl:ml-1 h-4 w-4" /> {t('إضافة', 'Add')}
+                                                <span className="font-bold text-xs sm:text-base text-primary">{formatCurrency(item.price)}</span>
+                                                <Button ref={el => addToCartRefs.current[item.id] = el} onClick={() => addToCart(item, item.id)} variant="default" size="sm" className="shadow-lg hover:shadow-primary/50 transition-shadow text-xs h-8 px-2 sm:px-3">
+                                                    <Plus className="ltr:mr-1 rtl:ml-1" /> {t('إضافة', 'Add')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -304,7 +300,7 @@ export default function MenuPage() {
                                                 transition={{ duration: 0.3 }}
                                                 className="flex items-center gap-4"
                                             >
-                                                {item.image && <Image src={item.image} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item.image_hint || ''} />}
+                                                {item.image && <Image src={item.image} alt={t(item.name, item.name_en || '')} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item.image_hint || ''} />}
                                                 <div className="flex-1">
                                                     <p className="font-bold">{language === 'ar' ? item.name : (item.name_en || item.name)}</p>
                                                     <p className="text-sm text-primary font-semibold">{formatCurrency(item.price)}</p>
@@ -339,3 +335,5 @@ export default function MenuPage() {
         </div>
     );
 }
+
+    
