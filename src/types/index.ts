@@ -26,6 +26,7 @@ export type Order = {
   items: MenuItem[];
   total: number;
   tableId: number;
+  sessionId: string; // Unique identifier for the customer's session
   status: OrderStatus;
   timestamp: number;
   confirmationTimestamp?: number;
@@ -57,3 +58,5 @@ export type User = {
     username: string;
     role: UserRole;
 };
+
+    

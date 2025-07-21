@@ -63,8 +63,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     
     const addDummyOrder = useCallback(() => {
         const tableId = Math.floor(Math.random() * 12) + 1;
+        // A dummy session ID for the simulated order
+        const dummySessionId = `dummy-sid-${Date.now()}`;
         const dummyOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
             tableId: tableId,
+            sessionId: dummySessionId,
             items: [{ id: 'item-5', name: 'فتوش', quantity: 1, price: 20000, category: 'appetizer' }],
             total: 20000,
         };
@@ -115,3 +118,5 @@ export const useOrderFlow = () => {
     }
     return context;
 };
+
+    

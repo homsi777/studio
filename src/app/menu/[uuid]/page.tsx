@@ -44,15 +44,27 @@ export default function MenuPage() {
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [flyingItems, setFlyingItems] = useState<any[]>([]);
     const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+    const [sessionId, setSessionId] = useState<string | null>(null);
 
     const cartRef = useRef<HTMLButtonElement>(null);
     const addToCartRefs = useRef<{[key: string]: HTMLButtonElement | null}>({});
 
-    // Find the current active order for this table
+    // Generate or retrieve session ID on component mount
     useEffect(() => {
-        const activeOrder = orders.find(o => o.tableId === parseInt(displayTableNumber) && o.status !== 'completed' && o.status !== 'cancelled');
+        let sid = sessionStorage.getItem('session_id');
+        if (!sid) {
+            sid = crypto.randomUUID();
+            sessionStorage.setItem('session_id', sid);
+        }
+        setSessionId(sid);
+    }, []);
+
+    // Find the current active order for this table/session
+    useEffect(() => {
+        if (!sessionId) return;
+        const activeOrder = orders.find(o => o.tableId === parseInt(displayTableNumber) && o.sessionId === sessionId && o.status !== 'completed' && o.status !== 'cancelled');
         setCurrentOrder(activeOrder || null);
-    }, [orders, displayTableNumber]);
+    }, [orders, displayTableNumber, sessionId]);
 
     const addToCart = (item: MenuItem, itemId: string) => {
         const fromRect = addToCartRefs.current[itemId]?.getBoundingClientRect();
@@ -100,8 +112,14 @@ export default function MenuPage() {
     };
 
     const handleSendOrder = () => {
+        if (!sessionId) {
+            // Handle case where session ID is not yet available, though unlikely
+            console.error("Session ID not available");
+            return;
+        }
         const newOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
             tableId: parseInt(displayTableNumber),
+            sessionId: sessionId,
             items: cart,
             total: total,
         }
@@ -181,7 +199,7 @@ export default function MenuPage() {
                         className="fixed z-50 rounded-lg overflow-hidden shadow-xl"
                         style={{ width: 64, height: 48 }}
                     >
-                       {item.image && <Image src={item.image} alt="flying item" width={64} height={48} className="object-cover w-full h-full" />}
+                       {item.image && <Image src={item.image} alt="flying item" width={64} height={48} className="object-cover w-full h-full" data-ai-hint={item.image_hint}/>}
                     </motion.div>
                 ))}
             </AnimatePresence>
@@ -307,3 +325,5 @@ export default function MenuPage() {
         </div>
     );
 }
+
+    
