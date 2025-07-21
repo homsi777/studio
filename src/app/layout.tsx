@@ -43,7 +43,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <SidebarProvider>
-          <Sidebar>
+          <Sidebar side="right">
             <SidebarHeader>
               <div className="flex items-center gap-3">
                 <IconLogo className="w-10 h-10 text-primary" />
