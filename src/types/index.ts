@@ -5,6 +5,9 @@ export type MenuItem = {
   name: string;
   price: number;
   quantity: number;
+  description?: string;
+  category: 'main' | 'appetizer' | 'drink';
+  image: string;
 };
 
 export type Order = {

@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { IconChart, IconChefHat, IconCoin, IconLogo, IconMenu, IconPOS, IconSettings, IconTable } from '@/components/icons';
+import { IconChart, IconChefHat, IconCoin, IconLogo, IconMenu, IconPOS, IconSettings, IconTable, IconUsers } from '@/components/icons';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,97 +42,112 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider>
-          <Sidebar side="right">
-            <SidebarHeader>
-              <div className="flex items-center gap-3">
-                <IconLogo className="w-10 h-10 text-primary" />
-                <div className="flex flex-col">
-                  <span className="font-headline text-lg font-semibold tracking-tighter">
-                    المائدة
-                  </span>
-                  <span className="text-xs text-muted-foreground">مدير المطعم</span>
+        {/* We can hide the main sidebar on the customer menu page */}
+        <div className="[&_[data-customer-menu]]:hidden">
+            <SidebarProvider>
+            <Sidebar side="right">
+                <SidebarHeader>
+                <div className="flex items-center gap-3">
+                    <IconLogo className="w-10 h-10 text-primary" />
+                    <div className="flex flex-col">
+                    <span className="font-headline text-lg font-semibold tracking-tighter">
+                        المائدة
+                    </span>
+                    <span className="text-xs text-muted-foreground">مدير المطعم</span>
+                    </div>
                 </div>
-              </div>
-            </SidebarHeader>
-            <SidebarContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="لوحة التحكم">
-                    <IconTable />
-                    <span>لوحة التحكم</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="#" tooltip="واجهة الشيف">
-                    <IconChefHat />
-                    <span>واجهة الشيف</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="#" tooltip="نقطة البيع">
-                    <IconPOS />
-                    <span>نقطة البيع السريعة</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                </SidebarHeader>
+                <SidebarContent>
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton href="/" tooltip="لوحة التحكم">
+                        <IconTable />
+                        <span>لوحة التحكم</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton href="#" tooltip="واجهة الشيف">
+                        <IconChefHat />
+                        <span>واجهة الشيف</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton href="/menu/1" tooltip="قائمة الزبون (تجريبي)">
+                        <IconUsers />
+                        <span>عرض قائمة الزبون</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton href="#" tooltip="نقطة البيع">
+                        <IconPOS />
+                        <span>نقطة البيع السريعة</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarSeparator />
+                    <SidebarMenuItem>
+                    <SidebarMenuButton href="#" tooltip="إدارة القائمة">
+                        <IconMenu />
+                        <span>إدارة القائمة</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton href="#" tooltip="التقارير">
+                        <IconChart />
+                        <span>التقارير</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton href="#" tooltip="المصاريف">
+                        <IconCoin />
+                        <span>المصاريف</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+                </SidebarContent>
+                <SidebarFooter>
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton href="/settings" tooltip="الإعدادات">
+                        <IconSettings />
+                        <span>الإعدادات</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+                <div className="flex items-center justify-between p-2">
+                    <LanguageToggle />
+                    <ThemeToggle />
+                </div>
                 <SidebarSeparator />
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="#" tooltip="إدارة القائمة">
-                    <IconMenu />
-                    <span>إدارة القائمة</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="#" tooltip="التقارير">
-                    <IconChart />
-                    <span>التقارير</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="#" tooltip="المصاريف">
-                    <IconCoin />
-                    <span>المصاريف</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-            <SidebarFooter>
-               <SidebarMenu>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/settings" tooltip="الإعدادات">
-                    <IconSettings />
-                    <span>الإعدادات</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-               </SidebarMenu>
-              <div className="flex items-center justify-between p-2">
-                 <LanguageToggle />
-                 <ThemeToggle />
-              </div>
-               <SidebarSeparator />
-               <div className="flex items-center gap-3 p-2">
-                  <Avatar>
-                    <AvatarImage src="https://placehold.co/40x40" alt="Admin" data-ai-hint="manager profile" />
-                    <AvatarFallback>AD</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">المدير العام</p>
-                    <p className="text-xs text-muted-foreground">admin@almaida.com</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-               </div>
-            </SidebarFooter>
-          </Sidebar>
-          <SidebarInset>
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
-              <SidebarTrigger className="md:hidden" />
-              <h1 className="font-headline text-xl font-semibold">لوحة التحكم</h1>
-            </header>
-            {children}
+                <div className="flex items-center gap-3 p-2">
+                    <Avatar>
+                        <AvatarImage src="https://placehold.co/40x40" alt="Admin" data-ai-hint="manager profile" />
+                        <AvatarFallback>AD</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                        <p className="text-sm font-semibold">المدير العام</p>
+                        <p className="text-xs text-muted-foreground">admin@almaida.com</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </div>
+                </SidebarFooter>
+            </Sidebar>
+            <SidebarInset>
+                <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
+                <SidebarTrigger className="md:hidden" />
+                <h1 className="font-headline text-xl font-semibold">لوحة التحكم</h1>
+                </header>
+                {children}
             </SidebarInset>
-        </SidebarProvider>
+            </SidebarProvider>
+        </div>
+        
+        {/* Render children outside the sidebar structure if it's a customer menu page */}
+        <div className="hidden [&_[data-customer-menu]]:block">
+            {children}
+        </div>
+        
         <Toaster />
       </body>
     </html>
