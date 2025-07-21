@@ -32,6 +32,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const mockExpenses: Expense[] = [
     { id: 'exp-1', description: 'إيجار المحل لشهر يونيو', description_en: 'Shop rent for June', amount: 2500000, date: '2024-06-01', category: 'rent' },
