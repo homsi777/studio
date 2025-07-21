@@ -65,19 +65,6 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
     return () => clearInterval(intervalId);
   }, [table, open]);
 
-
-  if (!table) return null;
-
-  const statusInfo = statusMap[table.status] || statusMap.available;
-  
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const toggleCurrency = () => {
-    setCurrency(prev => prev === 'SYP' ? 'USD' : 'SYP');
-  }
-
   const convertedOrder = useMemo(() => {
     if (!table?.order) return null;
     if (currency === 'SYP') return table.order;
@@ -92,6 +79,20 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
     };
   }, [table?.order, currency]);
 
+
+  if (!table) {
+    return null;
+  }
+
+  const statusInfo = statusMap[table.status] || statusMap.available;
+  
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const toggleCurrency = () => {
+    setCurrency(prev => prev === 'SYP' ? 'USD' : 'SYP');
+  }
 
   const formatCurrency = (amount: number) => {
     const symbol = currency === 'SYP' ? 'ل.س' : '$';
