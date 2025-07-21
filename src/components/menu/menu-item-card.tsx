@@ -70,5 +70,3 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
 );
 
 MenuItemCard.displayName = 'MenuItemCard';
-
-    
