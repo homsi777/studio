@@ -31,7 +31,7 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                     <Label htmlFor="restaurant-name">{t('اسم المطعم', 'Restaurant Name')}</Label>
-                    <Input id="restaurant-name" defaultValue="المائدة" />
+                    <Input id="restaurant-name" defaultValue="العالمية" />
                     </div>
                     <div className="space-y-2">
                     <Label htmlFor="restaurant-address">{t('العنوان', 'Address')}</Label>

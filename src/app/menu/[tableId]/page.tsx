@@ -101,7 +101,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                     <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
                     <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!')}</h1>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                        {t('الشيف قد استلم طلبكم وسيبدأ بتحضيره قريباً. شكراً لاختياركم مطعم المائدة ونتمنى لكم وقتاً ممتعاً.', 'The chef has received your order and will start preparing it soon. Thank you for choosing Al-Ma\'ida Restaurant, we wish you a pleasant time.')}
+                        {t('الشيف قد استلم طلبكم وسيبدأ بتحضيره قريباً. شكراً لاختياركم مطعم العالمية ونتمنى لكم وقتاً ممتعاً.', 'The chef has received your order and will start preparing it soon. Thank you for choosing Al-Alamiyah Restaurant, we wish you a pleasant time.')}
                     </p>
                  </motion.div>
             </div>
@@ -130,7 +130,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
             <header className="p-4 border-b sticky top-0 bg-background/80 backdrop-blur-sm z-10">
                 <div className="container mx-auto flex justify-between items-center">
                     <div className="text-center">
-                        <h1 className="font-headline text-2xl font-bold">{t('قائمة طعام المائدة', 'Al-Ma\'ida Menu')}</h1>
+                        <h1 className="font-headline text-2xl font-bold">{t('قائمة طعام العالمية', 'Al-Alamiyah Menu')}</h1>
                         <p className="text-sm text-muted-foreground">{t('الطاولة رقم', 'Table No.')} {params.tableId}</p>
                     </div>
                      <Button variant="outline" size="sm" onClick={() => setCurrency(c => c === 'SYP' ? 'USD' : 'SYP')}>

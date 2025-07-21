@@ -5,7 +5,7 @@ import { AppContent } from '@/components/app-content';
 
 
 export const metadata: Metadata = {
-  title: "Al-Ma'ida Manager",
+  title: "Al-Alamiyah Manager",
   description: 'حلول ذكية ومتكاملة لإدارة المطاعم',
 };
 

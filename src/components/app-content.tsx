@@ -75,7 +75,7 @@ export function AppContent({
               <IconLogo className="w-10 h-10 text-primary" />
               <div className="flex flex-col">
               <span className="font-headline text-lg font-semibold tracking-tighter">
-                  {t('المائدة', 'Al-Ma\'ida')}
+                  {t('العالمية', 'Al-Alamiyah')}
               </span>
               <span className="text-xs text-muted-foreground">{t('مدير المطعم', 'Restaurant Manager')}</span>
               </div>
@@ -145,7 +145,7 @@ export function AppContent({
           <div className="flex items-center gap-3 p-2">
               <div className="flex-1">
                   <p className="text-sm font-semibold">{t('المدير العام', 'General Manager')}</p>
-                  <p className="text-xs text-muted-foreground">admin@almaida.com</p>
+                  <p className="text-xs text-muted-foreground">admin@alamiyah.com</p>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
