@@ -59,7 +59,7 @@ function ReportsPage() {
     }
 
   return (
-    <main className="flex-1 p-4 sm:p-6">
+    <main className="flex-1 p-4 sm:p-6 select-none">
         <div className="hidden print:block print-header space-y-2">
             <h1 className="print-header-title">{settings.restaurantName}</h1>
              <div className="text-xs text-gray-600">
@@ -223,3 +223,5 @@ export default function GuardedReportsPage() {
         </AuthGuard>
     )
 }
+
+    

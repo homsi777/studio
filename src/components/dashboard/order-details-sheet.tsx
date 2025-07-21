@@ -90,7 +90,18 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
   const statusInfo = statusMap[table.status] || statusMap.available;
   
   const handlePrint = () => {
+    const printArea = document.querySelector(`#invoice-table-${table.id}`)?.parentElement;
+    if (!printArea) return;
+
+    const originalContent = document.body.innerHTML;
+    const printContent = printArea.innerHTML;
+
+    document.body.innerHTML = `<div class="printable-receipt">${printContent}</div>`;
+    
     window.print();
+    
+    document.body.innerHTML = originalContent;
+    window.location.reload(); // Reload to restore original event listeners etc.
   };
 
   const toggleCurrency = () => {
@@ -202,3 +213,5 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
     </Sheet>
   );
 }
+
+    
