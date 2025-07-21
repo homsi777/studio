@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
@@ -8,6 +9,7 @@ interface RestaurantSettings {
     address: string;
     phone: string;
     email: string;
+    numberOfTables: number;
 }
 
 interface RestaurantSettingsContextType {
@@ -24,7 +26,8 @@ export const RestaurantSettingsProvider = ({ children }: { children: ReactNode }
         restaurantName: 'العالمية جروب',
         address: 'دمشق، سوريا',
         phone: '+963 912 345 678',
-        email: 'info@alamiyah.com'
+        email: 'info@alamiyah.com',
+        numberOfTables: 12,
     });
 
     // Load settings from localStorage on initial load

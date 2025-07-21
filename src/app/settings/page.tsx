@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from "react";
@@ -28,8 +29,11 @@ function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   
   const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setSettings(prev => ({ ...prev, [id]: value }));
+    const { id, value, type } = e.target;
+    setSettings(prev => ({ 
+        ...prev, 
+        [id]: type === 'number' ? parseInt(value, 10) || 0 : value 
+    }));
   }
 
   const handleFetchRate = async () => {
@@ -69,7 +73,7 @@ function SettingsPage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>{t('الإعدادات العامة', 'General Settings')}</CardTitle>
-                    <CardDescription>{t('إدارة المعلومات الأساسية للمطعم.', 'Manage basic restaurant information.')}</CardDescription>
+                    <CardDescription>{t('إدارة المعلومات الأساسية للمطعم وعدد الطاولات.', 'Manage basic restaurant information and table count.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -80,9 +84,15 @@ function SettingsPage() {
                         <Label htmlFor="address">{t('العنوان', 'Address')}</Label>
                         <Input id="address" value={settings.address} onChange={handleSettingsChange} />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">{t('رقم الهاتف', 'Phone Number')}</Label>
-                        <Input id="phone" value={settings.phone} onChange={handleSettingsChange} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">{t('رقم الهاتف', 'Phone Number')}</Label>
+                            <Input id="phone" value={settings.phone} onChange={handleSettingsChange} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="numberOfTables">{t('عدد الطاولات', 'Number of Tables')}</Label>
+                            <Input id="numberOfTables" type="number" value={settings.numberOfTables} onChange={handleSettingsChange} min="1"/>
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="email">{t('البريد الإلكتروني (اختياري)', 'Email (Optional)')}</Label>

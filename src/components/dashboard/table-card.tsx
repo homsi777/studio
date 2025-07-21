@@ -78,7 +78,7 @@ export function TableCard({ table, onSelect }: TableCardProps) {
     <Card
       onClick={() => onSelect(table)}
       className={cn(
-        'flex flex-col justify-between h-40 transform hover:-translate-y-1 select-none shadow-md',
+        'flex flex-col justify-between min-h-[160px] transform hover:-translate-y-1 select-none shadow-md',
         styles.bg,
         styles.border,
         styles.shadow,
