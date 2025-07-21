@@ -118,7 +118,7 @@ export function AppContent({
                   <SidebarMenuItem>
                     <SidebarMenuButton href="/menu/a1b2c3d4-e5f6-7890-1234-567890abcdef" tooltip={t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')} target="_blank">
                       <IconUsers />
-                      <span>{t('عرض قائمة الزبون', 'View Customer Menu')}</span>
+                      <span>{t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
               </SidebarMenu>
