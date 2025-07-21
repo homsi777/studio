@@ -203,5 +203,3 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
         </div>
     );
 }
-
-    

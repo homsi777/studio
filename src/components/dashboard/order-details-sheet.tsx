@@ -142,11 +142,11 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
         <SheetFooter className="mt-auto print:hidden">
           <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Button variant="secondary" onClick={toggleCurrency} className="flex-1">
-              <Coins />
+              <Coins className="w-4 h-4 mr-2" />
               <span>{currency === 'SYP' ? 'عرض بالدولار' : 'عرض بالليرة'}</span>
             </Button>
             <Button variant="accent" className="flex-1" onClick={handlePrint}>
-              <Printer />
+              <Printer className="w-4 h-4 mr-2" />
               <span>طباعة الفاتورة</span>
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>إغلاق</Button>

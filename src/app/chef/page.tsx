@@ -33,11 +33,12 @@ export default function ChefPage() {
   
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (over && active.id !== over.id) {
-      const orderId = active.id as string;
-      const newStatus = over.id as OrderStatus;
-      updateOrderStatus(orderId, newStatus);
+        const activeOrder = orders.find(o => o.id === active.id);
+        const overColumnId = over.id as OrderStatus;
+        if (activeOrder && activeOrder.status !== overColumnId) {
+             updateOrderStatus(active.id as string, overColumnId);
+        }
     }
   };
 
@@ -68,9 +69,11 @@ export default function ChefPage() {
     { id: 'in_progress', title: 'قيد التحضير' },
     { id: 'ready', title: 'جاهز للتسليم' },
   ];
+  
+  const orderIds = useMemo(() => orders.map(o => o.id), [orders]);
 
   return (
-    <main className="flex-1 flex flex-col p-4 sm:p-6 bg-muted/30" dir="rtl">
+    <main className="flex-1 flex flex-col p-4 sm:p-6 bg-background/30" dir="rtl">
         <div className="flex items-center justify-between mb-6">
             <h1 className="font-headline text-3xl font-bold text-foreground">واجهة الشيف</h1>
             <Button onClick={simulateNewOrder}>
@@ -80,19 +83,21 @@ export default function ChefPage() {
         </div>
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                {columns.map(column => (
-                    <ChefOrderColumn key={column.id} id={column.id} title={column.title} count={orders.filter(o => o.status === column.id).length}>
-                         <AnimatePresence>
-                            {orders.filter(order => order.status === column.id)
-                                .sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
-                                .map(order => (
-                                <motion.div key={order.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}>
-                                    <ChefOrderCard order={order} onStatusChange={updateOrderStatus} />
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </ChefOrderColumn>
-                ))}
+              <SortableContext items={orderIds} strategy={verticalListSortingStrategy}>
+                  {columns.map(column => (
+                      <ChefOrderColumn key={column.id} id={column.id} title={column.title} count={orders.filter(o => o.status === column.id).length}>
+                          <AnimatePresence>
+                              {orders.filter(order => order.status === column.id)
+                                  .sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+                                  .map(order => (
+                                      <motion.div key={order.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}>
+                                          <ChefOrderCard order={order} onStatusChange={updateOrderStatus} />
+                                      </motion.div>
+                                  ))}
+                          </AnimatePresence>
+                      </ChefOrderColumn>
+                  ))}
+              </SortableContext>
             </div>
         </DndContext>
     </main>

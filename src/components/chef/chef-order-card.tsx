@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Hash, Check, ArrowLeft } from 'lucide-react';
+import { Clock, Hash, Check, ArrowLeft, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChefOrderCardProps {
@@ -82,19 +82,22 @@ export function ChefOrderCard({ order, onStatusChange }: ChefOrderCardProps) {
 
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow duration-200" {...listeners}>
-        <CardHeader className="p-4">
-          <div className="flex justify-between items-start">
+    <div ref={setNodeRef} style={style} {...attributes} className="touch-none">
+      <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <CardHeader className="p-4 flex flex-row items-center justify-between">
+          <div {...listeners} className="cursor-grab p-2 -ml-2 text-muted-foreground hover:text-foreground">
+             <GripVertical className="h-5 w-5" />
+          </div>
+          <div>
             <CardTitle className="font-headline text-xl">الطاولة {order.tableId}</CardTitle>
-            <div className="text-xs text-muted-foreground flex items-center gap-2">
-                <Clock className="h-3 w-3" />
-                <span>{timeAgo}</span>
+            <div className="text-xs text-muted-foreground flex items-center gap-2 pt-1">
+                <Hash className="h-3 w-3" />
+                <span>{order.id}</span>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground flex items-center gap-2 pt-1">
-             <Hash className="h-3 w-3" />
-             <span>{order.id}</span>
+          <div className="text-xs text-muted-foreground flex items-center gap-2">
+              <Clock className="h-3 w-3" />
+              <span>{timeAgo}</span>
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-0">
