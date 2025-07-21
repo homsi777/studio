@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Flame, Clock, Loader2, PartyPopper, Check } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Flame, Loader2, PartyPopper, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/use-language';
@@ -113,7 +113,6 @@ export default function MenuPage() {
 
     const handleSendOrder = () => {
         if (!sessionId) {
-            // Handle case where session ID is not yet available, though unlikely
             console.error("Session ID not available");
             return;
         }
