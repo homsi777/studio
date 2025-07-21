@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { QrCodeGenerator } from "@/components/settings/qr-code-generator";
 import { useLanguage } from "@/hooks/use-language";
+import { AuthGuard } from "@/components/auth-guard";
 
-export default function SettingsPage() {
+
+function SettingsPage() {
   const { language } = useLanguage();
   const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
 
@@ -83,4 +85,12 @@ export default function SettingsPage() {
       </div>
     </main>
   );
+}
+
+export default function GuardedSettingsPage() {
+    return (
+        <AuthGuard>
+            <SettingsPage />
+        </AuthGuard>
+    )
 }

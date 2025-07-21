@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { type Table } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
 import { OrderDetailsSheet } from '@/components/dashboard/order-details-sheet';
+import { AuthGuard } from '@/components/auth-guard';
 
 const mockTables: Table[] = [
   { id: 1, status: 'new_order', order: { id: 'ORD-001', items: [{ id: 'item-1', name: 'مشويات مشكلة', price: 85000, quantity: 1, category: 'main' }, { id: 'item-2', name: 'حمص', price: 15000, quantity: 2, category: 'appetizer' }, { id: 'item-3', name: 'مياه معدنية', price: 5000, quantity: 4, category: 'drink' }], total: 135000 }, seatingDuration: '25 دقيقة' },
@@ -21,7 +22,7 @@ const mockTables: Table[] = [
   { id: 12, status: 'available', order: null },
 ];
 
-export default function DashboardPage() {
+function DashboardPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   
   const handleSelectTable = (table: Table) => {
@@ -64,4 +65,12 @@ export default function DashboardPage() {
       />
     </main>
   );
+}
+
+export default function GuardedDashboardPage() {
+    return (
+        <AuthGuard>
+            <DashboardPage />
+        </AuthGuard>
+    )
 }

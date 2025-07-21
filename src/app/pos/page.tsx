@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -22,6 +21,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cn } from '@/lib/utils';
+import { AuthGuard } from '@/components/auth-guard';
 
 
 const menuItems: MenuItem[] = [
@@ -42,7 +42,7 @@ const categories: { value: MenuItemCategory | 'all', ar: string, en: string }[] 
     { value: 'dessert', ar: 'حلويات', en: 'Desserts' },
 ];
 
-export default function QuickPOSPage() {
+function QuickPOSPage() {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -117,7 +117,7 @@ export default function QuickPOSPage() {
                             variant={activeCategory === cat.value ? 'default' : 'outline'}
                             onClick={() => setActiveCategory(cat.value)}
                             className={cn(
-                                "py-6 px-5 text-base font-semibold transition-all duration-200 transform hover:scale-105",
+                                "py-6 px-5 text-base font-semibold transition-all duration-200 transform hover:scale-105 select-none",
                                 activeCategory === cat.value ? 'shadow-lg bg-primary text-primary-foreground' : 'bg-card text-card-foreground shadow-md'
                             )}
                         >
@@ -213,6 +213,10 @@ export default function QuickPOSPage() {
     );
 }
 
-    
-
-    
+export default function GuardedQuickPOSPage() {
+    return (
+        <AuthGuard>
+            <QuickPOSPage />
+        </AuthGuard>
+    )
+}

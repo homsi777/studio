@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import {
@@ -22,7 +23,7 @@ import { IconChart, IconChefHat, IconCoin, IconLogo, IconMenu, IconPOS, IconSett
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal } from 'lucide-react';
+import { LogOut, MoreHorizontal } from 'lucide-react';
 
 export function AppContent({
   children,
@@ -30,6 +31,7 @@ export function AppContent({
   children: React.ReactNode;
 }>) {
   const { language, dir } = useLanguage();
+  const { isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
   const [pageTitle, setPageTitle] = useState('');
   
@@ -43,6 +45,7 @@ export function AppContent({
     '/reports': { ar: 'التقارير', en: 'Reports' },
     '/expenses': { ar: 'المصاريف', en: 'Expenses' },
     '/settings': { ar: 'الإعدادات', en: 'Settings' },
+    '/login': { ar: 'تسجيل الدخول', en: 'Login' },
   }
 
   useEffect(() => {
@@ -53,13 +56,17 @@ export function AppContent({
   useEffect(() => {
     const currentTitleKey = Object.keys(pageTitles).find(key => pathname.startsWith(key) && (key !== '/' || pathname === '/'));
     const title = pageTitles[currentTitleKey || '/'];
-    setPageTitle(t(title.ar, title.en));
+    if (title) {
+      setPageTitle(t(title.ar, title.en));
+    }
   }, [pathname, language, t, pageTitles]);
   
 
+  const isAuthPage = pathname === '/login';
   const isCustomerMenu = pathname.startsWith('/menu/');
 
-  if (isCustomerMenu) {
+  // If on customer menu or login page, don't show the main layout
+  if (!isAuthenticated || isCustomerMenu || isAuthPage) {
     return (
       <>
         {children}
@@ -145,6 +152,12 @@ export function AppContent({
                   <IconSettings />
                   <span>{t('الإعدادات', 'Settings')}</span>
               </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={logout} tooltip={t('تسجيل الخروج', 'Logout')}>
+                    <LogOut />
+                    <span>{t('تسجيل الخروج', 'Logout')}</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
           </SidebarMenu>
           <div className="flex items-center justify-between p-2">

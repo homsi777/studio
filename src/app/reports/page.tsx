@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { FileText, FileSpreadsheet, FileCode, Printer } from "lucide-react"
+import { AuthGuard } from "@/components/auth-guard"
 
 const salesData = [
   { date: "Sat", date_ar: "السبت", sales: 400000, expenses: 150000 },
@@ -35,7 +36,7 @@ const kitchenReportData = {
     orderCount: 85,
 }
 
-export default function ReportsPage() {
+function ReportsPage() {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -200,4 +201,13 @@ export default function ReportsPage() {
         </div>
     </main>
   )
+}
+
+
+export default function GuardedReportsPage() {
+    return (
+        <AuthGuard>
+            <ReportsPage />
+        </AuthGuard>
+    )
 }

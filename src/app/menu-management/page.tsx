@@ -32,6 +32,8 @@ import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Search } from 'lucide-
 import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { AnimatePresence, motion } from 'framer-motion';
+import { AuthGuard } from '@/components/auth-guard';
+
 
 const mockMenuItems: MenuItem[] = [
     { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'تشكيلة من الكباب والشيش طاووق واللحم بعجين.', description_en: 'Assortment of kebab, shish tawook, and meat pies.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off' },
@@ -50,7 +52,7 @@ const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
     dessert: { ar: 'حلويات', en: 'Dessert' },
 };
 
-export default function MenuManagementPage() {
+function MenuManagementPage() {
     const { language } = useLanguage();
     const [items, setItems] = useState<MenuItem[]>(mockMenuItems);
     const [isDialogOpen, setDialogOpen] = useState(false);
@@ -300,4 +302,13 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
             </DialogContent>
         </Dialog>
     );
+}
+
+
+export default function GuardedMenuManagementPage() {
+    return (
+        <AuthGuard>
+            <MenuManagementPage />
+        </AuthGuard>
+    )
 }

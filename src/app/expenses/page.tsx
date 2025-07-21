@@ -33,6 +33,8 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { AuthGuard } from '@/components/auth-guard';
+
 
 const mockExpenses: Expense[] = [
     { id: 'exp-1', description: 'إيجار المحل لشهر يونيو', description_en: 'Shop rent for June', amount: 2500000, date: '2024-06-01', category: 'rent' },
@@ -52,7 +54,7 @@ const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: 
     other: { ar: 'أخرى', en: 'Other', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' },
 };
 
-export default function ExpensesPage() {
+function ExpensesPage() {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -213,4 +215,12 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave }: ExpenseFormDialogPr
             </DialogContent>
         </Dialog>
     );
+}
+
+export default function GuardedExpensesPage() {
+    return (
+        <AuthGuard>
+            <ExpensesPage />
+        </AuthGuard>
+    )
 }
