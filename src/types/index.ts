@@ -48,4 +48,11 @@ export type Expense = {
     category: ExpenseCategory;
 };
 
+export type UserRole = 'manager' | 'employee';
+
+export type User = {
+    id: string;
+    username: string;
+    role: UserRole;
+};
     

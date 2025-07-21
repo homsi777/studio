@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { QrCodeGenerator } from "@/components/settings/qr-code-generator";
+import { UserManagement } from "@/components/settings/user-management";
 import { useLanguage } from "@/hooks/use-language";
 import { AuthGuard } from "@/components/auth-guard";
 import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
@@ -68,35 +69,76 @@ function SettingsPage() {
         </div>
         <Separator />
 
-        <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+                <Card>
+                  <CardHeader>
+                      <CardTitle>{t('الإعدادات العامة', 'General Settings')}</CardTitle>
+                      <CardDescription>{t('إدارة المعلومات الأساسية للمطعم.', 'Manage basic restaurant information.')}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                          <Label htmlFor="restaurantName">{t('اسم المطعم', 'Restaurant Name')}</Label>
+                          <Input id="restaurantName" value={settings.restaurantName} onChange={handleSettingsChange} />
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="address">{t('العنوان', 'Address')}</Label>
+                          <Input id="address" value={settings.address} onChange={handleSettingsChange} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                              <Label htmlFor="phone">{t('رقم الهاتف', 'Phone Number')}</Label>
+                              <Input id="phone" value={settings.phone} onChange={handleSettingsChange} dir="ltr" className="text-left"/>
+                          </div>
+                           <div className="space-y-2">
+                              <Label htmlFor="email">{t('البريد الإلكتروني (اختياري)', 'Email (Optional)')}</Label>
+                              <Input id="email" type="email" value={settings.email} onChange={handleSettingsChange} dir="ltr" className="text-left"/>
+                          </div>
+                      </div>
+                  </CardContent>
+                </Card>
+                
+                <UserManagement />
+
                 <Card>
                 <CardHeader>
-                    <CardTitle>{t('الإعدادات العامة', 'General Settings')}</CardTitle>
-                    <CardDescription>{t('إدارة المعلومات الأساسية للمطعم.', 'Manage basic restaurant information.')}</CardDescription>
+                    <CardTitle>{t('إعدادات الطابعات', 'Printers Settings')}</CardTitle>
+                    <CardDescription>{t('إدارة إعدادات طابعات التقارير والفواتير.', 'Manage settings for report and receipt printers.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="restaurantName">{t('اسم المطعم', 'Restaurant Name')}</Label>
-                        <Input id="restaurantName" value={settings.restaurantName} onChange={handleSettingsChange} />
+                        <Label htmlFor="printer-a4">{t('طابعة التقارير (A4)', 'Reports Printer (A4)')}</Label>
+                        <Input id="printer-a4" defaultValue="Microsoft Print to PDF" />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="address">{t('العنوان', 'Address')}</Label>
-                        <Input id="address" value={settings.address} onChange={handleSettingsChange} />
+                        <Label htmlFor="printer-thermal">{t('طابعة الفواتير (حرارية 80مم)', 'Receipt Printer (80mm Thermal)')}</Label>
+                        <Input id="printer-thermal" defaultValue="POS-80C" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">{t('رقم الهاتف', 'Phone Number')}</Label>
-                            <Input id="phone" value={settings.phone} onChange={handleSettingsChange} dir="ltr" className="text-left"/>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="email">{t('البريد الإلكتروني (اختياري)', 'Email (Optional)')}</Label>
-                            <Input id="email" type="email" value={settings.email} onChange={handleSettingsChange} dir="ltr" className="text-left"/>
-                        </div>
-                    </div>
+                    <Button variant="outline">{t('اختبار الطباعة', 'Test Print')}</Button>
                 </CardContent>
                 </Card>
+            </div>
 
+            <div className="lg:col-span-1 space-y-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>{t('رموز QR للطاولات', 'Table QR Codes')}</CardTitle>
+                        <CardDescription>{t('إنشاء وطباعة رموز QR لتوجيه الزبائن إلى قائمة الطعام الرقمية لكل طاولة.', 'Generate and print QR codes to direct customers to the digital menu for each table.')}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <QrCodeGenerator />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('إدارة الطاولات', 'Table Management')}</CardTitle>
+                        <CardDescription>{t('تحديد العدد الإجمالي للطاولات في المطعم.', 'Set the total number of tables in the restaurant.')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <Label htmlFor="numberOfTables">{t('عدد الطاولات', 'Number of Tables')}</Label>
+                        <Input id="numberOfTables" type="number" value={settings.numberOfTables} onChange={handleSettingsChange} min="1"/>
+                    </CardContent>
+                </Card>
                 <Card>
                   <CardHeader>
                       <CardTitle>{t('إعدادات العملة', 'Currency Settings')}</CardTitle>
@@ -119,46 +161,6 @@ function SettingsPage() {
                         </p>
                       )}
                   </CardContent>
-                </Card>
-
-                <Card>
-                <CardHeader>
-                    <CardTitle>{t('إعدادات الطابعات', 'Printers Settings')}</CardTitle>
-                    <CardDescription>{t('إدارة إعدادات طابعات التقارير والفواتير.', 'Manage settings for report and receipt printers.')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="printer-a4">{t('طابعة التقارير (A4)', 'Reports Printer (A4)')}</Label>
-                        <Input id="printer-a4" defaultValue="Microsoft Print to PDF" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="printer-thermal">{t('طابعة الفواتير (حرارية 80مم)', 'Receipt Printer (80mm Thermal)')}</Label>
-                        <Input id="printer-thermal" defaultValue="POS-80C" />
-                    </div>
-                    <Button variant="outline">{t('اختبار الطباعة', 'Test Print')}</Button>
-                </CardContent>
-                </Card>
-            </div>
-
-            <div className="space-y-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>{t('رموز QR للطاولات', 'Table QR Codes')}</CardTitle>
-                        <CardDescription>{t('إنشاء وطباعة رموز QR لتوجيه الزبائن إلى قائمة الطعام الرقمية لكل طاولة.', 'Generate and print QR codes to direct customers to the digital menu for each table.')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <QrCodeGenerator />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t('إدارة الطاولات', 'Table Management')}</CardTitle>
-                        <CardDescription>{t('تحديد العدد الإجمالي للطاولات في المطعم.', 'Set the total number of tables in the restaurant.')}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <Label htmlFor="numberOfTables">{t('عدد الطاولات', 'Number of Tables')}</Label>
-                        <Input id="numberOfTables" type="number" value={settings.numberOfTables} onChange={handleSettingsChange} min="1"/>
-                    </CardContent>
                 </Card>
             </div>
         </div>
