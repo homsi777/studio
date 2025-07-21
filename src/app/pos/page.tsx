@@ -1,15 +1,17 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
-import { type MenuItem } from '@/types';
+import { type MenuItem, type MenuItemCategory } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -31,6 +33,13 @@ const menuItems: MenuItem[] = [
     { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, category: 'dessert', image: 'https://placehold.co/600x400', quantity: 0, "data-ai-hint": "kunafa cheese" },
 ];
 
+const categories: { value: MenuItemCategory | 'all', ar: string, en: string }[] = [
+    { value: 'all', ar: 'الكل', en: 'All' },
+    { value: 'appetizer', ar: 'مقبلات', en: 'Appetizers' },
+    { value: 'main', ar: 'رئيسية', en: 'Main' },
+    { value: 'drink', ar: 'مشروبات', en: 'Drinks' },
+    { value: 'dessert', ar: 'حلويات', en: 'Desserts' },
+];
 
 export default function QuickPOSPage() {
     const { language } = useLanguage();
@@ -38,6 +47,7 @@ export default function QuickPOSPage() {
 
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeCategory, setActiveCategory] = useState<MenuItemCategory | 'all'>('all');
     const [isConfirming, setIsConfirming] = useState(false);
 
     const addToCart = (item: MenuItem) => {
@@ -63,9 +73,10 @@ export default function QuickPOSPage() {
 
     const filteredItems = useMemo(() =>
         menuItems.filter(item =>
-            (item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (item.name_en && item.name_en.toLowerCase().includes(searchTerm.toLowerCase()))
-        ), [searchTerm]);
+            (activeCategory === 'all' || item.category === activeCategory) &&
+            ((item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (item.name_en && item.name_en.toLowerCase().includes(searchTerm.toLowerCase())))
+        ), [searchTerm, activeCategory]);
 
     const completeOrder = () => {
         console.log("Order completed:", cart);
@@ -73,28 +84,39 @@ export default function QuickPOSPage() {
         setCart([]); // Clear cart after completion
         setIsConfirming(false);
     }
+    
+    const clearCart = () => {
+        setCart([]);
+    }
 
     return (
-        <main className="flex h-[calc(100vh-theme(spacing.14))] bg-muted/20">
+        <main className="flex h-[calc(100vh-theme(spacing.14))] bg-muted/20 overflow-hidden">
+            {/* Items Grid */}
             <div className="flex-1 p-4 flex flex-col">
-                <div className="mb-4">
-                    <div className="relative">
+                <div className="flex gap-4 mb-4">
+                     <div className="relative flex-1">
                         <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input 
                             placeholder={t("ابحث عن صنف...", "Search for an item...")} 
-                            className="w-full text-lg p-6 ltr:pl-12 rtl:pr-12" 
+                            className="w-full text-base p-5 ltr:pl-12 rtl:pr-12" 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                 </div>
-                <ScrollArea className="flex-1">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as MenuItemCategory | 'all')} className="w-full">
+                    <TabsList className="grid w-full grid-cols-5 mb-4">
+                        {categories.map(cat => (
+                            <TabsTrigger key={cat.value} value={cat.value}>{t(cat.ar, cat.en)}</TabsTrigger>
+                        ))}
+                    </TabsList>
+                </Tabs>
+                <ScrollArea className="flex-1 -m-2 p-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {filteredItems.map(item => (
-                            <Card key={item.id} className="cursor-pointer hover:border-primary transition-colors group" onClick={() => addToCart(item)}>
+                            <Card key={item.id} className="cursor-pointer hover:border-primary transition-colors duration-150" onClick={() => addToCart(item)}>
                                 <div className="relative h-24">
                                      <Image src={item.image || 'https://placehold.co/600x400'} alt={item.name} layout="fill" objectFit="cover" className="rounded-t-lg" data-ai-hint={item['data-ai-hint']} />
-                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
                                 </div>
                                 <CardContent className="p-2 text-center">
                                     <p className="font-bold text-sm truncate">{language === 'ar' ? item.name : item.name_en}</p>
@@ -105,15 +127,20 @@ export default function QuickPOSPage() {
                     </div>
                 </ScrollArea>
             </div>
-            <aside className="w-[380px] bg-card ltr:border-l rtl:border-r flex flex-col shadow-lg">
-                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">{t("السلة الحالية", "Current Cart")}</CardTitle>
-                </CardHeader>
+
+            {/* Cart Section */}
+            <aside className="w-[420px] bg-card ltr:border-l rtl:border-r flex flex-col shadow-lg">
+                 <div className="p-4 flex justify-between items-center border-b">
+                    <h2 className="font-headline text-2xl">{t("السلة الحالية", "Current Cart")}</h2>
+                    <Button variant="ghost" size="icon" onClick={clearCart} disabled={cart.length === 0}>
+                        <Trash2 className="h-5 w-5" />
+                    </Button>
+                 </div>
                  <ScrollArea className="flex-1">
-                    <CardContent className="space-y-3">
+                    <div className="p-4 space-y-3">
                         {cart.length === 0 ? (
-                             <div className="text-center text-muted-foreground py-16">
-                                <p>{t("السلة فارغة", "Cart is empty")}</p>
+                             <div className="text-center text-muted-foreground py-16 flex flex-col items-center gap-4">
+                                <p>{t("أضف أصنافاً لبدء الطلب", "Add items to start an order")}</p>
                             </div>
                         ) : (
                             cart.map(item => (
@@ -123,26 +150,31 @@ export default function QuickPOSPage() {
                                         <p className="text-sm text-muted-foreground">{item.price.toLocaleString()} {t('ل.س', 'SYP')}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, 1)}><Plus className="h-4 w-4" /></Button>
+                                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, 1)}><Plus className="h-4 w-4" /></Button>
                                         <span className="font-bold w-5 text-center">{item.quantity}</span>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, -1)}><Minus className="h-4 w-4" /></Button>
+                                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, -1)}><Minus className="h-4 w-4" /></Button>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => updateQuantity(item.id, -item.quantity)}><Trash2 className="h-4 w-4"/></Button>
                                 </div>
                             ))
                         )}
-                    </CardContent>
+                    </div>
                 </ScrollArea>
                 {cart.length > 0 && (
-                    <div className="p-4 border-t mt-auto space-y-4">
-                        <Separator />
+                    <div className="p-4 border-t mt-auto space-y-3 bg-muted/30">
                         <div className="flex justify-between items-center text-xl font-bold">
                             <span>{t("الإجمالي", "Total")}</span>
                             <span>{total.toLocaleString()} {t('ل.س', 'SYP')}</span>
                         </div>
-                         <Button size="lg" className="w-full font-bold text-lg" onClick={() => setIsConfirming(true)}>
-                            {t("إتمام الدفع", "Complete Payment")}
-                         </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button size="lg" className="w-full font-bold text-base bg-green-600 hover:bg-green-700" onClick={() => setIsConfirming(true)}>
+                                <Coins className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                {t("دفع نقدي", "Cash")}
+                             </Button>
+                             <Button size="lg" className="w-full font-bold text-base" onClick={() => setIsConfirming(true)}>
+                                <CreditCard className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                {t("دفع بالبطاقة", "Card")}
+                             </Button>
+                        </div>
                          <Button variant="outline" size="lg" className="w-full">
                             <Printer className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                             {t("طباعة فاتورة", "Print Invoice")}
@@ -155,18 +187,13 @@ export default function QuickPOSPage() {
                     <AlertDialogHeader>
                     <AlertDialogTitle>{t("تأكيد الدفع", "Confirm Payment")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        {t("المبلغ الإجمالي هو", "The total amount is")} {total.toLocaleString()} {t('ل.س', 'SYP')}. {t("الرجاء اختيار طريقة الدفع.", "Please choose a payment method.")}
+                        {t("المبلغ الإجمالي هو", "The total amount is")} {total.toLocaleString()} {t('ل.س', 'SYP')}. {t("هل أنت متأكد من إتمام العملية؟", "Are you sure you want to complete the transaction?")}
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2 sm:gap-0">
                         <AlertDialogCancel>{t("إلغاء", "Cancel")}</AlertDialogCancel>
-                        <AlertDialogAction onClick={completeOrder} className="bg-green-600 hover:bg-green-700">
-                            <Coins className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                            {t("دفع نقدي", "Cash Payment")}
-                        </AlertDialogAction>
-                         <AlertDialogAction onClick={completeOrder}>
-                            <CreditCard className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                            {t("دفع بالبطاقة", "Card Payment")}
+                        <AlertDialogAction onClick={completeOrder}>
+                            {t("تأكيد وإتمام", "Confirm & Complete")}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
