@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -5,16 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { QrCode, Printer } from 'lucide-react';
+import { QrCode, Printer, Building, Phone } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 
 type TargetType = 'customer' | 'chef' | 'pos';
 
 export function QrCodeGenerator() {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
+    const { settings } = useRestaurantSettings();
     
     const [target, setTarget] = useState<TargetType>('customer');
     const [tableNumber, setTableNumber] = useState<string>('1');
@@ -23,6 +26,7 @@ export function QrCodeGenerator() {
     const [isClient, setIsClient] = useState(false);
     
     const qrImageRef = useRef<HTMLImageElement>(null);
+    const printAreaRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -51,29 +55,20 @@ export function QrCodeGenerator() {
     };
     
     const handlePrint = () => {
-        const qrImage = qrImageRef.current;
-        if (!qrImage) return;
+        const printContent = printAreaRef.current;
+        if (!printContent) return;
 
         const printWindow = window.open('', '_blank');
         if (printWindow) {
-            let title = '';
-            switch(target) {
-                case 'customer': title = `${t('الطاولة', 'Table')} ${tableNumber}`; break;
-                case 'chef': title = t('واجهة الشيف', 'Chef Interface'); break;
-                case 'pos': title = t('نقطة البيع', 'POS'); break;
-            }
-
             printWindow.document.write('<html><head><title>Print QR Code</title>');
-            printWindow.document.write('<style>body { font-family: sans-serif; text-align: center; padding-top: 50px; } img { width: 250px; height: 250px; } h2 { font-size: 24px; margin-bottom: 20px; } </style>');
+            printWindow.document.write('<style>@import url("https://fonts.googleapis.com/css2?family=Alegreya:wght@700&family=Belleza&display=swap"); body { font-family: "Alegreya", serif; text-align: center; padding-top: 50px; } .qr-card { border: 2px solid #ddd; padding: 20px; border-radius: 15px; max-width: 300px; margin: 20px auto; break-inside: avoid; } img { width: 250px; height: 250px; } h2 { font-family: "Belleza", sans-serif; font-size: 28px; margin-bottom: 5px; } h3 { font-size: 22px; margin-top: 0; margin-bottom: 20px; } .footer { margin-top: 15px; font-size: 14px; } </style>');
             printWindow.document.write('</head><body>');
-            printWindow.document.write(`<h2>${title}</h2>`);
-            printWindow.document.write(`<img src="${qrImage.src}" alt="QR Code" />`);
+            printWindow.document.write(printContent.innerHTML);
             printWindow.document.write('</body></html>');
             printWindow.document.close();
             setTimeout(() => {
                 printWindow.focus();
                 printWindow.print();
-                // printWindow.close(); // Optional: close window after printing
             }, 500);
         }
     };
@@ -139,11 +134,21 @@ export function QrCodeGenerator() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-4 text-center"
                 >
-                    <Card className="mt-4 bg-muted/40 inline-block p-4">
-                        <CardContent className="p-0">
-                           <img ref={qrImageRef} src={generatedQrUrl} alt="Generated QR Code" className="w-48 h-48 mx-auto rounded-md" />
-                        </CardContent>
-                    </Card>
+                    <div ref={printAreaRef}>
+                        <div className="qr-card">
+                             <h2>{settings.restaurantName}</h2>
+                            <h3>
+                                {target === 'customer' && `${t('الطاولة', 'Table')} ${tableNumber}`}
+                                {target === 'chef' && t('واجهة الشيف', 'Chef Interface')}
+                                {target === 'pos' && t('نقطة البيع', 'POS')}
+                            </h3>
+                            <img ref={qrImageRef} src={generatedQrUrl} alt="Generated QR Code" className="w-48 h-48 mx-auto rounded-md" />
+                            <div className='footer'>
+                                <p className="flex items-center justify-center gap-1 text-xs"><Building className="w-3 h-3"/> {settings.address}</p>
+                                <p className="flex items-center justify-center gap-1 text-xs"><Phone className="w-3 h-3"/> {settings.phone}</p>
+                            </div>
+                        </div>
+                    </div>
                     <Button onClick={handlePrint} variant="outline" className="w-full">
                         <Printer className="ltr:mr-2 rtl:ml-2 h-4 w-4"/>
                         {t('طباعة', 'Print')}

@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
@@ -24,6 +25,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
 import { Button } from '@/components/ui/button';
 import { LogOut, MoreHorizontal } from 'lucide-react';
+import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 
 export function AppContent({
   children,
@@ -32,6 +34,7 @@ export function AppContent({
 }>) {
   const { language, dir } = useLanguage();
   const { isAuthenticated, logout } = useAuth();
+  const { settings } = useRestaurantSettings();
   const pathname = usePathname();
   const [pageTitle, setPageTitle] = useState('');
   
@@ -84,7 +87,7 @@ export function AppContent({
               <IconLogo className="w-10 h-10 text-primary" />
               <div className="flex flex-col">
               <span className="font-headline text-lg font-semibold tracking-tighter">
-                  {t('العالمية', 'Al-Alamiyah')}
+                  {settings.restaurantName}
               </span>
               <span className="text-xs text-muted-foreground">{t('مدير المطعم', 'Restaurant Manager')}</span>
               </div>

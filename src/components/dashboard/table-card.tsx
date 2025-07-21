@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -20,7 +21,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     icon: <AlertCircle className="h-5 w-5" />,
     text: 'طلب جديد',
     badge: 'border-transparent bg-red-500/20 text-red-500',
-    shadow: 'shadow-md shadow-red-900/10'
+    shadow: 'shadow-red-900/10'
   },
   confirmed: {
     bg: 'bg-card',
@@ -29,7 +30,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     icon: <CheckCircle className="h-5 w-5" />,
     text: 'تم التأكيد',
     badge: 'border-transparent bg-green-500/20 text-green-500',
-    shadow: 'shadow-md shadow-green-900/10'
+    shadow: 'shadow-green-900/10'
   },
   paying: {
     bg: 'bg-card',
@@ -38,7 +39,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     icon: <CreditCard className="h-5 w-5" />,
     text: 'دفع',
     badge: 'border-transparent bg-blue-500/20 text-blue-500',
-    shadow: 'shadow-md shadow-blue-900/10'
+    shadow: 'shadow-blue-900/10'
   },
   occupied: {
     bg: 'bg-card',
@@ -47,7 +48,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     icon: <Utensils className="h-5 w-5" />,
     text: 'مشغولة',
     badge: 'border-transparent bg-yellow-500/20 text-yellow-500',
-    shadow: 'shadow-md shadow-yellow-900/10'
+    shadow: 'shadow-yellow-900/10'
   },
   needs_attention: {
     bg: 'bg-card',
@@ -56,7 +57,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     icon: <CircleHelp className="h-5 w-5" />,
     text: 'تحتاج مساعدة',
     badge: 'border-transparent bg-orange-500/20 text-orange-500',
-    shadow: 'shadow-md shadow-orange-900/10'
+    shadow: 'shadow-orange-900/10'
   },
   available: {
     bg: 'bg-card/60 dark:bg-muted/10',
@@ -77,7 +78,7 @@ export function TableCard({ table, onSelect }: TableCardProps) {
     <Card
       onClick={() => onSelect(table)}
       className={cn(
-        'flex flex-col justify-between h-40 transform hover:-translate-y-1 select-none',
+        'flex flex-col justify-between h-40 transform hover:-translate-y-1 select-none shadow-md',
         styles.bg,
         styles.border,
         styles.shadow,

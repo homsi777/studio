@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -20,12 +21,14 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 
 export default function LoginPage() {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { login } = useAuth();
     const { toast } = useToast();
+    const { settings } = useRestaurantSettings();
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -62,7 +65,7 @@ export default function LoginPage() {
                 <ThemeToggle />
             </div>
             <div className='text-center mb-8'>
-                <h1 className='font-headline text-4xl font-bold text-primary tracking-wider'>العالمية جروب</h1>
+                <h1 className='font-headline text-4xl font-bold text-primary tracking-wider'>{settings.restaurantName}</h1>
                 <p className='text-muted-foreground'>{t('حلول ذكية ومتكاملة لإدارة المطاعم', 'Smart and Integrated Restaurant Management Solutions')}</p>
             </div>
             <Card className="w-full max-w-sm" dir={dir}>

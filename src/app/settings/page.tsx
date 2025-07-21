@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -12,16 +13,24 @@ import { AuthGuard } from "@/components/auth-guard";
 import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 
 
 function SettingsPage() {
   const { language } = useLanguage();
   const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
   const { toast } = useToast();
+  
+  const { settings, setSettings } = useRestaurantSettings();
 
   const [exchangeRate, setExchangeRate] = useState<number | null>(15000);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [isLoading, setIsLoading] = useState(false);
+  
+  const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setSettings(prev => ({ ...prev, [id]: value }));
+  }
 
   const handleFetchRate = async () => {
     setIsLoading(true);
@@ -60,16 +69,24 @@ function SettingsPage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>{t('الإعدادات العامة', 'General Settings')}</CardTitle>
-                    <CardDescription>{t('إدارة الإعدادات الأساسية للمطعم.', 'Manage basic restaurant settings.')}</CardDescription>
+                    <CardDescription>{t('إدارة المعلومات الأساسية للمطعم.', 'Manage basic restaurant information.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                    <Label htmlFor="restaurant-name">{t('اسم المطعم', 'Restaurant Name')}</Label>
-                    <Input id="restaurant-name" defaultValue="العالمية" />
+                        <Label htmlFor="restaurantName">{t('اسم المطعم', 'Restaurant Name')}</Label>
+                        <Input id="restaurantName" value={settings.restaurantName} onChange={handleSettingsChange} />
                     </div>
                     <div className="space-y-2">
-                    <Label htmlFor="restaurant-address">{t('العنوان', 'Address')}</Label>
-                    <Input id="restaurant-address" defaultValue="دمشق، سوريا" />
+                        <Label htmlFor="address">{t('العنوان', 'Address')}</Label>
+                        <Input id="address" value={settings.address} onChange={handleSettingsChange} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="phone">{t('رقم الهاتف', 'Phone Number')}</Label>
+                        <Input id="phone" value={settings.phone} onChange={handleSettingsChange} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email">{t('البريد الإلكتروني (اختياري)', 'Email (Optional)')}</Label>
+                        <Input id="email" value={settings.email} onChange={handleSettingsChange} />
                     </div>
                 </CardContent>
                 </Card>

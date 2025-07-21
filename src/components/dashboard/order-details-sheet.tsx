@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Hash, UtensilsCrossed, Printer, Coins, ChefHat } from "lucide-react";
+import { Clock, Hash, UtensilsCrossed, Printer, Coins, ChefHat, Building, Phone, Mail } from "lucide-react";
+import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 
 interface OrderDetailsSheetProps {
   table: Table | null;
@@ -50,6 +51,7 @@ const formatTimeAgo = (timestamp?: number): string => {
 };
 
 export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsSheetProps) {
+  const { settings } = useRestaurantSettings();
   const [currency, setCurrency] = useState<'SYP' | 'USD'>('SYP');
   const [chefConfirmationTimeAgo, setChefConfirmationTimeAgo] = useState('');
 
@@ -113,9 +115,14 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
         
         {/* Printable Invoice section */}
         <div id={`invoice-table-${table.id}`} className="flex-1 overflow-y-auto py-4 px-1 space-y-6">
-          <div className="print:text-center print:pt-8">
-            <h2 className="font-headline text-3xl hidden print:block mb-2 font-bold">مطعم العالمية</h2>
-            <p className="text-lg print:text-black font-semibold hidden print:block">فاتورة الطاولة {table.id}</p>
+          <div className="print:text-center print:pt-8 space-y-2">
+            <h2 className="font-headline text-3xl hidden print:block mb-2 font-bold">{settings.restaurantName}</h2>
+            <div className="hidden print:block text-xs text-gray-600">
+                <p className="flex items-center justify-center gap-2"><Building className="w-3 h-3"/> {settings.address}</p>
+                <p className="flex items-center justify-center gap-2"><Phone className="w-3 h-3"/> {settings.phone}</p>
+                {settings.email && <p className="flex items-center justify-center gap-2"><Mail className="w-3 h-3"/> {settings.email}</p>}
+            </div>
+            <p className="text-lg print:text-black font-semibold hidden print:block pt-4">فاتورة الطاولة {table.id}</p>
           </div>
 
           <div className="space-y-2">
