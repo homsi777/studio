@@ -146,7 +146,7 @@ export default function MenuPage({ params }: { params: { tableId: string } }) {
                         <h2 className="font-headline text-3xl font-bold mb-6 text-primary">{section.title}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {section.items.map(item => (
-                                <Card key={item.id} ref={el => itemRefs.current[item.id] = el} className="menu-item-card overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 relative">
+                                <Card key={item.id} ref={el => itemRefs.current[item.id] = el} className="menu-item-card overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:border-primary/50 relative select-none">
                                     {item.offer && (
                                         <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs shadow-lg z-10" variant="destructive">
                                             {language === 'ar' ? item.offer : (item.offer_en || item.offer)}

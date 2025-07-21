@@ -119,7 +119,7 @@ export default function QuickPOSPage() {
                 <ScrollArea className="flex-1 -m-2 p-2">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {filteredItems.map(item => (
-                            <Card key={item.id} className="cursor-pointer hover:border-primary active:border-primary active:scale-95 transition-all duration-100 flex flex-col" onClick={() => addToCart(item)}>
+                            <Card key={item.id} className="cursor-pointer hover:border-primary active:border-primary active:scale-95 transition-all duration-100 flex flex-col select-none" onClick={() => addToCart(item)}>
                                 <CardContent className="p-2 text-center flex-1 flex flex-col justify-center">
                                     <p className="font-bold text-base leading-tight">{t(item.name, item.name_en || '')}</p>
                                     <p className="text-sm text-muted-foreground font-semibold">{item.price.toLocaleString()} {t('ل.س', 'SYP')}</p>
