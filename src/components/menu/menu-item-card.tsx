@@ -36,6 +36,7 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
                                 src={item.image}
                                 alt={t(item.name, item.name_en || '')}
                                 fill
+                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                                 data-ai-hint={item.image_hint || ''}
                             />
