@@ -50,9 +50,13 @@ export default function ReportsPage() {
       },
     }
 
+    const handlePrint = () => {
+      window.print();
+    }
+
   return (
     <main className="flex-1 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4 report-print-hide">
             <h1 className="font-headline text-3xl font-bold text-foreground">{t("التقارير التحليلية", "Analytical Reports")}</h1>
             <div className="flex items-center gap-2 flex-wrap">
                 <Select defaultValue="weekly">
@@ -76,7 +80,7 @@ export default function ReportsPage() {
                      <Button variant="outline" size="icon" aria-label={t("تصدير Word", "Export Word")}>
                         <FileCode className="h-4 w-4" />
                     </Button>
-                     <Button variant="outline" size="icon" aria-label={t("طباعة", "Print")}>
+                     <Button variant="outline" size="icon" aria-label={t("طباعة", "Print")} onClick={handlePrint}>
                         <Printer className="h-4 w-4" />
                     </Button>
                 </div>
@@ -87,7 +91,7 @@ export default function ReportsPage() {
              <Card className="lg:col-span-3">
                 <CardHeader>
                     <CardTitle>{t("ملخص الأداء المالي", "Financial Performance Summary")}</CardTitle>
-                    <CardDescription>{t("مقارنة بين إجمالي المبيعات والمصاريف خلال آخر 7 أيام.", "Sales vs. expenses over the last 7 days.")}</CardDescription>
+                    <CardDescription className="report-print-hide">{t("مقارنة بين إجمالي المبيعات والمصاريف خلال آخر 7 أيام.", "Sales vs. expenses over the last 7 days.")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={chartConfig} className="h-[350px] w-full">
@@ -123,7 +127,7 @@ export default function ReportsPage() {
             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>{t("الأصناف الأكثر مبيعاً", "Top Selling Items")}</CardTitle>
-                    <CardDescription>{t("الأصناف الأكثر طلباً هذا الأسبوع.", "Most ordered items this week.")}</CardDescription>
+                    <CardDescription className="report-print-hide">{t("الأصناف الأكثر طلباً هذا الأسبوع.", "Most ordered items this week.")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -150,7 +154,7 @@ export default function ReportsPage() {
             <Card className="lg:col-span-2">
                 <CardHeader>
                     <CardTitle>{t("تقارير إضافية", "Additional Reports")}</CardTitle>
-                    <CardDescription>{t("نظرة عامة على جوانب أخرى من أداء المطعم.", "Overview of other aspects of restaurant performance.")}</CardDescription>
+                    <CardDescription className="report-print-hide">{t("نظرة عامة على جوانب أخرى من أداء المطعم.", "Overview of other aspects of restaurant performance.")}</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-4 bg-muted/50 rounded-lg">

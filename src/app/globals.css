@@ -83,3 +83,82 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .print-receipt {
+    @media print {
+      .printable-receipt {
+        display: block !important;
+      }
+      body > *:not(.printable-receipt) {
+        display: none !important;
+      }
+      .receipt-content {
+        font-family: 'Courier New', Courier, monospace;
+        color: black;
+        background: white;
+        width: 300px;
+        margin: 0 auto;
+        padding: 1rem;
+      }
+    }
+  }
+}
+
+@media print {
+  /* Hide sidebar and header when printing */
+  [data-sidebar="sidebar"],
+  [data-sidebar="trigger"],
+  header {
+    display: none !important;
+  }
+  
+  /* Ensure main content takes full width */
+  main, [data-sidebar-inset] {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  
+  /* Hide buttons and other interactive elements in reports */
+  .report-print-hide {
+    display: none !important;
+  }
+  
+  /* Ensure charts and cards are visible */
+  .card, .card-content, .card-header {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #e0e0e0 !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+
+  .print\:text-black {
+    color: black !important;
+  }
+
+  .print\:bg-white {
+    background-color: white !important;
+  }
+  
+  .print\:text-center {
+    text-align: center !important;
+  }
+  
+  .print\:pt-8 {
+    padding-top: 2rem !important;
+  }
+
+  .print\:text-gray-600 {
+    color: #4b5563 !important;
+  }
+}

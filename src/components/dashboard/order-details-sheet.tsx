@@ -113,7 +113,8 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
         <div id={`invoice-table-${table.id}`} className="flex-1 overflow-y-auto py-4 px-1 space-y-6">
           <div className="print:text-center print:pt-8">
             <h2 className="font-headline text-3xl hidden print:block mb-2">فاتورة</h2>
-            <h3 className="font-headline text-xl text-foreground print:text-black">الطاولة {table.id}</h3>
+            <h3 className="font-headline text-xl text-foreground print:text-black">مطعم المائدة</h3>
+            <p className="text-sm print:text-black">الطاولة {table.id}</p>
           </div>
 
           <div className="space-y-2">
@@ -137,6 +138,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
                   <span>رقم الطلب: {table.order.id}</span>
                 </div>
               )}
+               <p className="print:text-black">تاريخ: {new Date().toLocaleString('ar-SY')}</p>
             </div>
           </div>
           
@@ -169,6 +171,11 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
                 <p className="text-muted-foreground">لا يوجد طلب لهذه الطاولة بعد.</p>
             </div>
           )}
+
+           <div className="print:text-center hidden print:block pt-4 space-y-1 text-xs">
+              <p>شكراً لزيارتكم!</p>
+              <p>Thank you for visiting!</p>
+            </div>
         </div>
         <SheetFooter className="mt-auto print:hidden">
           <div className="flex flex-col sm:flex-row gap-2 w-full">
