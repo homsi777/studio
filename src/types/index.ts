@@ -13,7 +13,7 @@ export type MenuItem = {
   description?: string;
   description_en?: string;
   category: MenuItemCategory;
-  image: string;
+  image?: string;
   "data-ai-hint"?: string;
 };
 
@@ -39,6 +39,7 @@ export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies';
 export type Expense = {
     id: string;
     description: string;
+    description_en?: string;
     amount: number;
     date: string;
     category: ExpenseCategory;

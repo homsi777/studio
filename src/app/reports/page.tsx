@@ -1,6 +1,7 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { useLanguage } from "@/hooks/use-language"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -8,50 +9,58 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 
 const salesData = [
-  { date: "السبت", sales: 400000 },
-  { date: "الأحد", sales: 300000 },
-  { date: "الإثنين", sales: 500000 },
-  { date: "الثلاثاء", sales: 450000 },
-  { date: "الأربعاء", sales: 600000 },
-  { date: "الخميس", sales: 750000 },
-  { date: "الجمعة", sales: 900000 },
+  { date: "Sat", date_ar: "السبت", sales: 400000, expenses: 150000 },
+  { date: "Sun", date_ar: "الأحد", sales: 300000, expenses: 120000 },
+  { date: "Mon", date_ar: "الإثنين", sales: 500000, expenses: 200000 },
+  { date: "Tue", date_ar: "الثلاثاء", sales: 450000, expenses: 180000 },
+  { date: "Wed", date_ar: "الأربعاء", sales: 600000, expenses: 250000 },
+  { date: "Thu", date_ar: "الخميس", sales: 750000, expenses: 300000 },
+  { date: "Fri", date_ar: "الجمعة", sales: 900000, expenses: 350000 },
 ]
 
 const topSellingItems = [
-    { name: "مشويات مشكلة", count: 120 },
-    { name: "شيش طاووق", count: 95 },
-    { name: "فتوش", count: 80 },
-    { name: "بيبسي", count: 250 },
-    { name: "كبة مقلية", count: 70 },
+    { name: "مشويات مشكلة", name_en: "Mixed Grill", count: 120 },
+    { name: "شيش طاووق", name_en: "Shish Tawook", count: 95 },
+    { name: "فتوش", name_en: "Fattoush", count: 80 },
+    { name: "بيبسي", name_en: "Pepsi", count: 250 },
+    { name: "كبة مقلية", name_en: "Fried Kibbeh", count: 70 },
 ]
 
 const kitchenReportData = {
-    avgPreparationTime: "18 دقيقة",
-    peakHours: "8:00م - 10:00م",
+    avgPreparationTime: "18",
+    peakHours: "8:00 PM - 10:00 PM",
+    peakHours_ar: "8:00م - 10:00م",
     orderCount: 85,
 }
 
 export default function ReportsPage() {
+    const { language } = useLanguage();
+    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+
     const chartConfig = {
       sales: {
-        label: "المبيعات (ل.س)",
+        label: t("المبيعات", "Sales"),
         color: "hsl(var(--primary))",
+      },
+      expenses: {
+        label: t("المصاريف", "Expenses"),
+        color: "hsl(var(--accent))",
       },
     }
 
   return (
-    <main className="flex-1 p-4 sm:p-6" dir="rtl">
+    <main className="flex-1 p-4 sm:p-6">
         <div className="flex items-center justify-between mb-6">
-            <h1 className="font-headline text-3xl font-bold text-foreground">التقارير</h1>
+            <h1 className="font-headline text-3xl font-bold text-foreground">{t("التقارير", "Reports")}</h1>
             <div className="flex items-center gap-2">
                 <Select defaultValue="weekly">
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="عرض حسب" />
+                        <SelectValue placeholder={t("عرض حسب", "View by")} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="daily">يومي</SelectItem>
-                        <SelectItem value="weekly">أسبوعي</SelectItem>
-                        <SelectItem value="monthly">شهري</SelectItem>
+                        <SelectItem value="daily">{t("يومي", "Daily")}</SelectItem>
+                        <SelectItem value="weekly">{t("أسبوعي", "Weekly")}</SelectItem>
+                        <SelectItem value="monthly">{t("شهري", "Monthly")}</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -60,24 +69,32 @@ export default function ReportsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
              <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle>ملخص المبيعات الأسبوعي</CardTitle>
-                    <CardDescription>إجمالي المبيعات بالليرة السورية خلال آخر 7 أيام.</CardDescription>
+                    <CardTitle>{t("ملخص الأداء المالي", "Financial Performance Summary")}</CardTitle>
+                    <CardDescription>{t("مقارنة بين إجمالي المبيعات والمصاريف خلال آخر 7 أيام.", "Sales vs. expenses over the last 7 days.")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
                         <BarChart data={salesData} accessibilityLayer>
                             <CartesianGrid vertical={false} />
                             <XAxis
-                                dataKey="date"
+                                dataKey={language === 'ar' ? "date_ar" : "date"}
                                 tickLine={false}
                                 tickMargin={10}
                                 axisLine={false}
                             />
                              <YAxis
-                                tickFormatter={(value) => `${Number(value) / 1000} ألف`}
+                                tickFormatter={(value) => `${Number(value) / 1000}k`}
                             />
-                            <Tooltip content={<ChartTooltipContent />} />
-                            <Bar dataKey="sales" fill="var(--color-sales)" radius={4} />
+                            <Tooltip 
+                                cursor={{ fill: 'hsl(var(--muted))' }}
+                                content={<ChartTooltipContent 
+                                    formatter={(value, name) => `${(typeof value === 'number' ? value.toLocaleString() : value)} ${t('ل.س', 'SYP')}`}
+                                    labelClassName="font-bold"
+                                />} 
+                            />
+                            <Legend />
+                            <Bar dataKey="sales" fill="var(--color-sales)" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ChartContainer>
                 </CardContent>
@@ -85,21 +102,21 @@ export default function ReportsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>الأصناف الأكثر مبيعاً</CardTitle>
-                    <CardDescription>الأصناف الأكثر طلباً هذا الأسبوع.</CardDescription>
+                    <CardTitle>{t("الأصناف الأكثر مبيعاً", "Top Selling Items")}</CardTitle>
+                    <CardDescription>{t("الأصناف الأكثر طلباً هذا الأسبوع.", "Most ordered items this week.")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>الصنف</TableHead>
-                                <TableHead className="text-center">عدد الطلبات</TableHead>
+                                <TableHead>{t("الصنف", "Item")}</TableHead>
+                                <TableHead className="text-center">{t("عدد الطلبات", "Orders")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {topSellingItems.map((item) => (
                                 <TableRow key={item.name}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
                                     <TableCell className="text-center">
                                          <Badge>{item.count}</Badge>
                                     </TableCell>
@@ -112,46 +129,21 @@ export default function ReportsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>تقرير حالة المطبخ</CardTitle>
-                    <CardDescription>نظرة عامة على أداء المطبخ.</CardDescription>
+                    <CardTitle>{t("تقرير حالة المطبخ", "Kitchen Status Report")}</CardTitle>
+                    <CardDescription>{t("نظرة عامة على أداء المطبخ.", "Overview of kitchen performance.")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">متوسط وقت التحضير</span>
-                        <span className="font-bold">{kitchenReportData.avgPreparationTime}</span>
+                        <span className="text-muted-foreground">{t("متوسط وقت التحضير", "Avg. Preparation Time")}</span>
+                        <span className="font-bold">{kitchenReportData.avgPreparationTime} {t("دقيقة", "min")}</span>
                     </div>
                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">ساعات الذروة</span>
-                        <span className="font-bold">{kitchenReportData.peakHours}</span>
+                        <span className="text-muted-foreground">{t("ساعات الذروة", "Peak Hours")}</span>
+                        <span className="font-bold">{language === 'ar' ? kitchenReportData.peakHours_ar : kitchenReportData.peakHours}</span>
                     </div>
                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">إجمالي الطلبات اليوم</span>
+                        <span className="text-muted-foreground">{t("إجمالي الطلبات اليوم", "Total Orders Today")}</span>
                         <span className="font-bold">{kitchenReportData.orderCount}</span>
-                    </div>
-                </CardContent>
-            </Card>
-
-             <Card>
-                <CardHeader>
-                    <CardTitle>ملخص المصاريف</CardTitle>
-                    <CardDescription>إجمالي المصاريف المسجلة هذا الشهر.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">إيجار</span>
-                        <span className="font-bold">2,500,000 ل.س</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">فواتير</span>
-                        <span className="font-bold">800,000 ل.س</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">مشتريات</span>
-                        <span className="font-bold">7,200,000 ل.س</span>
-                    </div>
-                     <div className="flex justify-between items-center pt-2 border-t font-bold text-lg">
-                        <span>الإجمالي</span>
-                        <span>10,500,000 ل.س</span>
                     </div>
                 </CardContent>
             </Card>

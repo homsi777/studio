@@ -52,7 +52,7 @@ const mockMenuItems: MenuItem[] = [
 
 const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
     main: { ar: 'طبق رئيسي', en: 'Main Course' },
-    appetizer: { ar: 'Appetizer', en: 'Appetizer' },
+    appetizer: { ar: 'مقبلات', en: 'Appetizer' },
     drink: { ar: 'مشروب', en: 'Drink' },
     dessert: { ar: 'حلويات', en: 'Dessert' },
 };
@@ -137,7 +137,7 @@ export default function MenuManagementPage() {
                         {items.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell>
-                                    <Image src={item.image} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item['data-ai-hint']} />
+                                    <Image src={item.image || 'https://placehold.co/600x400'} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item['data-ai-hint']} />
                                 </TableCell>
                                 <TableCell className="font-medium">{language === 'ar' ? item.name : item.name_en}</TableCell>
                                 <TableCell>
@@ -151,7 +151,7 @@ export default function MenuManagementPage() {
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
+                                        <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
                                             <DropdownMenuItem onClick={() => handleEdit(item)}>
                                                 <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                                 {t('تعديل', 'Edit')}
@@ -199,12 +199,12 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
         if (item) {
             setFormData({
                 name: item.name,
-                name_en: item.name_en,
-                description: item.description,
-                description_en: item.description_en,
+                name_en: item.name_en || '',
+                description: item.description || '',
+                description_en: item.description_en || '',
                 price: item.price,
                 category: item.category,
-                image: item.image,
+                image: item.image || 'https://placehold.co/600x400',
             });
         } else {
             setFormData({

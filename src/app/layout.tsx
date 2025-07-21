@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from '@/hooks/use-language';
 import { AppContent } from '@/components/app-content';
 
@@ -17,9 +16,13 @@ export default function RootLayout({
 }>) {
   return (
     <LanguageProvider>
-        <AppContent>
-            {children}
-        </AppContent>
+      <html lang="ar" dir="rtl">
+        <body>
+          <AppContent>
+              {children}
+          </AppContent>
+        </body>
+      </html>
     </LanguageProvider>
   );
 }
