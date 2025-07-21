@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useOrderFlow } from '@/hooks/use-order-flow';
+import { uuidToTableMap } from '@/lib/utils';
+
 
 const menuItems: MenuItem[] = [
     { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'كباب، شيش طاووق، لحم بعجين.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off', image: "https://placehold.co/600x400.png", image_hint: "mixed grill" },
@@ -25,11 +27,6 @@ const menuItems: MenuItem[] = [
     { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة كنافة ناعمة مع جبنة.', category: 'dessert', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "cheese kunafa" },
     { id: 'item-10', name: 'سلطة سيزر', name_en: 'Caesar Salad', price: 30000, description: 'خس، دجاج مشوي، وصلصة السيزر.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "caesar salad" },
 ];
-
-const uuidToTableMap: Record<string, string> = {
-    "d2a5c1b8-3e9f-4b0a-8d1c-7f8e9a2b3c4d": "5",
-    "a1b2c3d4-e5f6-7890-1234-567890abcdef": "1"
-};
 
 export default function MenuPage() {
     const params = useParams();
@@ -62,9 +59,9 @@ export default function MenuPage() {
     // Find the current active order for this table/session
     useEffect(() => {
         if (!sessionId) return;
-        const activeOrder = orders.find(o => o.tableId === parseInt(displayTableNumber) && o.sessionId === sessionId && o.status !== 'completed' && o.status !== 'cancelled');
+        const activeOrder = orders.find(o => o.tableUuid === tableUuid && o.sessionId === sessionId && o.status !== 'completed' && o.status !== 'cancelled');
         setCurrentOrder(activeOrder || null);
-    }, [orders, displayTableNumber, sessionId]);
+    }, [orders, tableUuid, sessionId]);
 
     const addToCart = (item: MenuItem, itemId: string) => {
         const fromRect = addToCartRefs.current[itemId]?.getBoundingClientRect();
@@ -112,12 +109,13 @@ export default function MenuPage() {
     };
 
     const handleSendOrder = () => {
-        if (!sessionId) {
-            console.error("Session ID not available");
+        if (!sessionId || !tableUuid) {
+            console.error("Session ID or Table UUID not available");
             return;
         }
         const newOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
             tableId: parseInt(displayTableNumber),
+            tableUuid: tableUuid,
             sessionId: sessionId,
             items: cart,
             total: total,
@@ -324,5 +322,3 @@ export default function MenuPage() {
         </div>
     );
 }
-
-    

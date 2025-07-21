@@ -27,7 +27,7 @@ function ChefPage() {
     <main className="flex-1 flex flex-col p-4 sm:p-6 bg-background/30" dir="rtl">
         <div className="flex items-center justify-between mb-6">
             <h1 className="font-headline text-3xl font-bold text-foreground">واجهة الشيف</h1>
-            <Button onClick={addDummyOrder}>
+            <Button onClick={() => addDummyOrder('d2a5c1b8-3e9f-4b0a-8d1c-7f8e9a2b3c4d')}>
                 <PlusCircle className="ml-2 h-4 w-4" />
                 محاكاة طلب جديد
             </Button>

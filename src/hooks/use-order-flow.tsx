@@ -5,6 +5,7 @@ import React, { createContext, useState, useContext, ReactNode, useCallback } fr
 import { Order, Table, MenuItem } from '@/types';
 import { useToast } from './use-toast';
 import { BellRing } from 'lucide-react';
+import { uuidToTableMap } from '@/lib/utils';
 
 // --- MOCK DATA ---
 const initialOrders: Order[] = [];
@@ -23,7 +24,7 @@ interface OrderFlowContextType {
     approveOrderByCashier: (orderId: string) => void;
     confirmFinalOrder: (orderId: string) => void;
     confirmOrderReady: (orderId: string) => void;
-    addDummyOrder: () => void;
+    addDummyOrder: (tableUuid: string) => void;
 }
 
 const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefined);
@@ -61,12 +62,18 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         });
     }, [toast]);
     
-    const addDummyOrder = useCallback(() => {
-        const tableId = Math.floor(Math.random() * 12) + 1;
+    const addDummyOrder = useCallback((tableUuid: string) => {
+        const tableId = parseInt(uuidToTableMap[tableUuid] || '0', 10);
+        if (!tableId) {
+            console.error("Invalid table UUID for dummy order");
+            return;
+        }
+        
         // A dummy session ID for the simulated order
         const dummySessionId = `dummy-sid-${Date.now()}`;
         const dummyOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
             tableId: tableId,
+            tableUuid: tableUuid,
             sessionId: dummySessionId,
             items: [{ id: 'item-5', name: 'فتوش', quantity: 1, price: 20000, category: 'appetizer' }],
             total: 20000,
@@ -118,5 +125,3 @@ export const useOrderFlow = () => {
     }
     return context;
 };
-
-    
