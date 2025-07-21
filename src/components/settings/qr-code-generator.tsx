@@ -29,7 +29,7 @@ export function QrCodeGenerator() {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write('<html><head><title>QR Codes</title>');
-            printWindow.document.write('<style>body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; padding: 20px; } .qr-card { page-break-inside: avoid; text-align: center; border: 1px solid #ccc; padding: 10px; border-radius: 8px; width: 150px; } img { width: 100px; height: 100px; margin: 10px auto; display: block; } h3 { margin: 0; font-size: 16px; font-weight: bold; }</style>');
+            printWindow.document.write('<style>body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; padding: 20px; } .qr-card { page-break-inside: avoid; text-align: center; border: 1px solid #ccc; padding: 10px; border-radius: 8px; width: 150px; display: flex; flex-direction: column; align-items: center; } img { width: 100px; height: 100px; margin-bottom: 5px; } h3 { margin: 0; font-size: 14px; font-weight: bold; } .restaurant-name { font-size: 10px; color: #555; margin-top: 5px;}</style>');
             printWindow.document.write('</head><body>');
             for (let i = 1; i <= tableCount; i++) {
                 const url = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/menu/${i}`)}`;
@@ -37,6 +37,7 @@ export function QrCodeGenerator() {
                     `<div class="qr-card">
                         <h3>${t('الطاولة', 'Table')} ${i}</h3>
                         <img src="${url}" alt="QR Code for Table ${i}" />
+                        <span class="restaurant-name">${t('مطعم العالمية', 'Al-Alamiyah')}</span>
                     </div>`
                 );
             }

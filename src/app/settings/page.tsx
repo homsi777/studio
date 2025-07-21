@@ -57,13 +57,17 @@ function SettingsPage() {
 
                 <Card>
                 <CardHeader>
-                    <CardTitle>{t('إعدادات الطابعة', 'Printer Settings')}</CardTitle>
-                    <CardDescription>{t('إدارة إعدادات طابعة الفواتير.', 'Manage invoice printer settings.')}</CardDescription>
+                    <CardTitle>{t('إعدادات الطابعات', 'Printers Settings')}</CardTitle>
+                    <CardDescription>{t('إدارة إعدادات طابعات التقارير والفواتير.', 'Manage settings for report and receipt printers.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                    <Label htmlFor="printer-name">{t('اسم الطابعة', 'Printer Name')}</Label>
-                    <Input id="printer-name" defaultValue="POS-80C" />
+                        <Label htmlFor="printer-a4">{t('طابعة التقارير (A4)', 'Reports Printer (A4)')}</Label>
+                        <Input id="printer-a4" defaultValue="Microsoft Print to PDF" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="printer-thermal">{t('طابعة الفواتير (حرارية 80مم)', 'Receipt Printer (80mm Thermal)')}</Label>
+                        <Input id="printer-thermal" defaultValue="POS-80C" />
                     </div>
                     <Button variant="outline">{t('اختبار الطباعة', 'Test Print')}</Button>
                 </CardContent>

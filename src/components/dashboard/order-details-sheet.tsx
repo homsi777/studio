@@ -114,9 +114,8 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
         {/* Printable Invoice section */}
         <div id={`invoice-table-${table.id}`} className="flex-1 overflow-y-auto py-4 px-1 space-y-6">
           <div className="print:text-center print:pt-8">
-            <h2 className="font-headline text-3xl hidden print:block mb-2">فاتورة</h2>
-            <h3 className="font-headline text-xl text-foreground print:text-black">مطعم العالمية</h3>
-            <p className="text-sm print:text-black">الطاولة {table.id}</p>
+            <h2 className="font-headline text-3xl hidden print:block mb-2 font-bold">مطعم العالمية</h2>
+            <p className="text-lg print:text-black font-semibold hidden print:block">فاتورة الطاولة {table.id}</p>
           </div>
 
           <div className="space-y-2">

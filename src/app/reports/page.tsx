@@ -57,6 +57,9 @@ function ReportsPage() {
 
   return (
     <main className="flex-1 p-4 sm:p-6">
+        <div className="hidden print:block print-header">
+            <h1 className="print-header-title">{t('مطعم العالمية', 'Al-Alamiyah Restaurant')}</h1>
+        </div>
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4 report-print-hide">
             <h1 className="font-headline text-3xl font-bold text-foreground">{t("التقارير التحليلية", "Analytical Reports")}</h1>
             <div className="flex items-center gap-2 flex-wrap">

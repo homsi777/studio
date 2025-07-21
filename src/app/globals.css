@@ -106,6 +106,20 @@
 }
 
 @media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-header {
+    display: none;
+  }
+
+  @page {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
   /* Hide sidebar and header when printing */
   [data-sidebar="sidebar"],
   [data-sidebar="trigger"],
@@ -160,5 +174,17 @@
 
   .print\:text-gray-600 {
     color: #4b5563 !important;
+  }
+  
+  .print-header {
+    display: block !important;
+    text-align: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 1rem;
+  }
+  .print-header-title {
+    font-size: 1.5rem;
+    font-weight: bold;
   }
 }
