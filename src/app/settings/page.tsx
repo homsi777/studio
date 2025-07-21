@@ -73,7 +73,7 @@ function SettingsPage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>{t('الإعدادات العامة', 'General Settings')}</CardTitle>
-                    <CardDescription>{t('إدارة المعلومات الأساسية للمطعم وعدد الطاولات.', 'Manage basic restaurant information and table count.')}</CardDescription>
+                    <CardDescription>{t('إدارة المعلومات الأساسية للمطعم.', 'Manage basic restaurant information.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -88,10 +88,6 @@ function SettingsPage() {
                         <div className="space-y-2">
                             <Label htmlFor="phone">{t('رقم الهاتف', 'Phone Number')}</Label>
                             <Input id="phone" value={settings.phone} onChange={handleSettingsChange} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="numberOfTables">{t('عدد الطاولات', 'Number of Tables')}</Label>
-                            <Input id="numberOfTables" type="number" value={settings.numberOfTables} onChange={handleSettingsChange} min="1"/>
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -152,6 +148,16 @@ function SettingsPage() {
                     </CardHeader>
                     <CardContent>
                         <QrCodeGenerator />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('إدارة الطاولات', 'Table Management')}</CardTitle>
+                        <CardDescription>{t('تحديد العدد الإجمالي للطاولات في المطعم.', 'Set the total number of tables in the restaurant.')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <Label htmlFor="numberOfTables">{t('عدد الطاولات', 'Number of Tables')}</Label>
+                        <Input id="numberOfTables" type="number" value={settings.numberOfTables} onChange={handleSettingsChange} min="1"/>
                     </CardContent>
                 </Card>
             </div>
