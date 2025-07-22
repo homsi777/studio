@@ -391,7 +391,7 @@ export default function MenuPage() {
                                             {isSubmitting ? (
                                                 <Loader2 className="w-5 h-5 ltr:mr-2 rtl:ml-2 animate-spin"/>
                                             ) : (
-                                                <ArrowLeft className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
+                                                <CheckCircle className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
                                             )}
                                             {isSubmitting ? t('جارِ الإرسال...', 'Submitting...') : t('إرسال للموافقة', 'Send for Approval')}
                                         </Button>
@@ -405,3 +405,4 @@ export default function MenuPage() {
         </div>
     );
 }
+

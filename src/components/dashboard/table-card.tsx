@@ -5,7 +5,7 @@ import React from 'react';
 import { type Table } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, CircleHelp, Hourglass, Bell } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, HelpCircle, Hourglass, Bell } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { useLanguage } from '@/hooks/use-language';
 
@@ -19,7 +19,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     bg: 'bg-card',
     border: 'border-red-500/50',
     iconColor: 'text-red-500',
-    icon: <AlertCircle className="h-5 w-5" />,
+    icon: <AlertCircle className="h-5 w-5 animate-pulse" />,
     text_ar: 'طلب جديد',
     text_en: 'New Order',
     badge: 'border-transparent bg-red-500/20 text-red-500',
@@ -39,7 +39,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     bg: 'bg-card',
     border: 'border-purple-500/50',
     iconColor: 'text-purple-500',
-    icon: <CircleHelp className="h-5 w-5" />,
+    icon: <HelpCircle className="h-5 w-5" />,
     text_ar: 'بانتظار الزبون',
     text_en: 'Awaiting Customer',
     badge: 'border-transparent bg-purple-500/20 text-purple-500',
@@ -89,7 +89,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     bg: 'bg-card',
     border: 'border-orange-500/50',
     iconColor: 'text-orange-500',
-    icon: <CircleHelp className="h-5 w-5 animate-ping" />,
+    icon: <HelpCircle className="h-5 w-5 animate-ping" />,
     text_ar: 'تحتاج مساعدة',
     text_en: 'Needs Attention',
     badge: 'border-transparent bg-orange-500/20 text-orange-500',
