@@ -42,10 +42,10 @@ export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
             <>
                 <div 
                     onClick={handleCardClick} 
-                    className="honeycomb-cell group bg-card hover:bg-card/90 cursor-pointer flex flex-col items-center justify-center p-2 text-center"
+                    className="group bg-card hover:bg-card/90 cursor-pointer flex flex-col items-center justify-center p-2 text-center rounded-lg shadow-md w-40 min-h-[120px]"
                     ref={ref}
                 >
-                    <div className="flex-1 flex flex-col justify-center items-center">
+                    <div className="flex-1 flex flex-col justify-center items-center p-2">
                         <h3 className="font-headline text-sm sm:text-base font-bold leading-tight drop-shadow-md text-foreground">
                             {t(item.name, item.name_en || item.name)}
                         </h3>
@@ -55,12 +55,12 @@ export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
                     </div>
                      <motion.div
                         whileTap={{ scale: 0.9 }}
-                        className="mt-auto"
+                        className="mt-auto w-full px-2 pb-2"
                      >
                         <Button 
                             onClick={handleAddToCartClick} 
                             size="sm"
-                            className="bg-purple-200/50 text-purple-800 hover:bg-purple-200/80 dark:bg-purple-900/50 dark:text-purple-200 dark:hover:bg-purple-900/80 h-7 text-xs rounded-full px-3"
+                            className="bg-purple-200/50 text-purple-800 hover:bg-purple-200/80 dark:bg-purple-900/50 dark:text-purple-200 dark:hover:bg-purple-900/80 h-8 text-xs rounded-full px-3 w-full"
                         >
                             <Plus className="h-4 w-4 rtl:ml-1 ltr:mr-1" />
                             {t('إضافة', 'Add')}

@@ -121,21 +121,6 @@ export default function MenuPage() {
         return menuItems.filter(i => i.category === activeCategory);
     }, [activeCategory]);
     
-    const chunkedItems = useMemo(() => {
-       const result = [];
-       const itemsPerRow = [3, 2, 3, 2, 3]; // Example pattern
-       let i = 0;
-       let row = 0;
-       while(i < filteredItems.length){
-           const chunkSize = itemsPerRow[row % itemsPerRow.length];
-           result.push(filteredItems.slice(i, i + chunkSize));
-           i += chunkSize;
-           row++;
-       }
-       return result;
-    }, [filteredItems]);
-
-
     if (currentOrder) {
         if (currentOrder.status === 'pending_chef_approval' || currentOrder.status === 'pending_cashier_approval') {
             return (
@@ -186,7 +171,7 @@ export default function MenuPage() {
 
 
     return (
-        <div className="bg-background min-h-screen font-body select-none overflow-x-hidden" dir={dir}>
+        <div className="bg-background min-h-screen font-body select-none" dir={dir}>
             <header className="p-4 border-b sticky top-0 bg-background/80 backdrop-blur-sm z-30">
                 <div className="container mx-auto flex justify-between items-center gap-4">
                     <div className="text-center flex-1">
@@ -211,18 +196,14 @@ export default function MenuPage() {
             </nav>
 
             <main className="container mx-auto p-4 sm:p-6 pb-32">
-                 <div className="honeycomb">
-                    {chunkedItems.map((row, rowIndex) => (
-                        <div key={rowIndex} className="flex justify-center honeycomb-row">
-                             {row.map(item => (
-                                <MenuItemCard
-                                    key={item.id}
-                                    item={item}
-                                    onAddToCart={addToCart}
-                                    formatCurrency={formatCurrency}
-                                />
-                            ))}
-                        </div>
+                 <div className="flex flex-wrap justify-center gap-4">
+                     {filteredItems.map(item => (
+                        <MenuItemCard
+                            key={item.id}
+                            item={item}
+                            onAddToCart={addToCart}
+                            formatCurrency={formatCurrency}
+                        />
                     ))}
                  </div>
             </main>
