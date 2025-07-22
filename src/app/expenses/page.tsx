@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { type Expense, type ExpenseCategory } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, ArrowUpDown, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
@@ -50,16 +50,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-
-const initialExpenses: Expense[] = [
-    { id: 'exp-1', description: 'إيجار المحل لشهر يونيو', description_en: 'Shop rent for June', amount: 2500000, date: '2024-06-01', category: 'rent' },
-    { id: 'exp-2', description: 'فاتورة الكهرباء', description_en: 'Electricity Bill', amount: 550000, date: '2024-06-05', category: 'bills' },
-    { id: 'exp-3', description: 'شراء خضروات ولحوم من المورد', description_en: 'Purchase of vegetables and meat', amount: 1200000, date: '2024-06-07', category: 'supplies' },
-    { id: 'exp-4', description: 'فاتورة المياه', description_en: 'Water Bill', amount: 250000, date: '2024-06-10', category: 'bills' },
-    { id: 'exp-5', description: 'شراء مشروبات غازية', description_en: 'Purchase of soft drinks', amount: 400000, date: '2024-06-12', category: 'supplies' },
-    { id: 'exp-6', description: 'صيانة نظام التكييف', description_en: 'A/C system maintenance', amount: 300000, date: '2024-06-15', category: 'maintenance' },
-    { id: 'exp-7', description: 'رواتب الموظفين', description_en: 'Employee salaries', amount: 5000000, date: '2024-06-25', category: 'salaries' },
-];
+import { useToast } from '@/hooks/use-toast';
 
 const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string }> = {
     rent: { ar: 'إيجار', en: 'Rent', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
@@ -74,13 +65,37 @@ const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: 
 function ExpensesPage() {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+    const { toast } = useToast();
 
-    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+    useEffect(() => {
+        const fetchExpenses = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/v1/expenses');
+                if (!response.ok) throw new Error('Failed to fetch expenses');
+                const data: Expense[] = await response.json();
+                setExpenses(data);
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: "destructive",
+                    title: t("خطأ في جلب البيانات", "Fetch Error"),
+                    description: t("لم نتمكن من جلب المصاريف من الخادم.", "Could not fetch expenses from the server."),
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchExpenses();
+    }, [toast, t]);
 
     const totalExpenses = useMemo(() => {
         return expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -97,20 +112,39 @@ function ExpensesPage() {
     }
 
     const handleDelete = (id: string) => {
+        // TODO: Implement DELETE request
+        console.log("Deleting expense:", id);
         setExpenses(prev => prev.filter(exp => exp.id !== id));
     }
 
-    const handleSave = (formData: Omit<Expense, 'id'>) => {
+    const handleSave = async (formData: Omit<Expense, 'id'>) => {
         if (editingExpense) {
-            // Update existing expense
+            // TODO: Implement PUT request
+            console.log("Updating expense:", editingExpense.id, formData);
             setExpenses(prev => prev.map(exp => exp.id === editingExpense.id ? { ...editingExpense, ...formData } : exp));
         } else {
-            // Add new expense
-            const newExpense: Expense = {
-                id: `exp-${Date.now()}`,
-                ...formData,
-            };
-            setExpenses(prev => [newExpense, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            // Add new expense via API
+            try {
+                const response = await fetch('/api/v1/expenses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                if (!response.ok) throw new Error('Failed to save expense');
+                const newExpense: Expense = await response.json();
+                setExpenses(prev => [newExpense, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+                toast({
+                    title: t("تم الحفظ بنجاح", "Expense Saved"),
+                    description: t("تم تسجيل المصروف الجديد بنجاح.", "The new expense has been recorded."),
+                });
+            } catch (error) {
+                 console.error(error);
+                 toast({
+                    variant: "destructive",
+                    title: t("خطأ في الحفظ", "Save Error"),
+                    description: t("لم نتمكن من حفظ المصروف الجديد.", "Could not save the new expense."),
+                });
+            }
         }
         setDialogOpen(false);
     };
@@ -287,71 +321,79 @@ function ExpensesPage() {
                      </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow key={headerGroup.id}>
-                                        {headerGroup.headers.map((header) => {
-                                            return (
-                                                <TableHead key={header.id}>
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
-                                                </TableHead>
-                                            )
-                                        })}
-                                    </TableRow>
-                                ))}
-                            </TableHeader>
-                            <TableBody>
-                                {table.getRowModel().rows?.length ? (
-                                    table.getRowModel().rows.map((row) => (
-                                        <TableRow
-                                            key={row.id}
-                                            data-state={row.getIsSelected() && "selected"}
-                                        >
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id}>
-                                                    {flexRender(
-                                                        cell.column.columnDef.cell,
-                                                        cell.getContext()
-                                                    )}
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-64">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <>
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        {table.getHeaderGroups().map((headerGroup) => (
+                                            <TableRow key={headerGroup.id}>
+                                                {headerGroup.headers.map((header) => {
+                                                    return (
+                                                        <TableHead key={header.id}>
+                                                            {header.isPlaceholder
+                                                                ? null
+                                                                : flexRender(
+                                                                    header.column.columnDef.header,
+                                                                    header.getContext()
+                                                                )}
+                                                        </TableHead>
+                                                    )
+                                                })}
+                                            </TableRow>
+                                        ))}
+                                    </TableHeader>
+                                    <TableBody>
+                                        {table.getRowModel().rows?.length ? (
+                                            table.getRowModel().rows.map((row) => (
+                                                <TableRow
+                                                    key={row.id}
+                                                    data-state={row.getIsSelected() && "selected"}
+                                                >
+                                                    {row.getVisibleCells().map((cell) => (
+                                                        <TableCell key={cell.id}>
+                                                            {flexRender(
+                                                                cell.column.columnDef.cell,
+                                                                cell.getContext()
+                                                            )}
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                                    {t('لا توجد نتائج.', 'No results.')}
                                                 </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-24 text-center">
-                                            {t('لا توجد نتائج.', 'No results.')}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                     <div className="flex items-center justify-end space-x-2 py-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            {t('السابق', 'Previous')}
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            {t('التالي', 'Next')}
-                        </Button>
-                    </div>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                             <div className="flex items-center justify-end space-x-2 py-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => table.previousPage()}
+                                    disabled={!table.getCanPreviousPage()}
+                                >
+                                    {t('السابق', 'Previous')}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => table.nextPage()}
+                                    disabled={!table.getCanNextPage()}
+                                >
+                                    {t('التالي', 'Next')}
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </CardContent>
             </Card>
 
