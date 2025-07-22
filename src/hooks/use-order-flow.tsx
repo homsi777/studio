@@ -28,6 +28,8 @@ interface OrderFlowContextType {
     confirmFinalOrder: (orderId: string) => Promise<void>;
     confirmOrderReady: (orderId: string) => Promise<void>;
     completeOrder: (orderId: string) => Promise<void>;
+    requestBill: (orderId: string) => Promise<void>;
+    requestAttention: (orderId: string) => Promise<void>;
     addDummyOrder: (tableUuid: string) => void;
 }
 
@@ -188,6 +190,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         if(success) toast({ title: 'تم إتمام الطلب', description: `تم إغلاق الطلب ${orderId.substring(0,5)}... بنجاح.` });
     }
 
+    const requestBill = async (orderId: string) => {
+        await updateOrderStatus(orderId, 'paying');
+    }
+    
+    const requestAttention = async (orderId: string) => {
+        await updateOrderStatus(orderId, 'needs_attention');
+    }
+
     return (
         <OrderFlowContext.Provider value={{
             orders,
@@ -198,6 +208,8 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             confirmFinalOrder,
             confirmOrderReady,
             completeOrder,
+            requestBill,
+            requestAttention,
             addDummyOrder,
         }}>
             {children}

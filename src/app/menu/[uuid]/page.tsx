@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { MenuItem, Order } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils, ReceiptText, Bell } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils, ReceiptText, Bell, HelpCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
@@ -24,7 +24,7 @@ export default function MenuPage() {
 
     const { language, dir } = useLanguage();
     const { settings } = useRestaurantSettings();
-    const { submitOrder, confirmFinalOrder, orders } = useOrderFlow();
+    const { submitOrder, confirmFinalOrder, orders, requestBill, requestAttention } = useOrderFlow();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
 
@@ -146,6 +146,27 @@ export default function MenuPage() {
         if (activeCategory === 'all') return menuItems;
         return menuItems.filter(i => i.category === activeCategory);
     }, [activeCategory, menuItems]);
+
+    const handleRequestBill = () => {
+        if (currentOrder) {
+            requestBill(currentOrder.id);
+            toast({
+                title: t('تم طلب الفاتورة', 'Bill Requested'),
+                description: t('سيقوم النادل بإحضار الفاتورة الورقية إلى طاولتكم قريباً.', 'A waiter will bring the paper bill to your table soon.'),
+            });
+        }
+    };
+
+    const handleRequestAttention = () => {
+        if (currentOrder) {
+            requestAttention(currentOrder.id);
+            toast({
+                title: t('تم طلب المساعدة', 'Attention Requested'),
+                description: t('نادل قادم لمساعدتكم.', 'A waiter is on their way to assist you.'),
+            });
+        }
+    };
+
     
     if (currentOrder) {
         if (currentOrder.status === 'pending_chef_approval' || currentOrder.status === 'pending_cashier_approval') {
@@ -210,30 +231,42 @@ export default function MenuPage() {
             );
         }
 
-        if (currentOrder.status === 'confirmed') {
+        if (currentOrder.status === 'confirmed' || currentOrder.status === 'ready' || currentOrder.status === 'paying' || currentOrder.status === 'needs_attention') {
+            
+            const getStatusContent = () => {
+                switch (currentOrder.status) {
+                    case 'confirmed':
+                        return { icon: <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />, title: t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!'), description: t('طلبك الآن قيد التحضير. نتمنى لكم وقتاً ممتعاً!', 'Your order is now being prepared. We wish you a pleasant time!') };
+                    case 'ready':
+                        return { icon: <Bell className="w-24 h-24 text-primary mx-auto mb-6 animate-bounce" />, title: t('طلبكم جاهز!', 'Your Order is Ready!'), description: t('يمكنكم استلام طلبكم الآن. بالهناء والشفاء!', 'You can now pick up your order. Enjoy your meal!') };
+                    case 'paying':
+                        return { icon: <ReceiptText className="w-24 h-24 text-blue-500 mx-auto mb-6" />, title: t('الفاتورة قادمة', 'Bill on the way'), description: t('النادل في طريقه إليكم بالفاتورة. شكراً لزيارتكم!', 'A waiter is on the way with your bill. Thanks for visiting!') };
+                    case 'needs_attention':
+                        return { icon: <HelpCircle className="w-24 h-24 text-orange-500 mx-auto mb-6 animate-pulse" />, title: t('المساعدة قادمة', 'Help is on the way'), description: t('أحد موظفينا قادم لمساعدتكم.', 'One of our staff is coming to assist you.') };
+                    default:
+                        return { icon: null, title: '', description: '' };
+                }
+            }
+            const { icon, title, description } = getStatusContent();
+            
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
-                        <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
-                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!')}</h1>
-                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                           {t('طلبك الآن قيد التحضير. نتمنى لكم وقتاً ممتعاً!', 'Your order is now being prepared. We wish you a pleasant time!')}
-                        </p>
+                        {icon}
+                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{title}</h1>
+                        <p className="text-muted-foreground max-w-md mx-auto mb-8">{description}</p>
                     </motion.div>
-                </div>
-            );
-        }
-
-        if (currentOrder.status === 'ready') {
-            return (
-                 <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
-                    <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
-                        <Bell className="w-24 h-24 text-primary mx-auto mb-6 animate-bounce" />
-                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('طلبكم جاهز!', 'Your Order is Ready!')}</h1>
-                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                           {t('يمكنكم استلام طلبكم الآن. بالهناء والشفاء!', 'You can now pick up your order. Enjoy your meal!')}
-                        </p>
-                    </motion.div>
+                    
+                    <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t p-4 flex justify-center gap-4">
+                        <Button variant="outline" size="lg" className="flex-1" onClick={handleRequestBill} disabled={currentOrder.status === 'paying'}>
+                            <ReceiptText className="ltr:mr-2 rtl:ml-2 h-5 w-5"/>
+                            {t('طلب الفاتورة', 'Request Bill')}
+                        </Button>
+                        <Button variant="outline" size="lg" className="flex-1" onClick={handleRequestAttention} disabled={currentOrder.status === 'needs_attention'}>
+                            <HelpCircle className="ltr:mr-2 rtl:ml-2 h-5 w-5"/>
+                            {t('طلب المساعدة', 'Request Help')}
+                        </Button>
+                    </div>
                 </div>
             );
         }
