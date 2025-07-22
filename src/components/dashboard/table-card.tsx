@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { cn } from '@/lib/utils';
 import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, CircleHelp, Hourglass } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import { useLanguage } from '@/hooks/use-language';
 
 interface TableCardProps {
   table: Table;
@@ -97,6 +98,8 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
 };
 
 export function TableCard({ table, onSelect }: TableCardProps) {
+  const { language } = useLanguage();
+  const t = (ar: string, en: string) => language === 'ar' ? ar : en;
   const styles = statusStyles[table.status] || statusStyles.available;
   const isClickable = table.status !== 'available';
 
@@ -113,12 +116,12 @@ export function TableCard({ table, onSelect }: TableCardProps) {
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
         <CardTitle className="text-2xl font-headline font-bold">
-          طاولة {table.id}
+          {t('طاولة', 'Table')} {table.id}
         </CardTitle>
         {styles.icon && React.cloneElement(styles.icon as React.ReactElement, { className: cn((styles.icon as React.ReactElement).props.className, styles.iconColor) })}
       </CardHeader>
       <CardContent className="p-4 pt-0 text-center flex-1 flex flex-col justify-center items-center">
-         <Badge variant="outline" className={cn('text-sm font-semibold', styles.badge)}>{styles.text_ar}</Badge>
+         <Badge variant="outline" className={cn('text-sm font-semibold', styles.badge)}>{t(styles.text_ar, styles.text_en)}</Badge>
       </CardContent>
       {table.seatingDuration && (
         <CardFooter className="p-2 text-xs text-muted-foreground flex items-center justify-center gap-1 bg-black/10 dark:bg-black/20 rounded-b-xl">

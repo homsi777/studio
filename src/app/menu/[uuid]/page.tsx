@@ -145,9 +145,14 @@ export default function MenuPage() {
                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
                         <Loader2 className="w-24 h-24 text-primary mx-auto mb-6 animate-spin" />
                         <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('بانتظار موافقة المطعم...', 'Awaiting Restaurant Approval...')}</h1>
-                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                        <p className="text-muted-foreground max-w-md mx-auto mb-4">
                             {t('طلبك قيد المراجعة من قبل الشيف والمحاسب. سيتم إعلامك فوراً عند الموافقة للمتابعة.', 'Your order is being reviewed by the chef and cashier. You will be notified immediately upon approval to proceed.')}
                         </p>
+                        {currentOrder.status === 'pending_cashier_approval' && (
+                             <motion.div initial={{opacity: 0, y:10}} animate={{opacity:1, y:0}} className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-lg p-3 text-sm font-semibold">
+                                {t('تمت موافقة الشيف بنجاح!', 'Chef Approved!')}
+                             </motion.div>
+                        )}
                     </motion.div>
                 </div>
             );
@@ -198,7 +203,7 @@ export default function MenuPage() {
                 </div>
             </header>
 
-             <nav className="flex justify-center gap-2 sm:gap-4 p-4 sticky top-20 bg-background/80 backdrop-blur-sm z-20 overflow-x-auto">
+             <nav className="flex justify-center gap-2 sm:gap-4 p-4 sticky top-[73px] bg-background/80 backdrop-blur-sm z-20 overflow-x-auto">
                 {sections.map(section => (
                     <Button 
                         key={section.id} 
@@ -218,7 +223,7 @@ export default function MenuPage() {
                          <Loader2 className="h-12 w-12 animate-spin text-primary" />
                     </div>
                 ) : filteredItems.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                         {filteredItems.map(item => (
                             <MenuItemCard
                                 key={item.id}

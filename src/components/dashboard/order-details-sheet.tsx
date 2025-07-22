@@ -146,7 +146,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg w-full flex flex-col font-body bg-card">
         <div id={`invoice-table-${table.id}`} className="print:bg-white print:text-black">
-          <SheetHeader className="text-right no-print">
+          <SheetHeader className="text-start">
             <SheetTitle className="font-headline text-2xl">{t('تفاصيل الطاولة', 'Table Details')} {table.id}</SheetTitle>
             <SheetDescription>
               <Badge variant="outline" className={`text-sm ${statusInfo.className}`}>{t(statusInfo.ar, statusInfo.en)}</Badge>
@@ -183,7 +183,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
                 {table.order?.id && (
                   <div className="flex items-center gap-2">
                     <Hash className="h-4 w-4" />
-                    <span>{t('رقم الطلب', 'Order No.')}: {table.order.id}</span>
+                    <span>{t('رقم الطلب', 'Order No.')}: {table.order.id.substring(0, 8)}...</span>
                   </div>
                 )}
                 <p>{t('التاريخ', 'Date')}: {new Date().toLocaleString(language === 'ar' ? 'ar-SY' : 'en-US')}</p>
