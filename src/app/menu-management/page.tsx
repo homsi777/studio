@@ -36,6 +36,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AuthGuard } from '@/components/auth-guard';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 
 const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
@@ -149,7 +151,7 @@ function MenuManagementPage() {
                  const response = await fetch('/api/v1/menu-items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify({ ...formData, is_available: true }),
                 });
 
                 if (!response.ok) {
@@ -172,12 +174,35 @@ function MenuManagementPage() {
         }
         setDialogOpen(false);
     };
+
+    const handleToggleAvailability = async (item: MenuItem, isChecked: boolean) => {
+        const optimisticItems = items.map(i => i.id === item.id ? { ...i, is_available: isChecked } : i);
+        setItems(optimisticItems);
+
+        try {
+            const response = await fetch(`/api/v1/menu-items/${item.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_available: isChecked }),
+            });
+            if (!response.ok) throw new Error('Failed to update availability');
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: 'destructive',
+                title: t('خطأ في التحديث', 'Update Error'),
+                description: t('لم نتمكن من تحديث حالة الصنف. يرجى إعادة المحاولة.', 'Could not update item status. Please try again.'),
+            });
+            // Revert on failure
+            setItems(items);
+        }
+    }
     
     const filteredItems = useMemo(() =>
         items.filter(item =>
             (activeCategory === 'all' || item.category === activeCategory) &&
             ((t(item.name, item.name_en || item.name).toLowerCase().includes(searchTerm.toLowerCase())))
-        ), [items, searchTerm, activeCategory, language, t]);
+        ).sort((a,b) => (a.is_available === b.is_available) ? 0 : a.is_available ? -1 : 1), [items, searchTerm, activeCategory, language, t]);
 
 
     return (
@@ -222,9 +247,12 @@ function MenuManagementPage() {
                     <AnimatePresence>
                     {filteredItems.map(item => (
                         <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
-                            <Card className="h-full flex flex-col relative overflow-hidden">
+                            <Card className={cn(
+                                "h-full flex flex-col relative overflow-hidden transition-opacity duration-300",
+                                !item.is_available && "opacity-50 bg-muted/30"
+                            )}>
                                 {item.offer && (
-                                    <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground text-xs shadow-lg" variant="destructive">
+                                    <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground text-xs shadow-lg z-10" variant="destructive">
                                         {language === 'ar' ? item.offer : (item.offer_en || item.offer)}
                                     </Badge>
                                 )}
@@ -252,7 +280,14 @@ function MenuManagementPage() {
                                     <p className="text-sm text-muted-foreground">{language === 'ar' ? item.description : (item.description_en || item.description)}</p>
                                 </CardContent>
                                 <CardFooter className="flex justify-between items-center bg-muted/20 pt-4">
-                                    <Badge variant="outline">{categoryMap[item.category][language]}</Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Switch 
+                                          id={`available-${item.id}`} 
+                                          checked={item.is_available} 
+                                          onCheckedChange={(isChecked) => handleToggleAvailability(item, isChecked)}
+                                        />
+                                        <Label htmlFor={`available-${item.id}`} className="text-xs font-semibold">{t('متوفر', 'Available')}</Label>
+                                    </div>
                                     <span className="font-bold text-lg text-primary">{item.price.toLocaleString()} {t('ل.س', 'SYP')}</span>
                                 </CardFooter>
                             </Card>
@@ -299,7 +334,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
     const { language } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    const [formData, setFormData] = useState<Omit<MenuItem, 'id' | 'quantity'>>({
+    const [formData, setFormData] = useState<Omit<MenuItem, 'id' | 'quantity' | 'is_available'>>({
         name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', offer: '', offer_en: ''
     });
 
@@ -337,7 +372,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
     }
 
     const handleSubmit = () => {
-        onSave(formData);
+        onSave(formData as any);
     }
 
     return (
@@ -416,3 +451,5 @@ export default function GuardedMenuManagementPage() {
         </AuthGuard>
     )
 }
+
+    

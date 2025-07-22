@@ -15,6 +15,7 @@ export type MenuItem = {
   description?: string;
   description_en?: string;
   category: MenuItemCategory;
+  is_available: boolean;
   offer?: string;
   offer_en?: string;
   image?: string;
@@ -70,5 +71,7 @@ export type User = {
     role: UserRole;
     password?: string; // Note: For demonstration. Passwords should be handled securely on the backend.
 };
+
+    
 
     

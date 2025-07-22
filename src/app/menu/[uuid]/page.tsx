@@ -43,8 +43,8 @@ export default function MenuPage() {
                 setIsLoadingMenu(true);
                 const response = await fetch('/api/v1/menu-items');
                 if (!response.ok) throw new Error('Failed to fetch menu');
-                const data = await response.json();
-                setMenuItems(data);
+                const data: MenuItem[] = await response.json();
+                setMenuItems(data.filter(item => item.is_available));
             } catch (error) {
                 console.error(error);
                 toast({
@@ -406,3 +406,4 @@ export default function MenuPage() {
     );
 }
 
+    

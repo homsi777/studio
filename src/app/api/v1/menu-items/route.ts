@@ -73,13 +73,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Bad Request: Missing required fields (name, price, category).' }, { status: 400 });
     }
 
+    // Ensure new items are available by default
+    const dataToSave = {
+        ...newItemData,
+        is_available: newItemData.is_available ?? true
+    }
+
     const menuItemsCol = collection(db, 'menu-items');
-    const docRef = await addDoc(menuItemsCol, newItemData);
+    const docRef = await addDoc(menuItemsCol, dataToSave);
 
     const createdItem: MenuItem = {
       id: docRef.id,
-      ...newItemData
-    };
+      ...dataToSave
+    } as MenuItem;
     
     return NextResponse.json(createdItem, { status: 201 });
   } catch (error) {
@@ -87,3 +93,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+    
