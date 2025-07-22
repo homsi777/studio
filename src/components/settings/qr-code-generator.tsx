@@ -14,6 +14,7 @@ import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { tableIdToUuidMap } from '@/lib/utils';
 
 type QrTarget = 'customer' | 'chef' | 'cashier';
 
@@ -21,14 +22,6 @@ interface GeneratedCode {
     url: string;
     title: string;
     path: string;
-}
-
-// Mock function to generate UUIDs
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
 }
 
 
@@ -39,7 +32,7 @@ export function QrCodeGenerator() {
     const { toast } = useToast();
     
     const [target, setTarget] = useState<QrTarget>('customer');
-    const [tableNumber, setTableNumber] = useState('');
+    const [tableNumber, setTableNumber] = useState('1');
     const [validationError, setValidationError] = useState('');
     const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(null);
     const [baseUrl, setBaseUrl] = useState('');
@@ -56,14 +49,20 @@ export function QrCodeGenerator() {
 
     useEffect(() => {
         setGeneratedCode(null);
-        validateTableNumber(tableNumber);
-    }, [target, tableNumber]);
+        if (isClient) {
+           validateTableNumber(tableNumber);
+        }
+    }, [target, tableNumber, settings.numberOfTables, isClient]);
 
 
     const validateTableNumber = (value: string) => {
-        if (target !== 'customer' || !value) {
+        if (target !== 'customer') {
             setValidationError('');
             return true;
+        }
+        if (!value) {
+            setValidationError(t('الرجاء إدخال رقم طاولة.', 'Please enter a table number.'));
+            return false;
         }
         const num = parseInt(value, 10);
         if (isNaN(num) || num <= 0) {
@@ -91,14 +90,15 @@ export function QrCodeGenerator() {
         let path = '';
         let title = '';
 
-        // This simulates the backend generating a secure URL with a UUID
-        // In a real app, this would be an API call.
-        const simulateBackendUrlGeneration = (target: QrTarget, tableNumber?: string): {path: string, title: string} => {
+        const getPathAndTitle = (target: QrTarget, tableNumber?: string): {path: string, title: string} => {
             switch(target) {
                 case 'customer':
                     if (!tableNumber) return {path: '', title: ''};
-                    // Backend would associate this UUID with the table number
-                    const tableUuid = generateUUID(); 
+                    const tableUuid = tableIdToUuidMap[tableNumber];
+                    if (!tableUuid) {
+                        toast({ variant: "destructive", title: "Error", description: `Could not find UUID for table ${tableNumber}`})
+                        return {path: '', title: ''};
+                    }
                     return {
                         path: `/menu/${tableUuid}`,
                         title: `${t('الطاولة', 'Table')} ${tableNumber}`
@@ -112,7 +112,7 @@ export function QrCodeGenerator() {
             }
         }
         
-        const { path: securePath, title: codeTitle } = simulateBackendUrlGeneration(target, tableNumber);
+        const { path: securePath, title: codeTitle } = getPathAndTitle(target, tableNumber);
         
         if (!securePath) return;
 
