@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -51,7 +50,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useToast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string }> = {
     rent: { ar: 'إيجار', en: 'Rent', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
@@ -577,5 +576,3 @@ export default function GuardedExpensesPage() {
         </AuthGuard>
     )
 }
-
-    
