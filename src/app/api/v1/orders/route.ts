@@ -1,6 +1,7 @@
+
 // src/app/api/v1/orders/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Order } from '@/types';
 
@@ -100,5 +101,28 @@ export async function POST(request: NextRequest) {
  *       500:
  *         description: Internal Server Error
  */
-// GET endpoint will be added in a future step
-// to fetch orders for the chef and manager dashboards.
+export async function GET(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+
+        const ordersCol = collection(db, 'orders');
+        const q = status ? firestoreQuery(ordersCol, where("status", "==", status)) : ordersCol;
+        
+        const querySnapshot = await getDocs(q);
+        const ordersList = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Make sure to handle Firestore Timestamps
+                created_at: data.created_at?.toDate ? data.created_at.toDate().toISOString() : new Date().toISOString(),
+            } as Order
+        });
+
+        return NextResponse.json(ordersList);
+    } catch (error) {
+        console.error('Failed to fetch orders:', error);
+        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    }
+}

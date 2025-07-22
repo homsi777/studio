@@ -13,21 +13,8 @@ import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useOrderFlow } from '@/hooks/use-order-flow';
 import { uuidToTableMap } from '@/lib/utils';
 import { MenuItemCard } from '@/components/menu/menu-item-card';
+import { useToast } from '@/hooks/use-toast';
 
-
-const menuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, description: 'كباب، شيش طاووق، لحم بعجين.', category: 'main', quantity: 0, offer: 'خصم 15%', offer_en: '15% Off', image: "https://placehold.co/600x400.png", image_hint: "mixed grill" },
-    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, description: '4 قطع محشوة باللحم والجوز.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "fried kibbeh" },
-    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, description: 'خضروات طازجة وخبز محمص.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "fattoush salad" },
-    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, description: 'أسياخ دجاج متبلة ومشوية.', category: 'main', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "shish tawook" },
-    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, description: 'مشروب غازي منعش.', category: 'drink', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "pepsi can" },
-    { id: 'item-8', name: 'عصير برتقال', name_en: 'Orange Juice', price: 18000, description: 'طبيعي معصور عند الطلب.', category: 'drink', quantity: 0, offer: 'عرض خاص', offer_en: 'Special Offer', image: "https://placehold.co/600x400.png", image_hint: "orange juice" },
-    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة كنافة ناعمة مع جبنة.', category: 'dessert', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "cheese kunafa" },
-    { id: 'item-10', name: 'سلطة سيزر', name_en: 'Caesar Salad', price: 30000, description: 'خس، دجاج مشوي، وصلصة السيزر.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "caesar salad" },
-    { id: 'item-11', name: 'بطاطا مقلية', name_en: 'French Fries', price: 15000, description: 'بطاطا مقرمشة وذهبية.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "french fries" },
-    { id: 'item-12', name: 'ماء', name_en: 'Water', price: 5000, description: 'ماء معدني.', category: 'drink', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "water bottle" },
-    { id: 'item-13', name: 'كريم كراميل', name_en: 'Creme Caramel', price: 22000, description: 'حلوى الكريم كراميل الكلاسيكية.', category: 'dessert', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "creme caramel" },
-];
 
 export default function MenuPage() {
     const params = useParams();
@@ -38,14 +25,37 @@ export default function MenuPage() {
     const { settings } = useRestaurantSettings();
     const { submitOrder, confirmFinalOrder, orders } = useOrderFlow();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+    const { toast } = useToast();
 
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [isLoadingMenu, setIsLoadingMenu] = useState(true);
     const [cart, setCart] = useState<MenuItem[]>([]);
-    const [flyingItems, setFlyingItems] = useState<any[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState<MenuItem['category'] | 'all'>('all');
 
-    const cartRef = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+        const fetchMenuItems = async () => {
+            try {
+                setIsLoadingMenu(true);
+                const response = await fetch('/api/v1/menu-items');
+                if (!response.ok) throw new Error('Failed to fetch menu');
+                const data = await response.json();
+                setMenuItems(data);
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Could not load the menu.",
+                })
+            } finally {
+                setIsLoadingMenu(false);
+            }
+        };
+        fetchMenuItems();
+    }, [toast]);
 
     useEffect(() => {
         let sid = sessionStorage.getItem('session_id');
@@ -92,19 +102,26 @@ export default function MenuPage() {
         return `${value.toLocaleString('ar-SY')} ${symbol}`;
     };
 
-    const handleSendOrder = () => {
-        if (!sessionId || !tableUuid || displayTableNumber === 'N/A') {
-            console.error("Session ID, Table UUID, or Table Number not available");
+    const handleSendOrder = async () => {
+        if (!sessionId || !tableUuid || displayTableNumber === 'N/A' || cart.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: t('خطأ', 'Error'),
+                description: t('لا يمكن إرسال طلب فارغ أو بدون معلومات الطاولة.', 'Cannot send an empty order or without table info.'),
+            });
             return;
         }
+
+        setIsSubmitting(true);
         const newOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
             tableId: parseInt(displayTableNumber),
             tableUuid: tableUuid,
             sessionId: sessionId,
-            items: cart,
+            items: cart.map(({ quantity, ...item }) => ({ ...item, quantity: quantity || 0 })), // Ensure quantity is set
             total: total,
         }
-        submitOrder(newOrder);
+        await submitOrder(newOrder);
+        setIsSubmitting(false);
         setCart([]);
     };
 
@@ -119,7 +136,7 @@ export default function MenuPage() {
     const filteredItems = useMemo(() => {
         if (activeCategory === 'all') return menuItems;
         return menuItems.filter(i => i.category === activeCategory);
-    }, [activeCategory]);
+    }, [activeCategory, menuItems]);
     
     if (currentOrder) {
         if (currentOrder.status === 'pending_chef_approval' || currentOrder.status === 'pending_cashier_approval') {
@@ -196,16 +213,27 @@ export default function MenuPage() {
             </nav>
 
             <main className="container mx-auto p-4 sm:p-6 pb-32">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-                    {filteredItems.map(item => (
-                        <MenuItemCard
-                            key={item.id}
-                            item={item}
-                            onAddToCart={addToCart}
-                            formatCurrency={formatCurrency}
-                        />
-                    ))}
-                </div>
+                 {isLoadingMenu ? (
+                    <div className="flex justify-center items-center h-64">
+                         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    </div>
+                ) : filteredItems.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                        {filteredItems.map(item => (
+                            <MenuItemCard
+                                key={item.id}
+                                item={item}
+                                onAddToCart={addToCart}
+                                formatCurrency={formatCurrency}
+                            />
+                        ))}
+                    </div>
+                 ) : (
+                    <div className="text-center py-20 text-muted-foreground">
+                        <Utensils className="mx-auto h-12 w-12 mb-4"/>
+                        <p>{t('لا توجد أصناف متاحة في هذا القسم حالياً.', 'No items available in this category right now.')}</p>
+                    </div>
+                )}
             </main>
 
             <AnimatePresence>
@@ -220,7 +248,6 @@ export default function MenuPage() {
                         <Sheet>
                             <SheetTrigger asChild>
                                 <motion.button
-                                    ref={cartRef}
                                     className="rounded-full h-16 w-16 shadow-2xl bg-primary hover:bg-primary/90 relative flex items-center justify-center text-primary-foreground"
                                     whileTap={{ scale: 0.9 }}
                                     key={cart.length}
@@ -274,9 +301,13 @@ export default function MenuPage() {
                                             <span>{t('الإجمالي:', 'Total:')}</span>
                                             <span>{formatCurrency(total)}</span>
                                         </div>
-                                        <Button size="lg" className="w-full font-bold text-lg h-14" onClick={handleSendOrder}>
-                                            <ArrowLeft className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
-                                            {t('إرسال للموافقة', 'Send for Approval')}
+                                        <Button size="lg" className="w-full font-bold text-lg h-14" onClick={handleSendOrder} disabled={isSubmitting}>
+                                            {isSubmitting ? (
+                                                <Loader2 className="w-5 h-5 ltr:mr-2 rtl:ml-2 animate-spin"/>
+                                            ) : (
+                                                <ArrowLeft className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
+                                            )}
+                                            {isSubmitting ? t('جارِ الإرسال...', 'Submitting...') : t('إرسال للموافقة', 'Send for Approval')}
                                         </Button>
                                     </div>
                                 </SheetFooter>
