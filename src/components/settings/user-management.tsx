@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { type User, type UserRole } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +42,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Eye, EyeOff } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,12 +50,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-
-const mockUsers: User[] = [
-    { id: 'user-1', username: 'admin', role: 'manager' },
-    { id: 'user-2', username: 'chef_ahmad', role: 'employee' },
-    { id: 'user-3', username: 'cashier_fatima', role: 'employee' },
-];
 
 const roleMap: Record<UserRole, { ar: string, en: string, className: string }> = {
     manager: { ar: 'مدير', en: 'Manager', className: 'bg-primary/20 text-primary-foreground' },
@@ -68,11 +62,35 @@ export function UserManagement() {
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
 
-    const [users, setUsers] = useState<User[]>(mockUsers);
+    const [users, setUsers] = useState<User[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setFormOpen] = useState(false);
     const [isConfirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/v1/users');
+                if (!response.ok) throw new Error('Failed to fetch users');
+                const data = await response.json();
+                setUsers(data);
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: "destructive",
+                    title: t("خطأ في جلب البيانات", "Fetch Error"),
+                    description: t("لم نتمكن من جلب قائمة المستخدمين.", "Could not fetch the user list."),
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUsers();
+    }, [t, toast]);
+
 
     const openAddDialog = () => {
         setEditingUser(null);
@@ -89,20 +107,38 @@ export function UserManagement() {
         setConfirmDeleteOpen(true);
     };
 
-    const handleSaveUser = (formData: Omit<User, 'id'>, password?: string) => {
+    const handleSaveUser = async (formData: Omit<User, 'id'>, password?: string) => {
         if (editingUser) {
+            // TODO: Implement user update (PUT request)
             setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...editingUser, ...formData } : u));
             toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.username}.`, `User ${formData.username} has been updated.`) });
         } else {
-            const newUser: User = { id: `user-${Date.now()}`, ...formData };
-            setUsers(prev => [...prev, newUser]);
-            toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.username}.`, `New user ${formData.username} has been added.`) });
+            try {
+                const response = await fetch('/api/v1/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                if (!response.ok) throw new Error('Failed to save user');
+                const newUser: User = await response.json();
+                setUsers(prev => [...prev, newUser]);
+                toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.username}.`, `New user ${formData.username} has been added.`) });
+
+            } catch (error) {
+                 console.error(error);
+                 toast({
+                    variant: "destructive",
+                    title: t("خطأ في الحفظ", "Save Error"),
+                    description: t("لم نتمكن من حفظ المستخدم الجديد.", "Could not save the new user."),
+                });
+            }
         }
         setFormOpen(false);
     };
     
     const handleDeleteUser = () => {
         if (userToDelete) {
+             // TODO: Implement user deletion (DELETE request)
             setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
             toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.username}.`, `User ${userToDelete.username} has been deleted.`), variant: 'destructive' });
         }
@@ -123,47 +159,53 @@ export function UserManagement() {
                 </Button>
             </CardHeader>
             <CardContent>
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>{t('اسم المستخدم', 'Username')}</TableHead>
-                                <TableHead>{t('الدور', 'Role')}</TableHead>
-                                <TableHead><span className="sr-only">{t('الإجراءات', 'Actions')}</span></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {users.map((user) => (
-                                <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.username}</TableCell>
-                                    <TableCell>
-                                        <Badge className={roleMap[user.role].className}>{roleMap[user.role][language]}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">{t('فتح القائمة', 'Open menu')}</span>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
-                                                <DropdownMenuItem onClick={() => openEditDialog(user)}>
-                                                    <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                    {t('تعديل', 'Edit')}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-red-500 focus:text-red-500">
-                                                    <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                    {t('حذف', 'Delete')}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                 {isLoading ? (
+                    <div className="flex justify-center items-center h-40">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                 ) : (
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('اسم المستخدم', 'Username')}</TableHead>
+                                    <TableHead>{t('الدور', 'Role')}</TableHead>
+                                    <TableHead><span className="sr-only">{t('الإجراءات', 'Actions')}</span></TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
+                            </TableHeader>
+                            <TableBody>
+                                {users.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell className="font-medium">{user.username}</TableCell>
+                                        <TableCell>
+                                            <Badge className={roleMap[user.role].className}>{roleMap[user.role][language]}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">{t('فتح القائمة', 'Open menu')}</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
+                                                    <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                                        <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                                        {t('تعديل', 'Edit')}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-red-500 focus:text-red-500">
+                                                        <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                                        {t('حذف', 'Delete')}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
             </CardContent>
 
             <UserFormDialog
@@ -288,3 +330,5 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
         </Dialog>
     );
 }
+
+    
