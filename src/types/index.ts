@@ -53,6 +53,8 @@ export type Expense = {
     amount: number;
     date: string;
     category: ExpenseCategory;
+    user_id?: string;
+    invoice_image_url?: string;
 };
 
 export type UserRole = 'manager' | 'employee';

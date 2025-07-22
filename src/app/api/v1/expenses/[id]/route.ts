@@ -55,8 +55,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         if (!expenseSnap.exists()) {
             return NextResponse.json({ message: 'Expense not found.' }, { status: 404 });
         }
+        
+        const finalUpdateData = {
+          ...updatedData,
+          last_updated: serverTimestamp()
+        };
 
-        await updateDoc(expenseRef, { ...updatedData, last_updated: serverTimestamp() });
+        await updateDoc(expenseRef, finalUpdateData);
         
         const updatedDoc = await getDoc(expenseRef);
         const finalExpenseData = {
@@ -112,5 +117,4 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
-
     

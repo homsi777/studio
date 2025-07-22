@@ -628,6 +628,7 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
                 amount: expense.amount,
                 date: expense.date,
                 category: expense.category,
+                user_id: expense.user_id || '',
             };
         }
         return { 
@@ -635,7 +636,8 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
             description_en: '', 
             amount: 0, 
             date: new Date().toISOString().split('T')[0], 
-            category: 'supplies' as ExpenseCategory 
+            category: 'supplies' as ExpenseCategory,
+            user_id: 'current_user_id', // Should be replaced with actual logged-in user ID
         };
     }, [expense]);
 
@@ -717,5 +719,4 @@ export default function GuardedExpensesPage() {
         </AuthGuard>
     )
 }
-
     
