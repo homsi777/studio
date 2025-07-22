@@ -32,7 +32,7 @@ const menuItems: MenuItem[] = [
 export default function MenuPage() {
     const params = useParams();
     const tableUuid = params.uuid as string;
-    const displayTableNumber = uuidToTableMap[tableUuid] || tableUuid.substring(0, 4);
+    const displayTableNumber = uuidToTableMap[tableUuid] || 'N/A';
 
     const { language, dir } = useLanguage();
     const { settings } = useRestaurantSettings();
@@ -93,8 +93,8 @@ export default function MenuPage() {
     };
 
     const handleSendOrder = () => {
-        if (!sessionId || !tableUuid) {
-            console.error("Session ID or Table UUID not available");
+        if (!sessionId || !tableUuid || displayTableNumber === 'N/A') {
+            console.error("Session ID, Table UUID, or Table Number not available");
             return;
         }
         const newOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {

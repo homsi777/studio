@@ -5,13 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Mock data to map a secure UUID to a simple display number for the customer.
-// In a real app, this mapping would happen on the backend.
-export const uuidToTableMap: Record<string, string> = {
-    "a1b2c3d4-e5f6-7890-1234-567890abcdef": "1", // Demo link in sidebar
-    "d2a5c1b8-3e9f-4b0a-8d1c-7f8e9a2b3c4d": "5", // Example for QR generator
-};
-
 // Generates a mock UUID
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -20,21 +13,40 @@ function generateUUID() {
     });
 }
 
-// In a real app, you'd fetch this from your DB. For now, we'll generate it.
-// This ensures that each table number has a consistent, unique UUID for the session.
-const generateTableUuids = (count: number): Record<string, string> => {
-    const map: Record<string, string> = {};
-    for (let i = 1; i <= count; i++) {
-        // Find if a UUID for this table number already exists in the static map
-        const existingUuid = Object.keys(uuidToTableMap).find(key => uuidToTableMap[key] === i.toString());
-        if (existingUuid) {
-            map[i.toString()] = existingUuid;
-        } else {
-            map[i.toString()] = generateUUID();
-        }
-    }
-    return map;
+// --- Centralized UUID Mapping ---
+// In a real app, this would be fetched from your DB. For now, we'll generate it
+// and keep it consistent across the app.
+
+// Base static map for specific UUIDs we control (e.g., in demos, tests)
+const staticUuidMap: Record<string, string> = {
+    "a1b2c3d4-e5f6-7890-1234-567890abcdef": "1", // Demo link in sidebar
+    "d2a5c1b8-3e9f-4b0a-8d1c-7f8e9a2b3c4d": "5", // Example for QR generator
 };
 
-// We need to define this outside the component to keep it consistent across renders
-export const tableIdToUuidMap = generateTableUuids(50); // Generate for up to 50 tables
+const generateConsistentUuids = (count: number): { tableToUuid: Record<string, string>, uuidToTable: Record<string, string> } => {
+    const tableToUuid: Record<string, string> = {};
+    const uuidToTable: Record<string, string> = { ...staticUuidMap };
+
+    // First, populate the map with static values reversed
+    for (const uuid in staticUuidMap) {
+        const tableId = staticUuidMap[uuid];
+        tableToUuid[tableId] = uuid;
+    }
+
+    // Generate UUIDs for the rest of the tables
+    for (let i = 1; i <= count; i++) {
+        const tableIdStr = i.toString();
+        if (!tableToUuid[tableIdStr]) {
+            const newUuid = generateUUID();
+            tableToUuid[tableIdStr] = newUuid;
+            uuidToTable[newUuid] = tableIdStr;
+        }
+    }
+    
+    return { tableToUuid, uuidToTable };
+};
+
+const { tableToUuid, uuidToTable } = generateConsistentUuids(50); // Generate for up to 50 tables
+
+export const tableIdToUuidMap = tableToUuid;
+export const uuidToTableMap = uuidToTable;
