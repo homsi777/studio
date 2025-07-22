@@ -42,7 +42,7 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
             <>
                 <div 
                     onClick={handleCardClick} 
-                    className="honeycomb-cell group bg-card hover:bg-card/90 cursor-pointer flex flex-col items-center justify-center p-2 text-center select-none"
+                    className="honeycomb-cell group bg-card hover:bg-card/90 cursor-pointer flex flex-col items-center justify-center p-2 text-center"
                 >
                     <div className="flex-1 flex flex-col justify-center items-center">
                         <h3 className="font-headline text-sm sm:text-base font-bold leading-tight drop-shadow-md text-foreground">
@@ -70,17 +70,6 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
                  <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
                     <DialogContent className="sm:max-w-[425px]" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                         <DialogHeader>
-                            {item.image && (
-                                <div className="relative w-full h-48 rounded-md overflow-hidden mb-4">
-                                     <Image
-                                        src={item.image}
-                                        alt={t(item.name, item.name_en || '')}
-                                        fill
-                                        className="object-cover"
-                                        data-ai-hint={item.image_hint || ''}
-                                    />
-                                </div>
-                            )}
                             <DialogTitle className="font-headline text-2xl">{t(item.name, item.name_en || item.name)}</DialogTitle>
                             <DialogDescription>{t(item.description || '', item.description_en || item.description || '')}</DialogDescription>
                         </DialogHeader>
