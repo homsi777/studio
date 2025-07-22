@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
@@ -9,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins, FilePenLine } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins, FilePenLine, Loader2 } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,17 +23,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
+import { useToast } from '@/hooks/use-toast';
 
-
-const menuItems: MenuItem[] = [
-    { id: 'item-1', name: 'مشويات مشكلة', name_en: 'Mixed Grill', price: 85000, category: 'main', quantity: 0 },
-    { id: 'item-4', name: 'كبة مقلية', name_en: 'Fried Kibbeh', price: 25000, category: 'appetizer', quantity: 0 },
-    { id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', quantity: 0 },
-    { id: 'item-6', name: 'شيش طاووق', name_en: 'Shish Tawook', price: 60000, category: 'main', quantity: 0 },
-    { id: 'item-7', name: 'بيبسي', name_en: 'Pepsi', price: 8000, category: 'drink', quantity: 0 },
-    { id: 'item-8', name: 'عصير برتقال طازج', name_en: 'Fresh Orange Juice', price: 18000, category: 'drink', quantity: 0 },
-    { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, category: 'dessert', quantity: 0 },
-];
 
 const categories: { value: MenuItemCategory | 'all', ar: string, en: string }[] = [
     { value: 'all', ar: 'الكل', en: 'All' },
@@ -45,17 +37,42 @@ const categories: { value: MenuItemCategory | 'all', ar: string, en: string }[] 
 function QuickPOSPage() {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+    const { toast } = useToast();
 
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<MenuItemCategory | 'all'>('all');
     const [isConfirming, setIsConfirming] = useState(false);
 
+    useEffect(() => {
+        const fetchMenuItems = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/v1/menu-items');
+                if (!response.ok) throw new Error('Failed to fetch menu items');
+                const data = await response.json();
+                setMenuItems(data.map((item: MenuItem) => ({ ...item, quantity: 0 })));
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: 'destructive',
+                    title: t('خطأ في جلب البيانات', 'Fetch Error'),
+                    description: t('لم نتمكن من تحميل قائمة الطعام.', 'Could not load the menu.'),
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMenuItems();
+    }, [t, toast]);
+
     const addToCart = (item: MenuItem) => {
         setCart(prev => {
             const existing = prev.find(i => i.id === item.id);
             if (existing) {
-                return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+                return prev.map(i => i.id === item.id ? { ...i, quantity: (i.quantity || 1) + 1 } : i);
             }
             return [...prev, { ...item, quantity: 1 }];
         });
@@ -64,23 +81,27 @@ function QuickPOSPage() {
     const updateQuantity = (itemId: string, change: number) => {
         setCart(prev => {
             const updatedCart = prev.map(item =>
-                item.id === itemId ? { ...item, quantity: item.quantity + change } : item
+                item.id === itemId ? { ...item, quantity: (item.quantity || 0) + change } : item
             );
             return updatedCart.filter(item => item.quantity > 0);
         });
     };
 
-    const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
+    const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * (item.quantity || 0), 0), [cart]);
 
     const filteredItems = useMemo(() =>
         menuItems.filter(item =>
             (activeCategory === 'all' || item.category === activeCategory) &&
             ((t(item.name, item.name_en || item.name).toLowerCase().includes(searchTerm.toLowerCase())))
-        ), [searchTerm, activeCategory, language, t]);
+        ), [menuItems, searchTerm, activeCategory, language, t]);
 
     const completeOrder = () => {
         console.log("Order completed:", cart);
         // Here you would typically send the order to the backend
+        toast({
+            title: t('اكتمل الطلب', 'Order Completed'),
+            description: t(`تم تسجيل الطلب النقدي بقيمة ${total.toLocaleString()} ل.س بنجاح.`, `Cash order for ${total.toLocaleString()} SYP recorded successfully.`),
+        });
         setCart([]); // Clear cart after completion
         setIsConfirming(false);
     }
@@ -126,16 +147,22 @@ function QuickPOSPage() {
                     ))}
                 </div>
                 <ScrollArea className="flex-1 -m-2 p-2">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {filteredItems.map(item => (
-                            <Card key={item.id} className="cursor-pointer hover:border-primary active:border-primary active:scale-95 transition-all duration-100 flex flex-col select-none" onClick={() => addToCart(item)}>
-                                <CardContent className="p-2 text-center flex-1 flex flex-col justify-center">
-                                    <p className="font-bold text-base leading-tight">{t(item.name, item.name_en || '')}</p>
-                                    <p className="text-sm text-muted-foreground font-semibold">{item.price.toLocaleString()} {t('ل.س', 'SYP')}</p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-full">
+                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                            {filteredItems.map(item => (
+                                <Card key={item.id} className="cursor-pointer hover:border-primary active:border-primary active:scale-95 transition-all duration-100 flex flex-col select-none" onClick={() => addToCart(item)}>
+                                    <CardContent className="p-2 text-center flex-1 flex flex-col justify-center">
+                                        <p className="font-bold text-base leading-tight">{t(item.name, item.name_en || '')}</p>
+                                        <p className="text-sm text-muted-foreground font-semibold">{item.price.toLocaleString()} {t('ل.س', 'SYP')}</p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                 </ScrollArea>
             </div>
 
