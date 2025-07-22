@@ -51,6 +51,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 
 const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string }> = {
     rent: { ar: 'إيجار', en: 'Rent', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
@@ -71,6 +72,8 @@ function ExpensesPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+    const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+    const [isConfirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -111,17 +114,60 @@ function ExpensesPage() {
         setDialogOpen(true);
     }
 
-    const handleDelete = (id: string) => {
-        // TODO: Implement DELETE request
-        console.log("Deleting expense:", id);
-        setExpenses(prev => prev.filter(exp => exp.id !== id));
+    const openDeleteDialog = (expense: Expense) => {
+        setExpenseToDelete(expense);
+        setConfirmDeleteOpen(true);
+    }
+
+    const handleDelete = async () => {
+        if (!expenseToDelete) return;
+        try {
+            const response = await fetch(`/api/v1/expenses/${expenseToDelete.id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Failed to delete expense');
+
+            setExpenses(prev => prev.filter(exp => exp.id !== expenseToDelete.id));
+             toast({
+                title: t("تم الحذف بنجاح", "Expense Deleted"),
+                description: t(`تم حذف المصروف "${expenseToDelete.description}".`, `The expense "${expenseToDelete.description}" has been deleted.`),
+            });
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: t("خطأ في الحذف", "Delete Error"),
+                description: t("لم نتمكن من حذف المصروف.", "Could not delete the expense."),
+            });
+        } finally {
+            setConfirmDeleteOpen(false);
+            setExpenseToDelete(null);
+        }
     }
 
     const handleSave = async (formData: Omit<Expense, 'id'>) => {
         if (editingExpense) {
-            // TODO: Implement PUT request
-            console.log("Updating expense:", editingExpense.id, formData);
-            setExpenses(prev => prev.map(exp => exp.id === editingExpense.id ? { ...editingExpense, ...formData } : exp));
+            try {
+                const response = await fetch(`/api/v1/expenses/${editingExpense.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                if (!response.ok) throw new Error('Failed to update expense');
+                const updatedExpense: Expense = await response.json();
+
+                setExpenses(prev => prev.map(exp => exp.id === editingExpense.id ? updatedExpense : exp));
+                toast({
+                    title: t("تم التحديث بنجاح", "Expense Updated"),
+                    description: t("تم تحديث بيانات المصروف بنجاح.", "The expense data has been updated."),
+                });
+
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: "destructive",
+                    title: t("خطأ في التحديث", "Update Error"),
+                    description: t("لم نتمكن من تحديث المصروف.", "Could not update the expense."),
+                });
+            }
         } else {
             // Add new expense via API
             try {
@@ -228,7 +274,7 @@ function ExpensesPage() {
                                 <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                 {t('تعديل', 'Edit')}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(expense.id)} className="text-red-500 focus:text-red-500">
+                            <DropdownMenuItem onClick={() => openDeleteDialog(expense)} className="text-red-500 focus:text-red-500">
                                 <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                 {t('حذف', 'Delete')}
                             </DropdownMenuItem>
@@ -404,6 +450,21 @@ function ExpensesPage() {
                 onSave={handleSave}
                 expense={editingExpense}
             />
+            
+            <AlertDialog open={isConfirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+                <AlertDialogContent dir={dir}>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>{t("تأكيد الحذف", "Confirm Deletion")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {t(`هل أنت متأكد من حذف هذا المصروف؟ لا يمكن التراجع عن هذا الإجراء.`, `Are you sure you want to delete this expense? This action cannot be undone.`)}
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel>{t("إلغاء", "Cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">{t("حذف", "Delete")}</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </main>
     );
 }
