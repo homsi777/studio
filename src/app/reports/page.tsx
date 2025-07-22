@@ -62,7 +62,7 @@ function ReportsPage() {
     <main className="flex-1 p-4 sm:p-6 select-none">
         <div className="hidden print:block print-header space-y-2">
             <h1 className="print-header-title">{settings.restaurantName}</h1>
-             <div className="text-xs text-gray-600">
+             <div className="text-xs text-gray-600 space-y-1">
                 <p className="flex items-center justify-center gap-2"><Building className="w-3 h-3"/> {settings.address}</p>
                 <p className="flex items-center justify-center gap-2"><Phone className="w-3 h-3"/> {settings.phone}</p>
                 {settings.email && <p className="flex items-center justify-center gap-2"><Mail className="w-3 h-3"/> {settings.email}</p>}
@@ -223,5 +223,6 @@ export default function GuardedReportsPage() {
         </AuthGuard>
     )
 }
+
 
     

@@ -5,6 +5,7 @@ import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/hooks/use-language";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
@@ -156,10 +157,15 @@ const ChartTooltipContent = React.forwardRef<
         )
       }
       
-      const labelValue = item?.payload?.[language === 'ar' ? 'date_ar' : 'date'] || label;
+      const labelValue = item?.payload?.[language === 'ar' ? 'date_ar' : 'date'] || item.payload[item.name as string] || label;
 
       if (!labelValue) {
         return null
+      }
+      
+      // For Pie Charts, the label is often the name of the slice itself.
+      if(itemConfig && itemConfig.label){
+        return <div className={cn("font-medium", labelClassName)}>{itemConfig.label}</div>
       }
 
       return <div className={cn("font-medium", labelClassName)}>{labelValue}</div>
@@ -368,5 +374,4 @@ export {
   ChartLegendContent,
   ChartStyle,
 }
-
     

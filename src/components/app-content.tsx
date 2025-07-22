@@ -60,7 +60,7 @@ export function AppContent({
 
   useEffect(() => {
     const currentTitleKey = Object.keys(pageTitles).find(key => pathname.startsWith(key) && (key !== '/' || pathname === '/'));
-    const title = pageTitles[currentTitleKey || '/'];
+    const title = currentTitleKey ? pageTitles[currentTitleKey] : null;
     if (title) {
       setPageTitle(t(title.ar, title.en));
     }
@@ -182,7 +182,7 @@ export function AppContent({
           </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 report-print-hide">
           <SidebarTrigger className="md:hidden" />
           <h1 className="font-headline text-xl font-semibold">{pageTitle}</h1>
           <div className="ml-auto">
@@ -197,3 +197,4 @@ export function AppContent({
     </>
   );
 }
+    
