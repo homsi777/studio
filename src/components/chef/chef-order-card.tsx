@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Hash, Check, ArrowLeft, GripVertical, ChefHat } from 'lucide-react';
+import { Clock, Hash, Check, GripVertical, ChefHat, Bell } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 
 const formatDuration = (seconds: number, lang: 'ar' | 'en'): string => {
@@ -65,7 +65,7 @@ export function ChefOrderCard({ order, onApprove, onReady }: ChefOrderCardProps)
 
   const nextAction = {
     pending_chef_approval: { text: t('موافقة على الطلب', 'Approve Order'), handler: () => onApprove(order.id), icon: <Check/>, variant: 'default' },
-    confirmed: { text: t('الطلب جاهز للتسليم', 'Order Ready'), handler: () => onReady(order.id), icon: <ArrowLeft/>, variant: 'secondary' },
+    confirmed: { text: t('الطلب جاهز للتسليم', 'Order Ready'), handler: () => onReady(order.id), icon: <Bell/>, variant: 'secondary' },
   };
   
   const action = order.status ? nextAction[order.status as keyof typeof nextAction] : null;
@@ -114,7 +114,7 @@ export function ChefOrderCard({ order, onApprove, onReady }: ChefOrderCardProps)
              <CardFooter className="p-2 bg-muted/40">
                 <Button onClick={action.handler} variant={action.variant as any} size="sm" className="w-full">
                     {action.icon}
-                    {action.text}
+                    <span className="ltr:ml-2 rtl:mr-2">{action.text}</span>
                 </Button>
             </CardFooter>
         )}

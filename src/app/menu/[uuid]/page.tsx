@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { MenuItem, Order } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils, ReceiptText } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils, ReceiptText, Bell } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
@@ -203,24 +203,35 @@ export default function MenuPage() {
                             ) : (
                                 <Check className="w-6 h-6 ltr:mr-2 rtl:ml-2" />
                             )}
-                            {isConfirming ? t('جارِ التأكيد...', 'Confirming...') : t('تأكيد ودفع', 'Confirm & Pay')}
+                            {isConfirming ? t('جارِ التأكيد...', 'Confirming...') : t('تأكيد وإرسال للمطبخ', 'Confirm & Send to Kitchen')}
                         </Button>
                     </motion.div>
                 </div>
             );
         }
 
-        if (currentOrder.status === 'confirmed' || currentOrder.status === 'ready') {
+        if (currentOrder.status === 'confirmed') {
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
                         <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
                         <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!')}</h1>
                         <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                           {currentOrder.status === 'ready' 
-                           ? t('طلبكم جاهز الآن! يمكنكم استلامه.', 'Your order is now ready! You can pick it up.')
-                           : t('طلبك الآن قيد التحضير. نتمنى لكم وقتاً ممتعاً!', 'Your order is now being prepared. We wish you a pleasant time!')
-                           }
+                           {t('طلبك الآن قيد التحضير. نتمنى لكم وقتاً ممتعاً!', 'Your order is now being prepared. We wish you a pleasant time!')}
+                        </p>
+                    </motion.div>
+                </div>
+            );
+        }
+
+        if (currentOrder.status === 'ready') {
+            return (
+                 <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
+                    <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
+                        <Bell className="w-24 h-24 text-primary mx-auto mb-6 animate-bounce" />
+                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('طلبكم جاهز!', 'Your Order is Ready!')}</h1>
+                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                           {t('يمكنكم استلام طلبكم الآن. بالهناء والشفاء!', 'You can now pick up your order. Enjoy your meal!')}
                         </p>
                     </motion.div>
                 </div>

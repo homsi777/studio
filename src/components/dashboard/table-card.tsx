@@ -59,7 +59,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     bg: 'bg-card',
     border: 'border-teal-500/50',
     iconColor: 'text-teal-500',
-    icon: <Bell className="h-5 w-5 animate-shake" />,
+    icon: <Bell className="h-5 w-5 animate-bounce" />,
     text_ar: 'جاهز للتسليم',
     text_en: 'Ready for Pickup',
     badge: 'border-transparent bg-teal-500/20 text-teal-500',
