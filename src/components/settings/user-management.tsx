@@ -69,25 +69,26 @@ export function UserManagement() {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
+    const fetchUsers = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/v1/users');
+            if (!response.ok) throw new Error('Failed to fetch users');
+            const data = await response.json();
+            setUsers(data);
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: t("خطأ في جلب البيانات", "Fetch Error"),
+                description: t("لم نتمكن من جلب قائمة المستخدمين.", "Could not fetch the user list."),
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                setIsLoading(true);
-                const response = await fetch('/api/v1/users');
-                if (!response.ok) throw new Error('Failed to fetch users');
-                const data = await response.json();
-                setUsers(data);
-            } catch (error) {
-                console.error(error);
-                toast({
-                    variant: "destructive",
-                    title: t("خطأ في جلب البيانات", "Fetch Error"),
-                    description: t("لم نتمكن من جلب قائمة المستخدمين.", "Could not fetch the user list."),
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchUsers();
     }, [t, toast]);
 
@@ -107,10 +108,10 @@ export function UserManagement() {
         setConfirmDeleteOpen(true);
     };
 
-    const handleSaveUser = async (formData: Omit<User, 'id'>, password?: string) => {
+    const handleSaveUser = async (formData: Omit<User, 'id'>) => {
         if (editingUser) {
-            // TODO: Implement user update (PUT request)
-            setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...editingUser, ...formData } : u));
+            // TODO: Implement user update (PUT request to /api/v1/users/[id])
+            await fetchUsers(); // Refetch to get updated data
             toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.username}.`, `User ${formData.username} has been updated.`) });
         } else {
             try {
@@ -119,9 +120,13 @@ export function UserManagement() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData),
                 });
+                if (response.status === 409) {
+                     toast({ variant: "destructive", title: t("خطأ", "Error"), description: t("اسم المستخدم موجود بالفعل.", "Username already exists.") });
+                     return;
+                }
                 if (!response.ok) throw new Error('Failed to save user');
-                const newUser: User = await response.json();
-                setUsers(prev => [...prev, newUser]);
+                
+                await fetchUsers(); // Refetch to get the new user with its ID
                 toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.username}.`, `New user ${formData.username} has been added.`) });
 
             } catch (error) {
@@ -136,10 +141,10 @@ export function UserManagement() {
         setFormOpen(false);
     };
     
-    const handleDeleteUser = () => {
+    const handleDeleteUser = async () => {
         if (userToDelete) {
-             // TODO: Implement user deletion (DELETE request)
-            setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+             // TODO: Implement user deletion (DELETE request to /api/v1/users/[id])
+            await fetchUsers();
             toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.username}.`, `User ${userToDelete.username} has been deleted.`), variant: 'destructive' });
         }
         setConfirmDeleteOpen(false);
@@ -189,13 +194,13 @@ export function UserManagement() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
-                                                    <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                                    <DropdownMenuItem onClick={() => openEditDialog(user)} disabled>
                                                         <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('تعديل', 'Edit')}
+                                                        {t('تعديل (قريباً)', 'Edit (soon)')}
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-red-500 focus:text-red-500">
+                                                    <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-red-500 focus:text-red-500" disabled>
                                                         <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('حذف', 'Delete')}
+                                                        {t('حذف (قريباً)', 'Delete (soon)')}
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -242,7 +247,7 @@ interface UserFormDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     user: User | null;
-    onSave: (formData: Omit<User, 'id'>, password?: string) => void;
+    onSave: (formData: Omit<User, 'id'>) => void;
 }
 
 function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogProps) {
@@ -268,7 +273,7 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ username, role }, password);
+        onSave({ username, role, password });
     };
 
     return (
@@ -330,5 +335,3 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
         </Dialog>
     );
 }
-
-    

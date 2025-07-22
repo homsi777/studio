@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,13 +58,22 @@ function SettingsPage() {
     }
   };
 
+  const handleSaveSettings = () => {
+    // The settings are already saved to localStorage via the hook's useEffect.
+    // This button provides explicit user feedback.
+    toast({
+      title: t("تم الحفظ", "Settings Saved"),
+      description: t("تم حفظ التغييرات بنجاح.", "Your changes have been saved successfully."),
+    });
+  }
+
 
   return (
     <main className="flex-1 p-4 sm:p-6">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
             <h1 className="font-headline text-2xl font-semibold">{t('الإعدادات', 'Settings')}</h1>
-            <Button>{t('حفظ التغييرات', 'Save Changes')}</Button>
+            <Button onClick={handleSaveSettings}>{t('حفظ التغييرات', 'Save Changes')}</Button>
         </div>
         <Separator />
 
