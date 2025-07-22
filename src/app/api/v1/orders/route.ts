@@ -48,10 +48,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Bad Request: Missing required fields.' }, { status: 400 });
     }
 
+    const subtotal = orderData.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
+
     const newOrder = {
       ...orderData,
       status: 'pending_chef_approval',
       created_at: serverTimestamp(), // Use server-side timestamp for accuracy
+      subtotal: subtotal,
+      serviceCharge: 0,
+      tax: 0,
+      finalTotal: subtotal,
     };
 
     const ordersCol = collection(db, 'orders');

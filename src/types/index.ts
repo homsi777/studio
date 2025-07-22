@@ -24,7 +24,10 @@ export type MenuItem = {
 export type Order = {
   id: string;
   items: MenuItem[];
-  total: number;
+  subtotal: number;
+  serviceCharge: number;
+  tax: number;
+  finalTotal: number;
   tableId: number;
   tableUuid: string;
   sessionId: string; // Unique identifier for the customer's session

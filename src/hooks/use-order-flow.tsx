@@ -22,9 +22,9 @@ const initialTables: Table[] = Array.from({ length: 12 }, (_, i) => ({
 interface OrderFlowContextType {
     orders: Order[];
     tables: Table[];
-    submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp'>) => Promise<void>;
+    submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => Promise<void>;
     approveOrderByChef: (orderId: string) => Promise<void>;
-    approveOrderByCashier: (orderId: string) => Promise<void>;
+    approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
     confirmFinalOrder: (orderId: string) => Promise<void>;
     confirmOrderReady: (orderId: string) => Promise<void>;
     addDummyOrder: (tableUuid: string) => void;
@@ -79,8 +79,9 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     }, [isAuthenticated, toast]);
 
 
-    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp'>) => {
+    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => {
         try {
+            const subtotal = orderData.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
             await addDoc(collection(db, "orders"), {
                 ...orderData,
                 status: 'pending_chef_approval',
@@ -89,6 +90,10 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 cashier_approved_at: null,
                 customer_confirmed_at: null,
                 completed_at: null,
+                subtotal,
+                serviceCharge: 0,
+                tax: 0,
+                finalTotal: subtotal,
             });
 
             toast({
@@ -118,12 +123,12 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         }
         
         const dummySessionId = `dummy-sid-${Date.now()}`;
-        const dummyOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
+        const dummyOrder: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'> = {
             tableId: tableId,
             tableUuid: tableUuid,
             sessionId: dummySessionId,
             items: [{ id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', description: '', quantity:1 }],
-            total: 20000,
+            subtotal: 20000,
         };
         submitOrder(dummyOrder);
     }, [submitOrder]);
@@ -153,9 +158,18 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
        if(success) toast({ title: 'بانتظار موافقة المحاسب', description: `تم تأكيد الطلب ${orderId.substring(0,5)}... من الشيف.` });
     };
 
-    const approveOrderByCashier = async (orderId: string) => {
-       const success = await updateOrderStatus(orderId, 'pending_final_confirmation', { cashier_approved_at: serverTimestamp() });
-       if(success) toast({ title: 'بانتظار التأكيد النهائي من الزبون', description: `تم تأكيد الطلب ${orderId.substring(0,5)}... من المحاسب.` });
+    const approveOrderByCashier = async (orderId: string, serviceCharge: number, tax: number) => {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+        const finalTotal = order.subtotal + serviceCharge + tax;
+
+       const success = await updateOrderStatus(orderId, 'pending_final_confirmation', { 
+           cashier_approved_at: serverTimestamp(),
+           serviceCharge,
+           tax,
+           finalTotal,
+       });
+       if(success) toast({ title: 'بانتظار التأكيد النهائي من الزبون', description: `تم إرسال الفاتورة النهائية للطلب ${orderId.substring(0,5)}...` });
     };
 
     const confirmFinalOrder = async (orderId: string) => {

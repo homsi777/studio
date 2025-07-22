@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { MenuItem, Order } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils, ReceiptText } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
@@ -14,6 +14,7 @@ import { useOrderFlow } from '@/hooks/use-order-flow';
 import { uuidToTableMap } from '@/lib/utils';
 import { MenuItemCard } from '@/components/menu/menu-item-card';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 
 export default function MenuPage() {
@@ -93,7 +94,7 @@ export default function MenuPage() {
         }
     };
 
-    const total = useMemo(() => {
+    const subtotal = useMemo(() => {
         return cart.reduce((sum, item) => sum + item.price * (item.quantity || 0), 0);
     }, [cart]);
 
@@ -114,12 +115,12 @@ export default function MenuPage() {
         }
 
         setIsSubmitting(true);
-        const newOrder: Omit<Order, 'id' | 'status' | 'timestamp'> = {
+        const newOrder: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'> = {
             tableId: parseInt(displayTableNumber),
             tableUuid: tableUuid,
             sessionId: sessionId,
             items: cart.map(({ quantity, ...item }) => ({ ...item, quantity: quantity || 0 })),
-            total: total,
+            subtotal: subtotal,
         }
         await submitOrder(newOrder);
         setIsSubmitting(false);
@@ -169,19 +170,40 @@ export default function MenuPage() {
         if (currentOrder.status === 'pending_final_confirmation') {
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
-                    <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
-                        <PartyPopper className="w-24 h-24 text-green-500 mx-auto mb-6" />
-                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تمت الموافقة على طلبك!', 'Your Order is Approved!')}</h1>
-                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                            {t('الشيف والمحاسب جاهزان. هل تود تأكيد الطلب نهائياً وإرساله إلى المطبخ؟', 'The chef and cashier are ready. Would you like to finalize the order and send it to the kitchen?')}
+                    <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }} className="w-full max-w-md">
+                        <ReceiptText className="w-24 h-24 text-green-500 mx-auto mb-6" />
+                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('فاتورتك النهائية جاهزة!', 'Your Final Bill is Ready!')}</h1>
+                        <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                            {t('الرجاء مراجعة الفاتورة النهائية أدناه والضغط على تأكيد لإرسال الطلب إلى المطبخ.', 'Please review the final bill below and press confirm to send the order to the kitchen.')}
                         </p>
-                        <Button onClick={handleFinalConfirm} size="lg" className="h-14 text-lg" disabled={isConfirming}>
+                        
+                        <div className="bg-muted/50 rounded-lg p-4 text-start space-y-2 mb-8">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t('المجموع الفرعي', 'Subtotal')}</span>
+                                <span className="font-medium">{formatCurrency(currentOrder.subtotal)}</span>
+                            </div>
+                             <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t('رسوم الخدمة', 'Service Charge')}</span>
+                                <span className="font-medium">{formatCurrency(currentOrder.serviceCharge)}</span>
+                            </div>
+                             <div className="flex justify-between">
+                                <span className="text-muted-foreground">{t('ضريبة', 'Tax')}</span>
+                                <span className="font-medium">{formatCurrency(currentOrder.tax)}</span>
+                            </div>
+                            <Separator />
+                             <div className="flex justify-between text-xl font-bold">
+                                <span>{t('الإجمالي النهائي', 'Final Total')}</span>
+                                <span>{formatCurrency(currentOrder.finalTotal)}</span>
+                            </div>
+                        </div>
+
+                        <Button onClick={handleFinalConfirm} size="lg" className="h-14 text-lg w-full" disabled={isConfirming}>
                              {isConfirming ? (
                                 <Loader2 className="w-6 h-6 ltr:mr-2 rtl:ml-2 animate-spin"/>
                             ) : (
                                 <Check className="w-6 h-6 ltr:mr-2 rtl:ml-2" />
                             )}
-                            {isConfirming ? t('جارِ التأكيد...', 'Confirming...') : t('تأكيد الطلب النهائي', 'Confirm Final Order')}
+                            {isConfirming ? t('جارِ التأكيد...', 'Confirming...') : t('تأكيد ودفع', 'Confirm & Pay')}
                         </Button>
                     </motion.div>
                 </div>
@@ -319,7 +341,7 @@ export default function MenuPage() {
                                     <div className="w-full space-y-4 pt-4 border-t">
                                         <div className="flex justify-between items-center text-xl font-bold">
                                             <span>{t('الإجمالي:', 'Total:')}</span>
-                                            <span>{formatCurrency(total)}</span>
+                                            <span>{formatCurrency(subtotal)}</span>
                                         </div>
                                         <Button size="lg" className="w-full font-bold text-lg h-14" onClick={handleSendOrder} disabled={isSubmitting}>
                                             {isSubmitting ? (
