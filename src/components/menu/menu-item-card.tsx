@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 interface MenuItemCardProps {
     item: MenuItem;
@@ -16,7 +17,7 @@ interface MenuItemCardProps {
     formatCurrency: (amount: number) => string;
 }
 
-export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
+export const MenuItemCard = React.forwardRef<HTMLLIElement, MenuItemCardProps>(
     ({ item, onAddToCart, formatCurrency }, ref) => {
         const { language } = useLanguage();
         const t = (ar: string, en: string) => language === 'ar' ? ar : en;
@@ -40,33 +41,35 @@ export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
 
         return (
             <>
-                <div 
-                    onClick={handleCardClick} 
-                    className="group bg-card hover:bg-card/90 cursor-pointer flex flex-col items-center justify-center p-2 text-center rounded-lg shadow-md w-40 min-h-[120px]"
+                <li
                     ref={ref}
+                    className="honeycomb-cell group"
+                    onClick={handleCardClick}
                 >
-                    <div className="flex-1 flex flex-col justify-center items-center p-2">
-                        <h3 className="font-headline text-sm sm:text-base font-bold leading-tight drop-shadow-md text-foreground">
-                            {t(item.name, item.name_en || item.name)}
-                        </h3>
-                        <p className="text-xs sm:text-sm font-semibold text-primary drop-shadow-md mt-1">
-                            {formatCurrency(item.price)}
-                        </p>
-                    </div>
-                     <motion.div
-                        whileTap={{ scale: 0.9 }}
-                        className="mt-auto w-full px-2 pb-2"
-                     >
-                        <Button 
-                            onClick={handleAddToCartClick} 
-                            size="sm"
-                            className="bg-purple-200/50 text-purple-800 hover:bg-purple-200/80 dark:bg-purple-900/50 dark:text-purple-200 dark:hover:bg-purple-900/80 h-8 text-xs rounded-full px-3 w-full"
+                    <div className="bg-card w-full h-full flex flex-col items-center justify-center p-2 text-center transition-transform duration-200 group-hover:scale-110">
+                         <div className="flex-1 flex flex-col justify-center items-center p-1">
+                            <h3 className="font-headline text-sm sm:text-base font-bold leading-tight drop-shadow-md text-foreground">
+                                {t(item.name, item.name_en || item.name)}
+                            </h3>
+                            <p className="text-xs sm:text-sm font-semibold text-primary drop-shadow-md mt-1">
+                                {formatCurrency(item.price)}
+                            </p>
+                        </div>
+                        <motion.div
+                            whileTap={{ scale: 0.9 }}
+                            className="mt-auto w-full px-2 pb-1"
                         >
-                            <Plus className="h-4 w-4 rtl:ml-1 ltr:mr-1" />
-                            {t('إضافة', 'Add')}
-                        </Button>
-                    </motion.div>
-                </div>
+                            <Button 
+                                onClick={handleAddToCartClick} 
+                                size="sm"
+                                className="bg-purple-200/50 text-purple-800 hover:bg-purple-200/80 dark:bg-purple-900/50 dark:text-purple-200 dark:hover:bg-purple-900/80 h-7 text-xs rounded-full px-3 w-full"
+                            >
+                                <Plus className="h-4 w-4 rtl:ml-1 ltr:mr-1" />
+                                {t('إضافة', 'Add')}
+                            </Button>
+                        </motion.div>
+                    </div>
+                </li>
                 
                  <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
                     <DialogContent className="sm:max-w-[425px]" dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -74,6 +77,9 @@ export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
                             <DialogTitle className="font-headline text-2xl">{t(item.name, item.name_en || item.name)}</DialogTitle>
                             <DialogDescription>{t(item.description || '', item.description_en || item.description || '')}</DialogDescription>
                         </DialogHeader>
+                        <div className="py-4">
+                            <p>{t(item.description || "لا يوجد وصف متاح.", item.description_en || "No description available.")}</p>
+                        </div>
                         <div className="flex justify-between items-center py-4">
                             <span className="text-2xl font-bold text-primary">{formatCurrency(item.price)}</span>
                         </div>

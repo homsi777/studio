@@ -196,8 +196,8 @@ export default function MenuPage() {
             </nav>
 
             <main className="container mx-auto p-4 sm:p-6 pb-32">
-                 <div className="flex flex-wrap justify-center gap-4">
-                     {filteredItems.map(item => (
+                <ul className="honeycomb">
+                    {filteredItems.map(item => (
                         <MenuItemCard
                             key={item.id}
                             item={item}
@@ -205,7 +205,7 @@ export default function MenuPage() {
                             formatCurrency={formatCurrency}
                         />
                     ))}
-                 </div>
+                </ul>
             </main>
 
             <AnimatePresence>
