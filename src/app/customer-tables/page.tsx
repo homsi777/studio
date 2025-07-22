@@ -1,4 +1,4 @@
-// This is a new file
+
 "use client";
 
 import { AnimatePresence, motion } from 'framer-motion';
@@ -13,7 +13,9 @@ import { useLanguage } from '@/hooks/use-language';
 function CustomerTablesPage() {
   const { settings } = useRestaurantSettings();
   const { orders } = useOrderFlow();
-  const { t } = useLanguage();
+  const { language } = useLanguage();
+
+  const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
   const handleSelectTable = (tableId: number) => {
     const uuid = tableIdToUuidMap[tableId.toString()];
@@ -30,7 +32,7 @@ function CustomerTablesPage() {
       let status: Table['status'] = 'occupied';
       if (activeOrder.status === 'pending_chef_approval') status = 'new_order';
       if (activeOrder.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
-      if (activeOrder.status === 'awaiting_final_confirmation') status = 'awaiting_final_confirmation';
+      if (activeOrder.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
       if (activeOrder.status === 'confirmed') status = 'confirmed';
       if (activeOrder.status === 'paying') status = 'paying';
       if (activeOrder.status === 'needs_attention') status = 'needs_attention';
