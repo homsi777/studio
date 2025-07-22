@@ -3,12 +3,24 @@
 
 import { useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { type Table } from '@/types';
+import { type Table, type TableStatus } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
 import { OrderDetailsSheet } from '@/components/dashboard/order-details-sheet';
 import { AuthGuard } from '@/components/auth-guard';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useOrderFlow } from '@/hooks/use-order-flow';
+
+const statusPriority: Record<TableStatus, number> = {
+    needs_attention: 1,
+    new_order: 2,
+    pending_cashier_approval: 3,
+    awaiting_final_confirmation: 4,
+    ready: 5,
+    paying: 6,
+    confirmed: 7,
+    occupied: 8,
+    available: 9,
+};
 
 function DashboardPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -57,7 +69,15 @@ function DashboardPage() {
       tableMap.set(order.tableId, tableData);
     }
 
-    return Array.from(tableMap.values()).sort((a,b) => a.id - b.id);
+    return Array.from(tableMap.values()).sort((a,b) => {
+        const priorityA = statusPriority[a.status] || 99;
+        const priorityB = statusPriority[b.status] || 99;
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        // If priorities are the same, sort by table ID
+        return a.id - b.id;
+    });
 
   }, [settings.numberOfTables, orders]);
 
@@ -68,8 +88,10 @@ function DashboardPage() {
           {tablesData.map((table, i) => (
             <motion.div
               key={table.id}
+              layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.3, delay: i * 0.05 }}
             >
               <TableCard
