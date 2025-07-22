@@ -52,7 +52,7 @@ function ReportsPage() {
         label: t("المصاريف", "Expenses"),
         color: "hsl(var(--chart-2))",
       },
-    }
+    } as const;
 
     const handlePrint = () => {
       window.print();
@@ -124,7 +124,7 @@ function ReportsPage() {
                             <Tooltip 
                                 cursor={false}
                                 content={<ChartTooltipContent 
-                                    formatter={(value) => `${(typeof value === 'number' ? value.toLocaleString() : value)} ${t('ل.س', 'SYP')}`}
+                                    formatter={(value, name) => `${(typeof value === 'number' ? value.toLocaleString() : value)} ${t('ل.س', 'SYP')}`}
                                     labelClassName="font-bold text-lg"
                                     indicator="dot"
                                 />} 
@@ -223,6 +223,5 @@ export default function GuardedReportsPage() {
         </AuthGuard>
     )
 }
-
 
     
