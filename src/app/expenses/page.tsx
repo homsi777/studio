@@ -31,7 +31,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, ArrowUpDown, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, ArrowUpDown, Loader2, Calendar as CalendarIcon, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
@@ -40,6 +40,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table';
 import {
@@ -58,6 +62,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string, color: string }> = {
@@ -153,12 +158,20 @@ function ExpensesPage() {
     }
 
     const handleSave = async (formData: Omit<Expense, 'id'>) => {
+        const dataToSave = { ...formData };
+        Object.keys(dataToSave).forEach(key => {
+            const typedKey = key as keyof typeof dataToSave;
+            if (dataToSave[typedKey] === '' || dataToSave[typedKey] === null) {
+                delete dataToSave[typedKey];
+            }
+        });
+
         if (editingExpense) {
             try {
                 const response = await fetch(`/api/v1/expenses/${editingExpense.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify(dataToSave),
                 });
                 if (!response.ok) throw new Error('Failed to update expense');
                 await fetchExpenses();
@@ -180,7 +193,7 @@ function ExpensesPage() {
                 const response = await fetch('/api/v1/expenses', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify(dataToSave),
                 });
                 if (!response.ok) throw new Error('Failed to save expense');
                 await fetchExpenses();
@@ -280,6 +293,21 @@ function ExpensesPage() {
                                 <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                 {t('تعديل', 'Edit')}
                             </DropdownMenuItem>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <Info className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                    {t('تفاصيل إضافية', 'More Details')}
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                    <div className="text-xs text-muted-foreground p-2 space-y-1">
+                                        <p><strong>{t('المورد:', 'Supplier:')}</strong> {expense.supplier || '-'}</p>
+                                        <p><strong>{t('طريقة الدفع:', 'Payment:')}</strong> {expense.payment_method || '-'}</p>
+                                        <p><strong>{t('رقم الفاتورة:', 'Invoice #:')}</strong> {expense.invoice_number || '-'}</p>
+                                    </div>
+                                </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
                             <DropdownMenuItem onClick={() => openDeleteDialog(expense)} className="text-red-500 focus:text-red-500">
                                 <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                 {t('حذف', 'Delete')}
@@ -628,7 +656,11 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
                 amount: expense.amount,
                 date: expense.date,
                 category: expense.category,
-                user_id: expense.user_id || '',
+                user_id: expense.user_id || 'current_user_id',
+                payment_method: expense.payment_method || 'cash',
+                supplier: expense.supplier || '',
+                invoice_number: expense.invoice_number || '',
+                notes: expense.notes || '',
             };
         }
         return { 
@@ -638,6 +670,10 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
             date: new Date().toISOString().split('T')[0], 
             category: 'supplies' as ExpenseCategory,
             user_id: 'current_user_id', // Should be replaced with actual logged-in user ID
+            payment_method: 'cash',
+            supplier: '',
+            invoice_number: '',
+            notes: '',
         };
     }, [expense]);
 
@@ -648,13 +684,13 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
     }, [expense, isOpen, getInitialFormData]);
 
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value, type } = e.target;
         setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
     };
 
-    const handleCategoryChange = (value: string) => {
-        setFormData(prev => ({ ...prev, category: value as ExpenseCategory }));
+    const handleSelectChange = (id: string, value: string) => {
+        setFormData(prev => ({ ...prev, [id]: value }));
     }
 
     const handleSubmit = () => {
@@ -663,44 +699,69 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange} dir={dir}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle className="font-headline">{expense ? t('تعديل المصروف', 'Edit Expense') : t('تسجيل مصروف جديد', 'Record New Expense')}</DialogTitle>
                     <DialogDescription>
-                        {t('أدخل تفاصيل المصروف ليتم أرشفته.', 'Enter the expense details to archive it.')}
+                        {t('أدخل تفاصيل المصروف ليتم أرشفته. الحقول المعلمة بـ * إلزامية.', 'Enter the expense details to archive it. Fields marked with * are required.')}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
                      <div className="space-y-2">
-                        <Label htmlFor="description">{t('وصف المصروف (عربي)', 'Description (Arabic)')}</Label>
-                        <Input id="description" value={formData.description} onChange={handleChange} />
+                        <Label htmlFor="description">{t('وصف المصروف', 'Description')}*</Label>
+                        <Input id="description" value={formData.description} onChange={handleChange} required/>
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="description_en">{t('وصف المصروف (إنجليزي)', 'Description (English)')}</Label>
-                        <Input id="description_en" value={formData.description_en} onChange={handleChange} />
-                    </div>
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="space-y-2">
-                            <Label htmlFor="amount">{t('المبلغ (ل.س)', 'Amount (SYP)')}</Label>
-                            <Input id="amount" type="number" value={formData.amount} onChange={handleChange}/>
+                            <Label htmlFor="amount">{t('المبلغ (ل.س)', 'Amount (SYP)')}*</Label>
+                            <Input id="amount" type="number" value={formData.amount} onChange={handleChange} required/>
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="date">{t('التاريخ', 'Date')}</Label>
-                            <Input id="date" type="date" value={formData.date} onChange={handleChange}/>
+                            <Label htmlFor="date">{t('التاريخ', 'Date')}*</Label>
+                            <Input id="date" type="date" value={formData.date} onChange={handleChange} required/>
                         </div>
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="category">{t('التصنيف', 'Category')}</Label>
-                        <Select value={formData.category} onValueChange={handleCategoryChange}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(Object.keys(categoryMap) as Array<keyof typeof categoryMap>).map((cat) => (
-                                   <SelectItem key={cat} value={cat}>{t(categoryMap[cat].ar, categoryMap[cat].en)}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="category">{t('التصنيف', 'Category')}*</Label>
+                            <Select value={formData.category} onValueChange={(v) => handleSelectChange('category', v)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(Object.keys(categoryMap) as Array<keyof typeof categoryMap>).map((cat) => (
+                                    <SelectItem key={cat} value={cat}>{t(categoryMap[cat].ar, categoryMap[cat].en)}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="payment_method">{t('طريقة الدفع', 'Payment Method')}*</Label>
+                             <Select value={formData.payment_method} onValueChange={(v) => handleSelectChange('payment_method', v)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('اختر طريقة الدفع', 'Select a payment method')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="cash">{t('نقداً', 'Cash')}</SelectItem>
+                                    <SelectItem value="credit_card">{t('بطاقة ائتمان', 'Credit Card')}</SelectItem>
+                                    <SelectItem value="bank_transfer">{t('تحويل بنكي', 'Bank Transfer')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="supplier">{t('المورد/الجهة', 'Supplier/Beneficiary')}</Label>
+                            <Input id="supplier" value={formData.supplier} onChange={handleChange} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="invoice_number">{t('رقم الفاتورة', 'Invoice Number')}</Label>
+                            <Input id="invoice_number" value={formData.invoice_number} onChange={handleChange} />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="notes">{t('ملاحظات إضافية', 'Additional Notes')}</Label>
+                        <Textarea id="notes" value={formData.notes} onChange={handleChange} />
                     </div>
                 </div>
                 <DialogFooter>

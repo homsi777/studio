@@ -45,6 +45,7 @@ export type Table = {
 };
 
 export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies' | 'maintenance' | 'other';
+export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer';
 
 export type Expense = {
     id: string;
@@ -53,6 +54,10 @@ export type Expense = {
     amount: number;
     date: string;
     category: ExpenseCategory;
+    payment_method?: PaymentMethod;
+    supplier?: string;
+    invoice_number?: string;
+    notes?: string;
     user_id?: string;
     invoice_image_url?: string;
 };
