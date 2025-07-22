@@ -8,6 +8,30 @@ import type { User } from '@/types';
 // system like Firebase Authentication. Exposing a user list like this is
 // not secure. This is simplified for the project's scope.
 
+
+const ensureDefaultAdminExists = async () => {
+    const usersCol = collection(db, 'users');
+    const snapshot = await getDocs(usersCol);
+
+    if (snapshot.empty) {
+        console.log("No users found. Creating default admin user.");
+        // IMPORTANT: Storing plaintext passwords is a major security risk.
+        // This is for demonstration purposes only. In a real application,
+        // passwords must be hashed on the server (e.g., using bcrypt).
+        const defaultAdmin: Omit<User, 'id'> = {
+            username: 'admin',
+            password: '123456', // Default password
+            role: 'manager'
+        };
+        try {
+            await addDoc(usersCol, defaultAdmin);
+            console.log("Default admin user created successfully.");
+        } catch (error) {
+            console.error("Failed to create default admin user:", error);
+        }
+    }
+}
+
 /**
  * @swagger
  * /api/v1/users:
@@ -30,6 +54,9 @@ import type { User } from '@/types';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Ensure the default admin exists if the database is empty.
+    await ensureDefaultAdminExists();
+
     const usersCol = collection(db, 'users');
     const usersSnapshot = await getDocs(usersCol);
     const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
