@@ -1,6 +1,6 @@
 // src/app/api/v1/expenses/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Expense } from '@/types';
 
@@ -75,8 +75,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Bad Request: Missing required fields.' }, { status: 400 });
     }
 
+    const docData = {
+        ...newExpenseData,
+        created_at: serverTimestamp()
+    }
+
     const expensesCol = collection(db, 'expenses');
-    const docRef = await addDoc(expensesCol, newExpenseData);
+    const docRef = await addDoc(expensesCol, docData);
 
     const createdExpense: Expense = {
       id: docRef.id,
@@ -89,3 +94,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+    

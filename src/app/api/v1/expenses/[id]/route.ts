@@ -1,7 +1,7 @@
 
 // src/app/api/v1/expenses/[id]/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Expense } from '@/types';
 
@@ -56,15 +56,15 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             return NextResponse.json({ message: 'Expense not found.' }, { status: 404 });
         }
 
-        await updateDoc(expenseRef, updatedData);
+        await updateDoc(expenseRef, { ...updatedData, last_updated: serverTimestamp() });
         
-        const updatedExpense: Expense = {
-            id,
-            ...expenseSnap.data(), // old data
-            ...updatedData,       // new data
+        const updatedDoc = await getDoc(expenseRef);
+        const finalExpenseData = {
+            id: updatedDoc.id,
+            ...updatedDoc.data()
         } as Expense;
 
-        return NextResponse.json(updatedExpense, { status: 200 });
+        return NextResponse.json(finalExpenseData, { status: 200 });
     } catch (error) {
         console.error(`Failed to update expense with ID ${params.id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -112,3 +112,5 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
+
+    
