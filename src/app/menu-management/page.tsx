@@ -35,6 +35,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { AnimatePresence, motion } from 'framer-motion';
 import { AuthGuard } from '@/components/auth-guard';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 
 const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
@@ -45,7 +46,7 @@ const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
 };
 
 function MenuManagementPage() {
-    const { language } = useLanguage();
+    const { language, dir } = useLanguage();
     const [items, setItems] = useState<MenuItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setDialogOpen] = useState(false);
@@ -53,6 +54,8 @@ function MenuManagementPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<MenuItemCategory | 'all'>('all');
     const { toast } = useToast();
+    const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
+    const [isConfirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -90,19 +93,58 @@ function MenuManagementPage() {
         setDialogOpen(true);
     };
 
-    const handleDelete = (itemId: string) => {
-        // TODO: Implement DELETE request
-        console.log("Deleting item:", itemId);
-        setItems(prev => prev.filter(item => item.id !== itemId));
+    const openDeleteDialog = (item: MenuItem) => {
+        setItemToDelete(item);
+        setConfirmDeleteOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
+        try {
+            const response = await fetch(`/api/v1/menu-items/${itemToDelete.id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Failed to delete item');
+            
+            setItems(prev => prev.filter(item => item.id !== itemToDelete.id));
+            toast({
+                title: t("تم الحذف بنجاح", "Item Deleted"),
+                description: t(`تم حذف صنف "${itemToDelete.name}".`, `The item "${t(itemToDelete.name, itemToDelete.name_en || '')}" has been deleted.`),
+            });
+        } catch(error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: t("خطأ في الحذف", "Delete Error"),
+                description: t("لم نتمكن من حذف الصنف.", "Could not delete the item."),
+            });
+        } finally {
+            setConfirmDeleteOpen(false);
+            setItemToDelete(null);
+        }
     };
     
     const handleSave = async (formData: Omit<MenuItem, 'id' | 'quantity'>) => {
         if (editingItem) {
-            // TODO: Implement PUT request
-            console.log("Updating item:", editingItem.id, formData);
-            setItems(prev => prev.map(item => item.id === editingItem.id ? { ...item, ...formData } : item));
+            try {
+                 const response = await fetch(`/api/v1/menu-items/${editingItem.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                if (!response.ok) throw new Error('Failed to update item');
+                const updatedItem = await response.json();
+                setItems(prev => prev.map(item => item.id === editingItem.id ? { ...item, ...updatedItem } : item));
+                toast({
+                    title: t("تم التحديث بنجاح", "Item Updated"),
+                });
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: "destructive",
+                    title: t("خطأ في التحديث", "Update Error"),
+                    description: t("لم نتمكن من تحديث الصنف.", "Could not update the item."),
+                });
+            }
         } else {
-            // Add new item via API
             try {
                  const response = await fetch('/api/v1/menu-items', {
                     method: 'POST',
@@ -199,7 +241,7 @@ function MenuManagementPage() {
                                                 <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                                 {t('تعديل', 'Edit')}
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-500 hover:!text-red-500">
+                                            <DropdownMenuItem onClick={() => openDeleteDialog(item)} className="text-red-500 focus:text-red-500">
                                                 <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                                 {t('حذف', 'Delete')}
                                             </DropdownMenuItem>
@@ -226,6 +268,21 @@ function MenuManagementPage() {
                 item={editingItem}
                 onSave={handleSave}
             />
+
+            <AlertDialog open={isConfirmDeleteOpen} onOpenChange={setConfirmDeleteOpen} dir={dir}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>{t("تأكيد الحذف", "Confirm Deletion")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {t(`هل أنت متأكد من حذف هذا الصنف؟ لا يمكن التراجع عن هذا الإجراء.`, `Are you sure you want to delete this item? This action cannot be undone.`)}
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel>{t("إلغاء", "Cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">{t("حذف", "Delete")}</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </main>
     );
 }
