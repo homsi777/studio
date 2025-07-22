@@ -58,4 +58,5 @@ export type User = {
     id: string;
     username: string;
     role: UserRole;
+    password?: string; // Note: For demonstration. Passwords should be handled securely on the backend.
 };
