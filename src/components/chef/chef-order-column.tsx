@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { OrderStatus } from '@/types';
+import type { OrderStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -30,13 +30,13 @@ export function ChefOrderColumn({ id, title, count, children }: ChefOrderColumnP
   return (
     <div
       className={cn(
-        "bg-card p-4 rounded-lg border-2 border-dashed flex flex-col h-full",
+        "bg-card p-4 rounded-lg border-2 border-dashed flex flex-col h-[calc(100vh-12rem)]",
         columnStyles[id]
       )}
     >
       <div className="flex justify-between items-center mb-4">
         <h2 className={cn("font-headline text-2xl font-bold", titleStyles[id])}>{title}</h2>
-        <Badge variant="secondary" className="text-base">{count}</Badge>
+        <Badge variant="secondary" className="text-base font-mono">{count}</Badge>
       </div>
       <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-1">
           {children}

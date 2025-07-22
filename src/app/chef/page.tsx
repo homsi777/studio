@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { type Order, type OrderStatus } from '@/types';
 import { ChefOrderCard } from '@/components/chef/chef-order-card';
@@ -10,31 +10,34 @@ import { AuthGuard } from '@/components/auth-guard';
 import { useOrderFlow } from '@/hooks/use-order-flow';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
 
 
 function ChefPage() {
   const { orders, approveOrderByChef, confirmOrderReady, addDummyOrder } = useOrderFlow();
+  const { language } = useLanguage();
+  const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
   const newOrders = useMemo(() => orders.filter(o => o.status === 'pending_chef_approval').sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)), [orders]);
   const inProgressOrders = useMemo(() => orders.filter(o => o.status === 'confirmed').sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)), [orders]);
 
-  const columns: { id: OrderStatus; title: string; orders: Order[] }[] = [
-    { id: 'pending_chef_approval', title: 'طلبات بانتظار موافقتك', orders: newOrders },
-    { id: 'confirmed', title: 'طلبات قيد التحضير', orders: inProgressOrders },
+  const columns: { id: OrderStatus; title: string; en_title: string; orders: Order[] }[] = [
+    { id: 'pending_chef_approval', title: 'طلبات بانتظار موافقتك', en_title: "Pending Approval", orders: newOrders },
+    { id: 'confirmed', title: 'طلبات قيد التحضير', en_title: "In Progress", orders: inProgressOrders },
   ];
 
   return (
-    <main className="flex-1 flex flex-col p-4 sm:p-6 bg-background/30" dir="rtl">
+    <main className="flex-1 flex flex-col p-4 sm:p-6 bg-background/30">
         <div className="flex items-center justify-between mb-6">
-            <h1 className="font-headline text-3xl font-bold text-foreground">واجهة الشيف</h1>
+            <h1 className="font-headline text-3xl font-bold text-foreground">{t('واجهة الشيف', 'Chef Interface')}</h1>
             <Button onClick={() => addDummyOrder('d2a5c1b8-3e9f-4b0a-8d1c-7f8e9a2b3c4d')}>
-                <PlusCircle className="ml-2 h-4 w-4" />
-                محاكاة طلب جديد
+                <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                {t('محاكاة طلب جديد', 'Simulate New Order')}
             </Button>
         </div>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {columns.map(column => (
-                <ChefOrderColumn key={column.id} id={column.id} title={column.title} count={column.orders.length}>
+                <ChefOrderColumn key={column.id} id={column.id} title={t(column.title, column.en_title)} count={column.orders.length}>
                     <AnimatePresence>
                         {column.orders.length > 0 ? (
                             column.orders.map(order => (
@@ -48,7 +51,7 @@ function ChefPage() {
                             ))
                         ) : (
                             <div className="text-center text-muted-foreground py-10">
-                                <p>لا توجد طلبات في هذا القسم.</p>
+                                <p>{t('لا توجد طلبات في هذا القسم.', 'No orders in this section.')}</p>
                             </div>
                         )}
                     </AnimatePresence>

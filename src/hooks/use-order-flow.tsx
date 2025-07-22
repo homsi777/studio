@@ -2,11 +2,11 @@
 "use client"
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import { Order, Table, MenuItem } from '@/types';
+import type { Order, Table, MenuItem } from '@/types';
 import { useToast } from './use-toast';
 import { BellRing } from 'lucide-react';
 import { uuidToTableMap } from '@/lib/utils';
-import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './use-auth';
 
@@ -50,14 +50,20 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         const ordersData: Order[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            ordersData.push({ 
+            const newOrder = { 
               id: doc.id, 
               ...data,
               // Convert Firestore timestamp to JS Date number
               timestamp: data.created_at?.toDate().getTime() || Date.now(),
               confirmationTimestamp: data.chef_approved_at?.toDate().getTime(),
-            } as Order);
+            } as Order;
+
+            ordersData.push(newOrder);
         });
+        
+        // Sort orders by creation time, newest first might be better for some views
+        ordersData.sort((a,b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+        
         setOrders(ordersData);
       });
 
@@ -68,6 +74,8 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
 
     const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp'>) => {
         try {
+            // Note: We are not using the API here, but writing directly.
+            // In a more complex scenario, you'd call your API. For real-time, direct writing is often fine.
             await addDoc(collection(db, "orders"), {
                 ...orderData,
                 status: 'pending_chef_approval',
@@ -105,19 +113,20 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             tableId: tableId,
             tableUuid: tableUuid,
             sessionId: dummySessionId,
-            items: [{ id: 'item-5', name: 'فتوش', quantity: 1, price: 20000, category: 'appetizer', name_en: 'Fattoush', description: '', quantity:1 }],
+            items: [{ id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', description: '', quantity:1 }],
             total: 20000,
         };
         submitOrder(dummyOrder);
     }, [submitOrder]);
 
-    const updateOrderStatus = async (orderId: string, newStatus: Order['status'], updates: object) => {
+    const updateOrderStatus = async (orderId: string, newStatus: Order['status'], updates: object = {}) => {
         const orderRef = doc(db, 'orders', orderId);
         try {
             await updateDoc(orderRef, {
                 status: newStatus,
                 ...updates,
             });
+            return true;
         } catch (error) {
              console.error(`Error updating order ${orderId} to ${newStatus}:`, error);
              toast({
@@ -125,28 +134,29 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 title: "خطأ في التحديث",
                 description: "لم نتمكن من تحديث حالة الطلب.",
              })
+             return false;
         }
     };
 
 
     const approveOrderByChef = async (orderId: string) => {
-        await updateOrderStatus(orderId, 'pending_cashier_approval', { chef_approved_at: serverTimestamp() });
-        toast({ title: 'بانتظار موافقة المحاسب', description: `تم تأكيد الطلب ${orderId} من الشيف.` });
+       const success = await updateOrderStatus(orderId, 'pending_cashier_approval', { chef_approved_at: serverTimestamp() });
+       if(success) toast({ title: 'بانتظار موافقة المحاسب', description: `تم تأكيد الطلب ${orderId.substring(0,5)}... من الشيف.` });
     };
 
     const approveOrderByCashier = async (orderId: string) => {
-        await updateOrderStatus(orderId, 'pending_final_confirmation', { cashier_approved_at: serverTimestamp() });
-        toast({ title: 'بانتظار التأكيد النهائي من الزبون', description: `تم تأكيد الطلب ${orderId} من المحاسب.` });
+       const success = await updateOrderStatus(orderId, 'pending_final_confirmation', { cashier_approved_at: serverTimestamp() });
+       if(success) toast({ title: 'بانتظار التأكيد النهائي من الزبون', description: `تم تأكيد الطلب ${orderId.substring(0,5)}... من المحاسب.` });
     };
 
     const confirmFinalOrder = async (orderId: string) => {
-        await updateOrderStatus(orderId, 'confirmed', { customer_confirmed_at: serverTimestamp() });
-        toast({ title: 'تم تأكيد الطلب نهائياً', description: `الطلب ${orderId} قيد التحضير الآن.` });
+       const success = await updateOrderStatus(orderId, 'confirmed', { customer_confirmed_at: serverTimestamp() });
+       if(success) toast({ title: 'تم تأكيد الطلب نهائياً', description: `الطلب ${orderId.substring(0,5)}... قيد التحضير الآن.` });
     };
 
     const confirmOrderReady = async (orderId: string) => {
-        await updateOrderStatus(orderId, 'ready', { completed_at: serverTimestamp() });
-        toast({ title: 'الطلب جاهز', description: `الطلب ${orderId} جاهز للتسليم.` });
+        const success = await updateOrderStatus(orderId, 'ready', { completed_at: serverTimestamp() });
+        if(success) toast({ title: 'الطلب جاهز', description: `الطلب ${orderId.substring(0,5)}... جاهز للتسليم.` });
     };
 
     return (
