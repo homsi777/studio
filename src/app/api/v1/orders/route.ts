@@ -1,4 +1,3 @@
-
 // src/app/api/v1/orders/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
 import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
