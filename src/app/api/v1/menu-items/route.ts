@@ -1,6 +1,6 @@
 // src/app/api/v1/menu-items/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { MenuItem } from '@/types';
 
@@ -34,6 +34,56 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Failed to fetch menu items from Firestore:', error);
     // It's good practice to hide specific error details in production
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+/**
+ * @swagger
+ * /api/v1/menu-items:
+ *   post:
+ *     summary: Create a new menu item
+ *     description: Adds a new menu item to the Firestore 'menu-items' collection.
+ *     tags:
+ *       - Menu
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/MenuItem'
+ *     responses:
+ *       201:
+ *         description: The created menu item.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MenuItem'
+ *       400:
+ *         description: Bad Request - Missing required fields
+ *       500:
+ *         description: Internal Server Error
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const newItemData = await request.json() as Omit<MenuItem, 'id'>;
+
+    // Basic validation
+    if (!newItemData.name || !newItemData.price || !newItemData.category) {
+      return NextResponse.json({ message: 'Bad Request: Missing required fields (name, price, category).' }, { status: 400 });
+    }
+
+    const menuItemsCol = collection(db, 'menu-items');
+    const docRef = await addDoc(menuItemsCol, newItemData);
+
+    const createdItem: MenuItem = {
+      id: docRef.id,
+      ...newItemData
+    };
+    
+    return NextResponse.json(createdItem, { status: 201 });
+  } catch (error) {
+    console.error('Failed to create menu item in Firestore:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
