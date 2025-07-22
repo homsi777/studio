@@ -29,6 +29,11 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
         const handleAddToCartClick = (e: React.MouseEvent) => {
             e.stopPropagation(); // Prevent dialog from opening when add button is clicked
             onAddToCart(item);
+        };
+        
+        const handleDialogAddToCartClick = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            onAddToCart(item);
             setDialogOpen(false);
         };
 
@@ -37,22 +42,29 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
             <>
                 <div 
                     onClick={handleCardClick} 
-                    className="honeycomb-cell group bg-card cursor-pointer"
+                    className="honeycomb-cell group bg-card hover:bg-card/90 cursor-pointer flex flex-col items-center justify-center p-2 text-center select-none"
                 >
-                    <Image
-                        src={item.image!}
-                        alt={t(item.name, item.name_en || '')}
-                        fill
-                        sizes="(max-width: 768px) 33vw, 20vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-110"
-                        data-ai-hint={item.image_hint || ''}
-                    />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-all duration-300 flex flex-col justify-end items-center text-center p-2">
-                         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:translate-y-0 translate-y-4 text-white">
-                            <h3 className="font-headline text-sm sm:text-base font-bold leading-tight drop-shadow-md">{t(item.name, item.name_en || item.name)}</h3>
-                            <p className="text-xs sm:text-sm font-semibold text-primary drop-shadow-md">{formatCurrency(item.price)}</p>
-                        </div>
+                    <div className="flex-1 flex flex-col justify-center items-center">
+                        <h3 className="font-headline text-sm sm:text-base font-bold leading-tight drop-shadow-md text-foreground">
+                            {t(item.name, item.name_en || item.name)}
+                        </h3>
+                        <p className="text-xs sm:text-sm font-semibold text-primary drop-shadow-md mt-1">
+                            {formatCurrency(item.price)}
+                        </p>
                     </div>
+                     <motion.div
+                        whileTap={{ scale: 0.9 }}
+                        className="mt-auto"
+                     >
+                        <Button 
+                            onClick={handleAddToCartClick} 
+                            size="sm"
+                            className="bg-purple-200/50 text-purple-800 hover:bg-purple-200/80 dark:bg-purple-900/50 dark:text-purple-200 dark:hover:bg-purple-900/80 h-7 text-xs rounded-full px-3"
+                        >
+                            <Plus className="h-4 w-4 rtl:ml-1 ltr:mr-1" />
+                            {t('إضافة', 'Add')}
+                        </Button>
+                    </motion.div>
                 </div>
                 
                  <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
@@ -77,7 +89,7 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>{t('إغلاق', 'Close')}</Button>
-                             <Button type="button" onClick={handleAddToCartClick} size="lg">
+                             <Button type="button" onClick={handleDialogAddToCartClick} size="lg">
                                 <Plus className="ltr:mr-2 rtl:ml-2 h-5 w-5"/>
                                 {t('إضافة للسلة', 'Add to Cart')}
                             </Button>
