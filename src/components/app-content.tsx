@@ -45,6 +45,7 @@ export function AppContent({
     '/': { ar: 'لوحة التحكم', en: 'Dashboard' },
     '/chef': { ar: 'واجهة الشيف', en: 'Chef Interface' },
     '/pos': { ar: 'نقطة البيع السريعة', en: 'Quick POS' },
+    '/customer-tables': { ar: 'طاولات الزبائن', en: 'Customer Tables' },
     '/menu-management': { ar: 'إدارة القائمة', en: 'Menu Management' },
     '/reports': { ar: 'التقارير', en: 'Reports' },
     '/expenses': { ar: 'المصاريف', en: 'Expenses' },
@@ -116,9 +117,9 @@ export function AppContent({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton href="/menu/a1b2c3d4-e5f6-7890-1234-567890abcdef" tooltip={t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')} target="_blank">
+                    <SidebarMenuButton href="/customer-tables" tooltip={t('طاولات الزبائن', 'Customer Tables')} isActive={pathname === '/customer-tables'}>
                       <IconUsers />
-                      <span>{t('قائمة الزبون (تجريبي)', 'Customer Menu (Demo)')}</span>
+                      <span>{t('طاولات الزبائن', 'Customer Tables')}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
               </SidebarMenu>
