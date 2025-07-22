@@ -1,7 +1,8 @@
+
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { type Expense, type ExpenseCategory } from '@/types';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import type { Expense, ExpenseCategory } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,8 +31,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, ArrowUpDown, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, ArrowUpDown, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import {
@@ -40,7 +41,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
+import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table';
 import {
   flexRender,
   getCoreRowModel,
@@ -51,14 +52,21 @@ import {
 } from '@tanstack/react-table';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
-const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string }> = {
-    rent: { ar: 'إيجار', en: 'Rent', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
-    bills: { ar: 'فواتير', en: 'Bills', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
-    salaries: { ar: 'رواتب', en: 'Salaries', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' },
-    supplies: { ar: 'مشتريات', en: 'Supplies', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' },
-    maintenance: { ar: 'صيانة', en: 'Maintenance', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300' },
-    other: { ar: 'أخرى', en: 'Other', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' },
+
+const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string, color: string }> = {
+    rent: { ar: 'إيجار', en: 'Rent', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', color: '#10B981' },
+    bills: { ar: 'فواتير', en: 'Bills', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', color: '#3B82F6' },
+    salaries: { ar: 'رواتب', en: 'Salaries', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300', color: '#8B5CF6' },
+    supplies: { ar: 'مشتريات', en: 'Supplies', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300', color: '#F59E0B' },
+    maintenance: { ar: 'صيانة', en: 'Maintenance', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300', color: '#F97316' },
+    other: { ar: 'أخرى', en: 'Other', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', color: '#6B7280' },
 };
 
 
@@ -76,32 +84,34 @@ function ExpensesPage() {
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const [dateRange, setDateRange] = useState<{from?: Date, to?: Date}>({});
+
+    const fetchExpenses = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const params = new URLSearchParams();
+            if (dateRange.from) params.append('startDate', dateRange.from.toISOString());
+            if (dateRange.to) params.append('endDate', dateRange.to.toISOString());
+
+            const response = await fetch(`/api/v1/expenses?${params.toString()}`);
+            if (!response.ok) throw new Error('Failed to fetch expenses');
+            const data: Expense[] = await response.json();
+            setExpenses(data);
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: t("خطأ في جلب البيانات", "Fetch Error"),
+                description: t("لم نتمكن من جلب المصاريف من الخادم.", "Could not fetch expenses from the server."),
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [dateRange, t, toast]);
 
     useEffect(() => {
-        const fetchExpenses = async () => {
-            try {
-                setIsLoading(true);
-                const response = await fetch('/api/v1/expenses');
-                if (!response.ok) throw new Error('Failed to fetch expenses');
-                const data: Expense[] = await response.json();
-                setExpenses(data);
-            } catch (error) {
-                console.error(error);
-                toast({
-                    variant: "destructive",
-                    title: t("خطأ في جلب البيانات", "Fetch Error"),
-                    description: t("لم نتمكن من جلب المصاريف من الخادم.", "Could not fetch expenses from the server."),
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchExpenses();
-    }, [toast, t]);
-
-    const totalExpenses = useMemo(() => {
-        return expenses.reduce((sum, exp) => sum + exp.amount, 0);
-    }, [expenses]);
+    }, [fetchExpenses]);
     
     const openAddDialog = () => {
         setEditingExpense(null);
@@ -151,9 +161,7 @@ function ExpensesPage() {
                     body: JSON.stringify(formData),
                 });
                 if (!response.ok) throw new Error('Failed to update expense');
-                const updatedExpense: Expense = await response.json();
-
-                setExpenses(prev => prev.map(exp => exp.id === editingExpense.id ? updatedExpense : exp));
+                await fetchExpenses();
                 toast({
                     title: t("تم التحديث بنجاح", "Expense Updated"),
                     description: t("تم تحديث بيانات المصروف بنجاح.", "The expense data has been updated."),
@@ -168,7 +176,6 @@ function ExpensesPage() {
                 });
             }
         } else {
-            // Add new expense via API
             try {
                 const response = await fetch('/api/v1/expenses', {
                     method: 'POST',
@@ -176,8 +183,7 @@ function ExpensesPage() {
                     body: JSON.stringify(formData),
                 });
                 if (!response.ok) throw new Error('Failed to save expense');
-                const newExpense: Expense = await response.json();
-                setExpenses(prev => [newExpense, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+                await fetchExpenses();
                 toast({
                     title: t("تم الحفظ بنجاح", "Expense Saved"),
                     description: t("تم تسجيل المصروف الجديد بنجاح.", "The new expense has been recorded."),
@@ -218,7 +224,8 @@ function ExpensesPage() {
             },
             cell: ({ row }) => {
                 const category = row.original.category;
-                return <Badge variant="outline" className={cn("rounded-md", categoryMap[category].className)}>{categoryMap[category][language]}</Badge>
+                const categoryInfo = categoryMap[category] || categoryMap.other;
+                return <Badge variant="outline" className={cn("rounded-md", categoryInfo.className)}>{categoryInfo[language]}</Badge>
             },
         },
         {
@@ -299,52 +306,149 @@ function ExpensesPage() {
         },
     });
     
-    const filteredTotal = useMemo(() => 
-        table.getRowModel().rows.reduce((total, row) => total + row.original.amount, 0)
-    , [table.getRowModel().rows]);
+    const { filteredTotal, categoryDistribution, expensesByDay } = useMemo(() => {
+        const currentRows = table.getRowModel().rows;
+        const filteredTotal = currentRows.reduce((total, row) => total + row.original.amount, 0);
+
+        const categoryDistribution = currentRows.reduce((acc, row) => {
+            const { category, amount } = row.original;
+            acc[category] = (acc[category] || 0) + amount;
+            return acc;
+        }, {} as Record<ExpenseCategory, number>);
+
+        const expensesByDay = currentRows.reduce((acc, row) => {
+            const { date, amount } = row.original;
+            const day = format(new Date(date), 'yyyy-MM-dd');
+            acc[day] = (acc[day] || 0) + amount;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return {
+            filteredTotal,
+            categoryDistribution: Object.entries(categoryDistribution).map(([name, value]) => ({ name: name as ExpenseCategory, value })),
+            expensesByDay: Object.entries(expensesByDay).map(([date, amount]) => ({ date, amount })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        };
+    }, [table.getRowModel().rows]);
+    
+
+    const pieChartConfig = useMemo(() => {
+        return categoryDistribution.reduce((acc, { name }) => {
+            const categoryInfo = categoryMap[name] || categoryMap.other;
+            acc[name] = {
+                label: t(categoryInfo.ar, categoryInfo.en),
+                color: categoryInfo.color,
+            };
+            return acc;
+        }, {} as any);
+    }, [categoryDistribution, t]);
+
+    const barChartConfig = {
+      amount: {
+        label: t("المبلغ", "Amount"),
+        color: "hsl(var(--chart-1))",
+      },
+    }
 
     return (
         <main className="flex-1 p-4 sm:p-6" dir={dir}>
             <div className="flex items-center justify-between mb-6">
                 <h1 className="font-headline text-3xl font-bold text-foreground">{t('إدارة المصاريف', 'Expense Management')}</h1>
-                <Button onClick={openAddDialog} size="lg" className="shadow-md">
+                <Button onClick={openAddDialog} size="lg" className="shadow-md shadow-primary/30">
                     <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                     {t('تسجيل مصروف جديد', 'Record New Expense')}
                 </Button>
             </div>
             
-            <div className="grid gap-6 md:grid-cols-3 mb-6">
-                <Card>
+            <div className="mb-6">
+                <Card className="shadow-lg shadow-purple-500/10">
                     <CardHeader>
-                        <CardTitle>{t('إجمالي المصاريف (الكلي)', 'Total Expenses (Overall)')}</CardTitle>
+                        <CardTitle>{t('نظرة عامة على المصاريف', 'Expenses Overview')}</CardTitle>
+                        <CardDescription>{t('ملخص للمصاريف المسجلة حسب الفلاتر المحددة.', 'Summary of recorded expenses based on selected filters.')}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-3xl font-bold">{totalExpenses.toLocaleString()} {t('ل.س', 'SYP')}</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>{t('إجمالي المصاريف (المعروضة)', 'Total Expenses (Filtered)')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-3xl font-bold">{filteredTotal.toLocaleString()} {t('ل.س', 'SYP')}</p>
+                    <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                       <div className='lg:col-span-1 flex flex-col gap-6'>
+                            <Card className="shadow-md shadow-purple-500/10">
+                                <CardHeader>
+                                    <CardTitle>{t('إجمالي المصاريف', 'Total Expenses')}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-4xl font-bold text-primary">{filteredTotal.toLocaleString()} {t('ل.س', 'SYP')}</p>
+                                </CardContent>
+                            </Card>
+                             <Card className="shadow-md shadow-purple-500/10">
+                                <CardHeader>
+                                    <CardTitle>{t('توزيع المصاريف', 'Expense Distribution')}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {isLoading ? <div className="h-[200px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div> :
+                                    <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[200px]">
+                                        <PieChart>
+                                            <Tooltip
+                                            cursor={false}
+                                            content={<ChartTooltipContent hideLabel nameKey="name" />}
+                                            />
+                                            <Pie data={categoryDistribution} dataKey="value" nameKey="name" innerRadius={50} strokeWidth={5}>
+                                                {categoryDistribution.map((entry) => (
+                                                    <Cell key={`cell-${entry.name}`} fill={categoryMap[entry.name]?.color || '#ccc'} />
+                                                ))}
+                                            </Pie>
+                                        </PieChart>
+                                    </ChartContainer>
+                                    }
+                                </CardContent>
+                            </Card>
+                       </div>
+                        <div className="lg:col-span-2">
+                            <Card className="h-full shadow-md shadow-purple-500/10">
+                                <CardHeader>
+                                    <CardTitle>{t('المصاريف عبر الزمن', 'Expenses Over Time')}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="h-[400px] pl-0">
+                                     {isLoading ? <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div> :
+                                        <ChartContainer config={barChartConfig} className="w-full h-full">
+                                            <BarChart data={expensesByDay} accessibilityLayer>
+                                                <CartesianGrid vertical={false} />
+                                                <XAxis
+                                                    dataKey="date"
+                                                    tickLine={false}
+                                                    tickMargin={10}
+                                                    axisLine={false}
+                                                    tickFormatter={(value) => format(new Date(value), 'MMM d')}
+                                                />
+                                                <YAxis
+                                                    tickFormatter={(value) => `${Number(value) / 1000}k`}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                />
+                                                <Tooltip
+                                                    cursor={false}
+                                                    content={<ChartTooltipContent indicator="dot" />}
+                                                />
+                                                <Legend />
+                                                <Bar dataKey="amount" fill="var(--color-amount)" radius={4} name={barChartConfig.amount.label} />
+                                            </BarChart>
+                                        </ChartContainer>
+                                     }
+                                </CardContent>
+                            </Card>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
 
-            <Card>
+            <Card className="shadow-lg shadow-purple-500/10">
                 <CardHeader>
-                     <div className="flex items-center justify-between">
+                     <div className="flex items-center justify-between flex-wrap gap-2">
                         <CardTitle>{t('سجل المصاريف', 'Expense Log')}</CardTitle>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                              <Input
                                 placeholder={t('ابحث في الوصف...', 'Search descriptions...')}
                                 value={(table.getColumn('description')?.getFilterValue() as string) ?? ''}
                                 onChange={(event) =>
                                     table.getColumn('description')?.setFilterValue(event.target.value)
                                 }
-                                className="max-w-sm"
+                                className="max-w-xs"
                             />
                             <Select 
                                 value={(table.getColumn('category')?.getFilterValue() as string) ?? 'all'}
@@ -362,6 +466,43 @@ function ExpensesPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-[300px] justify-start text-left font-normal",
+                                    !dateRange && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateRange.from ? (
+                                    dateRange.to ? (
+                                        <>
+                                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                                        {format(dateRange.to, "LLL dd, y")}
+                                        </>
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                    ) : (
+                                    <span>{t('اختر نطاق تاريخ', 'Pick a date range')}</span>
+                                    )}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateRange.from}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                    locale={language === 'ar' ? ar : undefined}
+                                />
+                                </PopoverContent>
+                            </Popover>
                         </div>
                      </div>
                 </CardHeader>
@@ -479,7 +620,7 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     
-    const getInitialFormData = (): Omit<Expense, 'id'> => {
+    const getInitialFormData = useCallback((): Omit<Expense, 'id'> => {
         if (expense) {
             return {
                 description: expense.description,
@@ -496,13 +637,13 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
             date: new Date().toISOString().split('T')[0], 
             category: 'supplies' as ExpenseCategory 
         };
-    }
+    }, [expense]);
 
     const [formData, setFormData] = useState<Omit<Expense, 'id'>>(getInitialFormData);
     
     React.useEffect(() => {
         setFormData(getInitialFormData());
-    }, [expense, isOpen]);
+    }, [expense, isOpen, getInitialFormData]);
 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,6 +1,7 @@
+
 // src/app/api/v1/expenses/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Expense } from '@/types';
 
@@ -26,8 +27,21 @@ import type { Expense } from '@/types';
  */
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+
     const expensesCol = collection(db, 'expenses');
-    const expensesSnapshot = await getDocs(expensesCol);
+    let q = query(expensesCol);
+
+    if (startDate) {
+        q = query(q, where('date', '>=', startDate.split('T')[0]));
+    }
+    if (endDate) {
+        q = query(q, where('date', '<=', endDate.split('T')[0]));
+    }
+
+    const expensesSnapshot = await getDocs(q);
     const expensesList = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
     
     // Sort by date descending by default
