@@ -26,7 +26,7 @@ function SettingsPage() {
 
   const [exchangeRate, setExchangeRate] = useState<number | null>(15000);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
   
   const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value, type } = e.target;
@@ -37,7 +37,7 @@ function SettingsPage() {
   }
 
   const handleFetchRate = async () => {
-    setIsLoading(true);
+    setIsLoadingRate(true);
     try {
       const rate = await fetchExchangeRate();
       setExchangeRate(rate);
@@ -54,7 +54,7 @@ function SettingsPage() {
         description: t("لم نتمكن من جلب سعر الصرف. يرجى المحاولة مرة أخرى.", "Could not fetch the exchange rate. Please try again."),
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingRate(false);
     }
   };
 
@@ -71,8 +71,8 @@ function SettingsPage() {
   return (
     <main className="flex-1 p-4 sm:p-6">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-            <h1 className="font-headline text-2xl font-semibold">{t('الإعدادات', 'Settings')}</h1>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+            <h1 className="font-headline text-3xl font-bold">{t('الإعدادات', 'Settings')}</h1>
             <Button onClick={handleSaveSettings}>{t('حفظ التغييرات', 'Save Changes')}</Button>
         </div>
         <Separator />
@@ -158,8 +158,8 @@ function SettingsPage() {
                           <Label htmlFor="usd-rate">{t('السعر الحالي (ل.س لكل 1$)', 'Current Rate (SYP per 1 USD)')}</Label>
                           <Input id="usd-rate" type="number" value={exchangeRate ?? ""} readOnly disabled />
                         </div>
-                        <Button onClick={handleFetchRate} disabled={isLoading} variant="outline" size="icon">
-                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        <Button onClick={handleFetchRate} disabled={isLoadingRate} variant="outline" size="icon">
+                            {isLoadingRate ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                             <span className="sr-only">Refresh</span>
                         </Button>
                       </div>
