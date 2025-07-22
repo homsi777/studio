@@ -8,13 +8,11 @@ import { ChefOrderCard } from '@/components/chef/chef-order-card';
 import { ChefOrderColumn } from '@/components/chef/chef-order-column';
 import { AuthGuard } from '@/components/auth-guard';
 import { useOrderFlow } from '@/hooks/use-order-flow';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 
 
 function ChefPage() {
-  const { orders, approveOrderByChef, confirmOrderReady, addDummyOrder } = useOrderFlow();
+  const { orders, approveOrderByChef, confirmOrderReady } = useOrderFlow();
   const { language } = useLanguage();
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -30,10 +28,6 @@ function ChefPage() {
     <main className="flex-1 flex flex-col p-4 sm:p-6 bg-background/30">
         <div className="flex items-center justify-between mb-6">
             <h1 className="font-headline text-3xl font-bold text-foreground">{t('واجهة الشيف', 'Chef Interface')}</h1>
-            <Button onClick={() => addDummyOrder('d2a5c1b8-3e9f-4b0a-8d1c-7f8e9a2b3c4d')}>
-                <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                {t('محاكاة طلب جديد', 'Simulate New Order')}
-            </Button>
         </div>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {columns.map(column => (
