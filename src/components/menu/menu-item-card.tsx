@@ -16,7 +16,7 @@ interface MenuItemCardProps {
     formatCurrency: (amount: number) => string;
 }
 
-export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProps>(
+export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
     ({ item, onAddToCart, formatCurrency }, ref) => {
         const { language } = useLanguage();
         const t = (ar: string, en: string) => language === 'ar' ? ar : en;
@@ -43,6 +43,7 @@ export const MenuItemCard = React.forwardRef<HTMLButtonElement, MenuItemCardProp
                 <div 
                     onClick={handleCardClick} 
                     className="honeycomb-cell group bg-card hover:bg-card/90 cursor-pointer flex flex-col items-center justify-center p-2 text-center"
+                    ref={ref}
                 >
                     <div className="flex-1 flex flex-col justify-center items-center">
                         <h3 className="font-headline text-sm sm:text-base font-bold leading-tight drop-shadow-md text-foreground">

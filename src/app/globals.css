@@ -111,7 +111,7 @@
       justify-content: center;
       list-style-type: none;
       padding: 0;
-      --hex-size: 120px;
+      --hex-size: 90px;
       --hex-gap: 4px;
       --hex-stagger: calc(var(--hex-size) * -0.25 - var(--hex-gap) * 0.5);
   }
@@ -132,12 +132,12 @@
   
   @media (max-width: 768px) {
     .honeycomb {
-      --hex-size: 100px;
+      --hex-size: 80px;
     }
   }
    @media (max-width: 480px) {
     .honeycomb {
-      --hex-size: 80px;
+      --hex-size: 70px;
     }
   }
 
