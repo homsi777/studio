@@ -196,7 +196,7 @@ export default function MenuPage() {
             </nav>
 
             <main className="container mx-auto p-4 sm:p-6 pb-32">
-                <ul className="honeycomb">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                     {filteredItems.map(item => (
                         <MenuItemCard
                             key={item.id}
@@ -205,7 +205,7 @@ export default function MenuPage() {
                             formatCurrency={formatCurrency}
                         />
                     ))}
-                </ul>
+                </div>
             </main>
 
             <AnimatePresence>
