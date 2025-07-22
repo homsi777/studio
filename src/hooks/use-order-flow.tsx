@@ -27,6 +27,7 @@ interface OrderFlowContextType {
     approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
     confirmFinalOrder: (orderId: string) => Promise<void>;
     confirmOrderReady: (orderId: string) => Promise<void>;
+    completeOrder: (orderId: string) => Promise<void>;
     addDummyOrder: (tableUuid: string) => void;
 }
 
@@ -127,7 +128,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             tableId: tableId,
             tableUuid: tableUuid,
             sessionId: dummySessionId,
-            items: [{ id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', description: '', quantity:1 }],
+            items: [{ id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', description: '', quantity:1, image: 'https://placehold.co/600x400.png', image_hint: 'food salad' }],
             subtotal: 20000,
         };
         submitOrder(dummyOrder);
@@ -178,9 +179,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const confirmOrderReady = async (orderId: string) => {
-        const success = await updateOrderStatus(orderId, 'ready', { completed_at: serverTimestamp() });
+        const success = await updateOrderStatus(orderId, 'ready', { completed_at: serverTimestamp() }); // Using completed_at for ready timestamp for now
         if(success) toast({ title: 'الطلب جاهز', description: `الطلب ${orderId.substring(0,5)}... جاهز للتسليم.` });
     };
+
+    const completeOrder = async (orderId: string) => {
+        const success = await updateOrderStatus(orderId, 'completed', { completed_at: serverTimestamp() });
+        if(success) toast({ title: 'تم إتمام الطلب', description: `تم إغلاق الطلب ${orderId.substring(0,5)}... بنجاح.` });
+    }
 
     return (
         <OrderFlowContext.Provider value={{
@@ -191,6 +197,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             approveOrderByCashier,
             confirmFinalOrder,
             confirmOrderReady,
+            completeOrder,
             addDummyOrder,
         }}>
             {children}
