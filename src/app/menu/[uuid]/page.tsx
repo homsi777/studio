@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { MenuItem, Order } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
@@ -24,6 +24,9 @@ const menuItems: MenuItem[] = [
     { id: 'item-8', name: 'عصير برتقال', name_en: 'Orange Juice', price: 18000, description: 'طبيعي معصور عند الطلب.', category: 'drink', quantity: 0, offer: 'عرض خاص', offer_en: 'Special Offer', image: "https://placehold.co/600x400.png", image_hint: "orange juice" },
     { id: 'item-9', name: 'كنافة بالجبن', name_en: 'Cheese Kunafa', price: 35000, description: 'طبقة كنافة ناعمة مع جبنة.', category: 'dessert', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "cheese kunafa" },
     { id: 'item-10', name: 'سلطة سيزر', name_en: 'Caesar Salad', price: 30000, description: 'خس، دجاج مشوي، وصلصة السيزر.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "caesar salad" },
+    { id: 'item-11', name: 'بطاطا مقلية', name_en: 'French Fries', price: 15000, description: 'بطاطا مقرمشة وذهبية.', category: 'appetizer', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "french fries" },
+    { id: 'item-12', name: 'ماء', name_en: 'Water', price: 5000, description: 'ماء معدني.', category: 'drink', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "water bottle" },
+    { id: 'item-13', name: 'كريم كراميل', name_en: 'Creme Caramel', price: 22000, description: 'حلوى الكريم كراميل الكلاسيكية.', category: 'dessert', quantity: 0, image: "https://placehold.co/600x400.png", image_hint: "creme caramel" },
 ];
 
 export default function MenuPage() {
@@ -40,9 +43,9 @@ export default function MenuPage() {
     const [flyingItems, setFlyingItems] = useState<any[]>([]);
     const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [activeCategory, setActiveCategory] = useState<MenuItem['category'] | 'all'>('all');
 
     const cartRef = useRef<HTMLButtonElement>(null);
-    const addToCartRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
     useEffect(() => {
         let sid = sessionStorage.getItem('session_id');
@@ -59,23 +62,7 @@ export default function MenuPage() {
         setCurrentOrder(activeOrder || null);
     }, [orders, tableUuid, sessionId]);
 
-    const addToCart = (item: MenuItem, itemId: string) => {
-        const fromRect = addToCartRefs.current[itemId]?.getBoundingClientRect();
-        const toRect = cartRef.current?.getBoundingClientRect();
-
-        if (fromRect && toRect) {
-            const newFlyingItem = {
-                id: Date.now(),
-                x: fromRect.left + fromRect.width / 2,
-                y: fromRect.top + fromRect.height / 2,
-                destX: toRect.left + toRect.width / 2,
-                destY: toRect.top + toRect.height / 2,
-                image: item.image,
-                image_hint: item.image_hint,
-            };
-            setFlyingItems(prev => [...prev, newFlyingItem]);
-        }
-
+    const addToCart = (item: MenuItem) => {
         setCart(prevCart => {
             const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
             if (existingItem) {
@@ -122,11 +109,32 @@ export default function MenuPage() {
     };
 
     const sections = useMemo(() => [
-        { title: t('المقبلات', 'Appetizers'), items: menuItems.filter(i => i.category === 'appetizer') },
-        { title: t('الأطباق الرئيسية', 'Main Courses'), items: menuItems.filter(i => i.category === 'main') },
-        { title: t('المشروبات', 'Drinks'), items: menuItems.filter(i => i.category === 'drink') },
-        { title: t('الحلويات', 'Desserts'), items: menuItems.filter(i => i.category === 'dessert') }
-    ], [language, t]);
+        { id: 'all', title: t('الكل', 'All'), icon: <Utensils/> },
+        { id: 'appetizer', title: t('المقبلات', 'Appetizers'), icon: <Utensils/> },
+        { id: 'main', title: t('الرئيسية', 'Main'), icon: <Utensils/> },
+        { id: 'drink', title: t('المشروبات', 'Drinks'), icon: <Utensils/> },
+        { id: 'dessert', title: t('الحلويات', 'Desserts'), icon: <Utensils/> }
+    ], [t]);
+    
+    const filteredItems = useMemo(() => {
+        if (activeCategory === 'all') return menuItems;
+        return menuItems.filter(i => i.category === activeCategory);
+    }, [activeCategory]);
+    
+    const chunkedItems = useMemo(() => {
+       const result = [];
+       const itemsPerRow = [3, 2, 3, 2, 3]; // Example pattern
+       let i = 0;
+       let row = 0;
+       while(i < filteredItems.length){
+           const chunkSize = itemsPerRow[row % itemsPerRow.length];
+           result.push(filteredItems.slice(i, i + chunkSize));
+           i += chunkSize;
+           row++;
+       }
+       return result;
+    }, [filteredItems]);
+
 
     if (currentOrder) {
         if (currentOrder.status === 'pending_chef_approval' || currentOrder.status === 'pending_cashier_approval') {
@@ -178,62 +186,45 @@ export default function MenuPage() {
 
 
     return (
-        <div className="bg-background min-h-screen font-body select-none" dir={dir}>
-            <AnimatePresence>
-                {flyingItems.map(item => (
-                    <motion.div
-                        key={item.id}
-                        initial={{ x: item.x, y: item.y, opacity: 1, scale: 0.3 }}
-                        animate={{
-                            x: item.destX,
-                            y: item.destY,
-                            opacity: 0,
-                            scale: 0,
-                            transition: {
-                                type: 'spring',
-                                stiffness: 400,
-                                damping: 50,
-                                mass: 0.5
-                            }
-                        }}
-                        onAnimationComplete={() => {
-                            setFlyingItems(prev => prev.filter(f => f.id !== item.id));
-                        }}
-                        className="fixed z-50 rounded-lg overflow-hidden shadow-xl"
-                        style={{ width: 48, height: 48 }}
-                    >
-                        {item.image && <Image src={item.image} alt="flying item" width={48} height={48} className="object-cover w-full h-full" data-ai-hint={item.image_hint || ''} />}
-                    </motion.div>
-                ))}
-            </AnimatePresence>
-
+        <div className="bg-background min-h-screen font-body select-none overflow-x-hidden" dir={dir}>
             <header className="p-4 border-b sticky top-0 bg-background/80 backdrop-blur-sm z-30">
                 <div className="container mx-auto flex justify-between items-center gap-4">
-                    <div className="text-center">
+                    <div className="text-center flex-1">
                         <h1 className="font-headline text-2xl font-bold text-primary">{settings.restaurantName}</h1>
                         <p className="text-sm text-muted-foreground">{t('الطاولة رقم', 'Table No.')} {displayTableNumber}</p>
                     </div>
                 </div>
             </header>
 
-            <main className="container mx-auto p-2 sm:p-4 pb-32">
+             <nav className="flex justify-center gap-2 sm:gap-4 p-4 sticky top-20 bg-background/80 backdrop-blur-sm z-20 overflow-x-auto">
                 {sections.map(section => (
-                    section.items.length > 0 &&
-                    <section key={section.title} className="mb-12">
-                        <h2 className="font-headline text-3xl font-bold mb-6 text-foreground px-2">{section.title}</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                            {section.items.map(item => (
+                    <Button 
+                        key={section.id} 
+                        variant={activeCategory === section.id ? 'default' : 'ghost'}
+                        onClick={() => setActiveCategory(section.id as any)}
+                        className="rounded-full shrink-0"
+                        size="lg"
+                    >
+                        {section.title}
+                    </Button>
+                ))}
+            </nav>
+
+            <main className="container mx-auto p-4 sm:p-6 pb-32">
+                 <div className="honeycomb">
+                    {chunkedItems.map((row, rowIndex) => (
+                        <div key={rowIndex} className="flex justify-center honeycomb-row">
+                             {row.map(item => (
                                 <MenuItemCard
                                     key={item.id}
                                     item={item}
                                     onAddToCart={addToCart}
                                     formatCurrency={formatCurrency}
-                                    ref={el => addToCartRefs.current[item.id] = el}
                                 />
                             ))}
                         </div>
-                    </section>
-                ))}
+                    ))}
+                 </div>
             </main>
 
             <AnimatePresence>

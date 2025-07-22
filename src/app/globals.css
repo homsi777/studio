@@ -103,6 +103,44 @@
       }
     }
   }
+
+  /* Honeycomb Grid Styles */
+  .honeycomb {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      list-style-type: none;
+      padding: 0;
+      --hex-size: 150px;
+      --hex-gap: 4px;
+      --hex-stagger: calc(var(--hex-size) * -0.25 - var(--hex-gap) * 0.5);
+  }
+
+  .honeycomb-cell {
+      position: relative;
+      width: var(--hex-size);
+      height: calc(var(--hex-size) * 1.1547);
+      margin: calc(var(--hex-size) * 0.57735) var(--hex-gap);
+      margin-bottom: var(--hex-stagger);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      transition: transform 0.2s ease-in-out;
+  }
+
+  .honeycomb-row:nth-child(even) {
+      margin-left: calc(var(--hex-size) * 0.5 + var(--hex-gap));
+  }
+  
+  @media (max-width: 768px) {
+    .honeycomb {
+      --hex-size: 120px;
+    }
+  }
+   @media (max-width: 480px) {
+    .honeycomb {
+      --hex-size: 100px;
+    }
+  }
+
 }
 
 @media print {
@@ -182,5 +220,3 @@
     color: #4b5563 !important;
   }
 }
-
-    
