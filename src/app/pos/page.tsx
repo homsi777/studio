@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins, FilePenLine, Loader2 } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, CreditCard, Coins, FilePenLine, Loader2, X } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -21,10 +21,20 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { AuthGuard } from '@/components/auth-guard';
 import { useToast } from '@/hooks/use-toast';
-
+import { useReactToPrint } from 'react-to-print';
+import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
+import { IconLogo } from '@/components/icons';
 
 const categories: { value: MenuItemCategory | 'all', ar: string, en: string }[] = [
     { value: 'all', ar: 'الكل', en: 'All' },
@@ -34,10 +44,54 @@ const categories: { value: MenuItemCategory | 'all', ar: string, en: string }[] 
     { value: 'dessert', ar: 'حلويات', en: 'Desserts' },
 ];
 
+
+function Receipt({ cart, total, restaurantSettings, language }: { cart: MenuItem[], total: number, restaurantSettings: any, language: 'ar' | 'en' }) {
+    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+    return (
+        <div className="bg-white text-black font-mono text-sm p-4 w-[300px] mx-auto">
+            <div className="text-center mb-4">
+                <IconLogo className="w-16 h-16 mx-auto text-black" />
+                <h2 className="text-xl font-bold">{restaurantSettings.restaurantName}</h2>
+                <p className="text-xs">{restaurantSettings.address}</p>
+                <p className="text-xs">{restaurantSettings.phone}</p>
+            </div>
+            <Separator className="border-dashed border-black my-2" />
+            <div className="flex justify-between text-xs">
+                <span>{new Date().toLocaleDateString()}</span>
+                <span>{new Date().toLocaleTimeString()}</span>
+            </div>
+            <Separator className="border-dashed border-black my-2" />
+            <div className="space-y-1">
+                {cart.map(item => (
+                    <div key={item.id}>
+                        <div className='flex'>
+                            <p className="flex-1 truncate">{t(item.name, item.name_en || item.name)}</p>
+                            <p className="pl-2">{item.price.toLocaleString()}</p>
+                        </div>
+                        <div className="flex justify-end">
+                            <span>{item.quantity} x</span>
+                            <span className="w-12 text-right">{(item.quantity * item.price).toLocaleString()}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <Separator className="border-dashed border-black my-2" />
+            <div className="flex justify-between font-bold text-base">
+                <span>{t('الإجمالي', 'Total')}</span>
+                <span>{total.toLocaleString()} {t('ل.س', 'SYP')}</span>
+            </div>
+            <Separator className="border-dashed border-black my-2" />
+            <p className="text-center text-xs">{t('شكراً لزيارتكم!', 'Thank you for visiting!')}</p>
+        </div>
+    );
+}
+
+
 function QuickPOSPage() {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
+    const { settings: restaurantSettings } = useRestaurantSettings();
 
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +99,13 @@ function QuickPOSPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<MenuItemCategory | 'all'>('all');
     const [isConfirming, setIsConfirming] = useState(false);
+    const [isPreviewOpen, setPreviewOpen] = useState(false);
+
+    const receiptRef = useRef(null);
+    const handlePrint = useReactToPrint({
+      content: () => receiptRef.current,
+      documentTitle: 'receipt',
+    });
 
     useEffect(() => {
         const fetchMenuItems = async () => {
@@ -97,12 +158,11 @@ function QuickPOSPage() {
 
     const completeOrder = () => {
         console.log("Order completed:", cart);
-        // Here you would typically send the order to the backend
         toast({
             title: t('اكتمل الطلب', 'Order Completed'),
             description: t(`تم تسجيل الطلب النقدي بقيمة ${total.toLocaleString()} ل.س بنجاح.`, `Cash order for ${total.toLocaleString()} SYP recorded successfully.`),
         });
-        setCart([]); // Clear cart after completion
+        setCart([]);
         setIsConfirming(false);
     }
     
@@ -112,7 +172,6 @@ function QuickPOSPage() {
 
     return (
         <main className="flex h-[calc(100vh-theme(spacing.14))] bg-muted/20 overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            {/* Items Grid */}
             <div className="flex-1 p-4 flex flex-col">
                 <div className="flex gap-4 mb-4">
                      <div className="relative flex-1">
@@ -166,7 +225,6 @@ function QuickPOSPage() {
                 </ScrollArea>
             </div>
 
-            {/* Cart Section */}
             <aside className="w-[420px] bg-card ltr:border-l rtl:border-r flex flex-col shadow-lg">
                  <div className="p-4 flex justify-between items-center border-b">
                     <h2 className="font-headline text-2xl">{t("السلة الحالية", "Current Cart")}</h2>
@@ -213,13 +271,29 @@ function QuickPOSPage() {
                                 {t("دفع بالبطاقة", "Card")}
                              </Button>
                         </div>
-                         <Button variant="outline" size="lg" className="w-full h-12 text-base">
+                        <Button variant="outline" size="lg" className="w-full h-12 text-base" onClick={() => setPreviewOpen(true)}>
                             <Printer className="ltr:mr-2 rtl:ml-2 h-5 w-5" />
                             {t("طباعة فاتورة", "Print Invoice")}
                         </Button>
                     </div>
                 )}
             </aside>
+
+            <Dialog open={isPreviewOpen} onOpenChange={setPreviewOpen}>
+                <DialogContent className="max-w-sm p-0 bg-transparent border-none shadow-none">
+                     <div ref={receiptRef}>
+                        <Receipt cart={cart} total={total} restaurantSettings={restaurantSettings} language={language}/>
+                     </div>
+                     <DialogFooter className="flex-row gap-2 pt-4 justify-center">
+                        <Button onClick={() => setPreviewOpen(false)} variant="secondary">{t('إغلاق', 'Close')}</Button>
+                        <Button onClick={handlePrint} className='bg-blue-600 hover:bg-blue-700'>
+                            <Printer className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                            {t('طباعة', 'Print')}
+                        </Button>
+                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <AlertDialog open={isConfirming} onOpenChange={setIsConfirming}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -247,3 +321,4 @@ export default function GuardedQuickPOSPage() {
         </AuthGuard>
     )
 }
+
