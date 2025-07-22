@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { type Table } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
@@ -13,7 +13,7 @@ import { useOrderFlow } from '@/hooks/use-order-flow';
 function DashboardPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const { settings } = useRestaurantSettings();
-  const { tables, orders } = useOrderFlow();
+  const { orders } = useOrderFlow();
 
   const handleSelectTable = (table: Table) => {
     if(table.status !== 'available') {
@@ -25,35 +25,47 @@ function DashboardPage() {
     setSelectedTable(null);
   };
 
-  const getTableData = (tableId: number): Table => {
-    const activeOrder = orders.find(o => o.tableId === tableId && o.status !== 'completed' && o.status !== 'cancelled');
-    if (activeOrder) {
-      let status: Table['status'] = 'occupied';
-      if (activeOrder.status === 'pending_chef_approval') status = 'new_order';
-      if (activeOrder.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
-      if (activeOrder.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
-      if (activeOrder.status === 'confirmed') status = 'confirmed';
-      if (activeOrder.status === 'paying') status = 'paying';
-      if (activeOrder.status === 'needs_attention') status = 'needs_attention';
-
-      return {
-        id: tableId,
-        status: status,
-        order: activeOrder,
-        seatingDuration: '10 min', // Mock data
-        chefConfirmationTimestamp: activeOrder.confirmationTimestamp
-      };
+  const tablesData = useMemo(() => {
+    const tableMap = new Map<number, Table>();
+    
+    // Initialize all tables as available
+    for (let i = 1; i <= settings.numberOfTables; i++) {
+        tableMap.set(i, { id: i, status: 'available', order: null });
     }
-    return { id: tableId, status: 'available', order: null };
-  };
 
-  const displayTables = Array.from({ length: settings.numberOfTables }, (_, i) => getTableData(i + 1));
+    // Populate with active orders
+    const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+
+    for (const order of activeOrders) {
+      let status: Table['status'] = 'occupied';
+      if (order.status === 'pending_chef_approval') status = 'new_order';
+      if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
+      if (order.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
+      if (order.status === 'confirmed') status = 'confirmed';
+      if (order.status === 'ready') status = 'ready';
+      if (order.status === 'paying') status = 'paying';
+      if (order.status === 'needs_attention') status = 'needs_attention';
+
+      const tableData: Table = {
+        id: order.tableId,
+        status: status,
+        order: order,
+        // Mock data, consider calculating this based on order start time
+        seatingDuration: '10 min', 
+        chefConfirmationTimestamp: order.confirmationTimestamp
+      };
+      tableMap.set(order.tableId, tableData);
+    }
+
+    return Array.from(tableMap.values()).sort((a,b) => a.id - b.id);
+
+  }, [settings.numberOfTables, orders]);
 
   return (
     <main className="flex-1 p-4 sm:p-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
         <AnimatePresence>
-          {displayTables.map((table, i) => (
+          {tablesData.map((table, i) => (
             <motion.div
               key={table.id}
               initial={{ opacity: 0, y: 20 }}

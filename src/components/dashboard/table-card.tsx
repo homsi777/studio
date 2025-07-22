@@ -5,7 +5,7 @@ import React from 'react';
 import { type Table } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, CircleHelp, Hourglass } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, CircleHelp, Hourglass, Bell } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { useLanguage } from '@/hooks/use-language';
 
@@ -54,6 +54,16 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     text_en: 'Confirmed',
     badge: 'border-transparent bg-green-500/20 text-green-500',
     shadow: 'shadow-green-900/10'
+  },
+  ready: {
+    bg: 'bg-card',
+    border: 'border-teal-500/50',
+    iconColor: 'text-teal-500',
+    icon: <Bell className="h-5 w-5 animate-shake" />,
+    text_ar: 'جاهز للتسليم',
+    text_en: 'Ready for Pickup',
+    badge: 'border-transparent bg-teal-500/20 text-teal-500',
+    shadow: 'shadow-teal-900/10'
   },
   paying: {
     bg: 'bg-card',
@@ -107,7 +117,7 @@ export function TableCard({ table, onSelect }: TableCardProps) {
     <Card
       onClick={() => onSelect(table)}
       className={cn(
-        'flex flex-col justify-between min-h-[160px] transform hover:-translate-y-1 select-none shadow-md',
+        'flex flex-col justify-between min-h-[160px] transform hover:-translate-y-1 select-none shadow-md transition-all duration-300',
         styles.bg,
         styles.border,
         styles.shadow,

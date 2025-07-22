@@ -31,6 +31,7 @@ export default function MenuPage() {
     const [isLoadingMenu, setIsLoadingMenu] = useState(true);
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isConfirming, setIsConfirming] = useState(false);
     const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState<MenuItem['category'] | 'all'>('all');
@@ -77,7 +78,7 @@ export default function MenuPage() {
             const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
             if (existingItem) {
                 return prevCart.map(cartItem =>
-                    cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
+                    cartItem.id === item.id ? { ...cartItem, quantity: (cartItem.quantity || 1) + 1 } : cartItem
                 );
             }
             return [...prevCart, { ...item, quantity: 1 }];
@@ -93,7 +94,7 @@ export default function MenuPage() {
     };
 
     const total = useMemo(() => {
-        return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        return cart.reduce((sum, item) => sum + item.price * (item.quantity || 0), 0);
     }, [cart]);
 
     const formatCurrency = (amount: number) => {
@@ -117,13 +118,20 @@ export default function MenuPage() {
             tableId: parseInt(displayTableNumber),
             tableUuid: tableUuid,
             sessionId: sessionId,
-            items: cart.map(({ quantity, ...item }) => ({ ...item, quantity: quantity || 0 })), // Ensure quantity is set
+            items: cart.map(({ quantity, ...item }) => ({ ...item, quantity: quantity || 0 })),
             total: total,
         }
         await submitOrder(newOrder);
         setIsSubmitting(false);
         setCart([]);
     };
+
+    const handleFinalConfirm = async () => {
+        if (!currentOrder) return;
+        setIsConfirming(true);
+        await confirmFinalOrder(currentOrder.id);
+        setIsConfirming(false);
+    }
 
     const sections = useMemo(() => [
         { id: 'all', title: t('الكل', 'All'), icon: <Utensils/> },
@@ -167,23 +175,30 @@ export default function MenuPage() {
                         <p className="text-muted-foreground max-w-md mx-auto mb-8">
                             {t('الشيف والمحاسب جاهزان. هل تود تأكيد الطلب نهائياً وإرساله إلى المطبخ؟', 'The chef and cashier are ready. Would you like to finalize the order and send it to the kitchen?')}
                         </p>
-                        <Button onClick={() => confirmFinalOrder(currentOrder.id)} size="lg" className="h-14 text-lg">
-                            <Check className="w-6 h-6 ltr:mr-2 rtl:ml-2" />
-                            {t('تأكيد الطلب النهائي', 'Confirm Final Order')}
+                        <Button onClick={handleFinalConfirm} size="lg" className="h-14 text-lg" disabled={isConfirming}>
+                             {isConfirming ? (
+                                <Loader2 className="w-6 h-6 ltr:mr-2 rtl:ml-2 animate-spin"/>
+                            ) : (
+                                <Check className="w-6 h-6 ltr:mr-2 rtl:ml-2" />
+                            )}
+                            {isConfirming ? t('جارِ التأكيد...', 'Confirming...') : t('تأكيد الطلب النهائي', 'Confirm Final Order')}
                         </Button>
                     </motion.div>
                 </div>
             );
         }
 
-        if (currentOrder.status === 'confirmed') {
+        if (currentOrder.status === 'confirmed' || currentOrder.status === 'ready') {
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
                         <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
                         <h1 className="font-headline text-3xl font-bold text-foreground mb-2">{t('تم إرسال طلبكم بنجاح!', 'Your order has been sent successfully!')}</h1>
                         <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                            {t('طلبك الآن قيد التحضير. نتمنى لكم وقتاً ممتعاً!', 'Your order is now being prepared. We wish you a pleasant time!')}
+                           {currentOrder.status === 'ready' 
+                           ? t('طلبكم جاهز الآن! يمكنكم استلامه.', 'Your order is now ready! You can pick it up.')
+                           : t('طلبك الآن قيد التحضير. نتمنى لكم وقتاً ممتعاً!', 'Your order is now being prepared. We wish you a pleasant time!')
+                           }
                         </p>
                     </motion.div>
                 </div>
@@ -260,12 +275,12 @@ export default function MenuPage() {
                                 >
                                     <ShoppingCart className="h-8 w-8" />
                                     <motion.div
-                                        key={cart.reduce((acc, item) => acc + item.quantity, 0)}
+                                        key={cart.reduce((acc, item) => acc + (item.quantity || 0), 0)}
                                         initial={{ scale: 0, y: 10 }}
                                         animate={{ scale: 1, y: 0 }}
                                         className="absolute -top-1 -right-1 bg-accent text-accent-foreground rounded-full h-7 w-7 flex items-center justify-center text-sm font-bold border-2 border-background"
                                     >
-                                        {cart.reduce((acc, item) => acc + item.quantity, 0)}
+                                        {cart.reduce((acc, item) => acc + (item.quantity || 0), 0)}
                                     </motion.div>
                                 </motion.button>
                             </SheetTrigger>
@@ -291,9 +306,9 @@ export default function MenuPage() {
                                                     <p className="text-sm text-primary font-semibold">{formatCurrency(item.price)}</p>
                                                 </div>
                                                 <div className="flex items-center gap-1 bg-muted p-1 rounded-full">
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => updateQuantity(item.id, (item.quantity || 0) + 1)}><Plus className="h-4 w-4" /></Button>
                                                     <span className="font-bold text-base w-6 text-center">{item.quantity}</span>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => updateQuantity(item.id, (item.quantity || 0) - 1)}><Minus className="h-4 w-4" /></Button>
                                                 </div>
                                                 <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-500/10 h-9 w-9 rounded-full" onClick={() => updateQuantity(item.id, 0)}><Trash2 className="h-5 w-5" /></Button>
                                             </motion.div>

@@ -55,7 +55,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
               ...data,
               // Convert Firestore timestamp to JS Date number
               timestamp: data.created_at?.toDate().getTime() || Date.now(),
-              confirmationTimestamp: data.chef_approved_at?.toDate().getTime(),
+              confirmationTimestamp: data.customer_confirmed_at?.toDate().getTime(),
             } as Order;
 
             ordersData.push(newOrder);
@@ -65,21 +65,30 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         ordersData.sort((a,b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
         
         setOrders(ordersData);
+      }, (error) => {
+          console.error("Error listening to orders collection:", error);
+          toast({
+              variant: "destructive",
+              title: "خطأ في الاتصال",
+              description: "فقد الاتصال بقاعدة البيانات. قد لا يتم تحديث الطلبات بشكل لحظي."
+          })
       });
 
       // Cleanup subscription on unmount
       return () => unsubscribe();
-    }, [isAuthenticated]);
+    }, [isAuthenticated, toast]);
 
 
     const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp'>) => {
         try {
-            // Note: We are not using the API here, but writing directly.
-            // In a more complex scenario, you'd call your API. For real-time, direct writing is often fine.
             await addDoc(collection(db, "orders"), {
                 ...orderData,
                 status: 'pending_chef_approval',
                 created_at: serverTimestamp(),
+                chef_approved_at: null,
+                cashier_approved_at: null,
+                customer_confirmed_at: null,
+                completed_at: null,
             });
 
             toast({

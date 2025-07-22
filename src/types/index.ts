@@ -1,6 +1,6 @@
 
 
-export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" | "needs_attention" | "paying" | "pending_cashier_approval" | "awaiting_final_confirmation";
+export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" | "needs_attention" | "paying" | "pending_cashier_approval" | "awaiting_final_confirmation" | "ready";
 
 export type OrderStatus = 'pending_chef_approval' | 'pending_cashier_approval' | 'pending_final_confirmation' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 
