@@ -69,17 +69,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         setOrders(ordersData);
       }, (error) => {
-          console.error("Error listening to orders collection:", error);
-          toast({
-              variant: "destructive",
-              title: "خطأ في الاتصال",
-              description: "فقد الاتصال بقاعدة البيانات. قد لا يتم تحديث الطلبات بشكل لحظي."
-          })
+          console.error("Error listening to orders collection (this is expected when offline):", error);
+          // We will no longer show a toast message for connection errors.
+          // The offline persistence will handle the user experience gracefully.
       });
 
       // Cleanup subscription on unmount
       return () => unsubscribe();
-    }, [isAuthenticated, toast]);
+    }, [isAuthenticated]);
 
 
     const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => {
