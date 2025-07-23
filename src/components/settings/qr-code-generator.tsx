@@ -41,6 +41,10 @@ export function QrCodeGenerator() {
     const printAreaRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // This effect runs only on the client-side.
+        // `window.location.origin` dynamically gets the current base URL
+        // (e.g., http://localhost:3000, or https://192.168.1.10:3000 on a client's network).
+        // This ensures QR codes work automatically in any environment without manual setup.
         if (typeof window !== "undefined") {
             setBaseUrl(window.location.origin);
             setIsClient(true);
