@@ -16,6 +16,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'alamiyah_auth_token';
+const TRIAL_START_DATE_KEY = 'alamiyah_trial_start_date';
+const TRIAL_DURATION_DAYS = 4;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -39,6 +41,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const login = async (username: string, pass: string): Promise<boolean> => {
         setIsLoading(true);
         try {
+            // Check for trial period expiration for the default admin account
+            if (username === 'admin' && pass === '123456') {
+                const trialStartDateStr = localStorage.getItem(TRIAL_START_DATE_KEY);
+                if (trialStartDateStr) {
+                    const trialStartDate = new Date(trialStartDateStr);
+                    const now = new Date();
+                    const trialEndDate = new Date(trialStartDate.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000);
+
+                    if (now > trialEndDate) {
+                        toast({
+                            variant: "destructive",
+                            title: "انتهت الفترة التجريبية",
+                            description: "صلاحية كلمة المرور الافتراضية قد انتهت. يرجى التواصل للحصول على النسخة الكاملة.",
+                        });
+                        setIsLoading(false);
+                        return false;
+                    }
+                }
+            }
+
+
             // In a real production app, never fetch all users to the client.
             // This should be an API endpoint that takes username/password and returns a token.
             // For this project's scope, we validate against the fetched user list.
@@ -55,6 +78,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (foundUser) {
                  try {
+                    // If it's the first successful login with default credentials, set the trial start date.
+                    if (username === 'admin' && pass === '123456' && !localStorage.getItem(TRIAL_START_DATE_KEY)) {
+                        localStorage.setItem(TRIAL_START_DATE_KEY, new Date().toISOString());
+                        toast({
+                            title: "أهلاً بك في الفترة التجريبية!",
+                            description: `يمكنك استخدام كلمة المرور الافتراضية لمدة ${TRIAL_DURATION_DAYS} أيام.`,
+                        });
+                    }
+
                     sessionStorage.setItem(AUTH_STORAGE_KEY, 'mock_jwt_token_for_' + foundUser.id);
                     setIsAuthenticated(true);
                     router.push('/');
