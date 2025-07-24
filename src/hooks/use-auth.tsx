@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -50,7 +51,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
     setIsLoading(true);
 
     // Trial period logic ONLY for the temporary 'admin' user
-    if (username === 'admin' && pass === '123456') {
+    if (username === 'admin') {
       try {
         const trialStartDateStr = localStorage.getItem(TRIAL_START_DATE_KEY);
         if (trialStartDateStr) {
