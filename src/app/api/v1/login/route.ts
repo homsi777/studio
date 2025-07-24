@@ -75,11 +75,18 @@ export async function POST(request: NextRequest) {
     );
 
     if (passwordMatch) {
-      const {password, ...userResponse} = userData;
+      // IMPORTANT FIX: Include the document ID in the user object
+      const userResponseData: User = {
+        id: userDoc.id,
+        username: userData.username,
+        role: userData.role,
+        // Do NOT send the password hash back to the client
+      };
+
       return NextResponse.json(
         {
           success: true,
-          user: {id: userDoc.id, ...userResponse},
+          user: userResponseData,
         },
         {status: 200}
       );

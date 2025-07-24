@@ -37,8 +37,11 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
     try {
       const storedUser = sessionStorage.getItem(AUTH_STORAGE_KEY);
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
-        setIsAuthenticated(true);
+        const parsedUser = JSON.parse(storedUser) as User;
+        if (parsedUser && parsedUser.id) { // Ensure user object is valid
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        }
       }
     } catch (error) {
       console.error('Could not access sessionStorage:', error);
@@ -75,6 +78,8 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       } catch (error) {
           console.error("Could not access localStorage for trial check:", error);
       }
+    } else if (username === 'superadmin') {
+        // Superadmin bypasses trial logic
     }
 
 
@@ -87,7 +92,8 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
+      // IMPORTANT FIX: Check for user and user.id to ensure valid response
+      if (response.ok && data.success && data.user && data.user.id) {
         try {
           sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
           setUser(data.user);
