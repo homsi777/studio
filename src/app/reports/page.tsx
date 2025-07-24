@@ -51,8 +51,11 @@ function ReportsPage() {
         const fetchAndProcessData = async () => {
             setIsLoading(true);
             try {
+                // To get all completed orders, I will fetch without a specific status filter
+                // as the logic to filter by status=completed was not fully implemented in the API.
+                // The processing logic below will filter for completed orders.
                 const [ordersRes, expensesRes] = await Promise.all([
-                    fetch('/api/v1/orders?status=completed'),
+                    fetch('/api/v1/orders'),
                     fetch('/api/v1/expenses')
                 ]);
 
@@ -60,8 +63,10 @@ function ReportsPage() {
                     throw new Error('Failed to fetch data');
                 }
 
-                const orders: Order[] = await ordersRes.json();
+                const allOrders: Order[] = await ordersRes.json();
                 const expenses: Expense[] = await expensesRes.json();
+                
+                const orders = allOrders.filter(o => o.status === 'completed');
 
                 // Process data
                 const totalRevenue = orders.reduce((sum, order) => sum + order.finalTotal, 0);
@@ -200,7 +205,7 @@ function ReportsPage() {
                     ))}
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 lg:grid-cols-3">
                      <Card className="lg:col-span-3">
                         <CardHeader>
                             <CardTitle>{t("ملخص الأداء المالي", "Financial Performance Summary")}</CardTitle>

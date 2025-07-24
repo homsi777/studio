@@ -112,16 +112,22 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
 
         const ordersCol = collection(db, 'orders');
-        const q = status ? firestoreQuery(ordersCol, where("status", "==", status)) : ordersCol;
+        let q = status ? firestoreQuery(ordersCol, where("status", "==", status)) : firestoreQuery(ordersCol);
         
         const querySnapshot = await getDocs(q);
         const ordersList = querySnapshot.docs.map(doc => {
             const data = doc.data();
+            const created_at_ts = data.created_at?.toDate ? data.created_at.toDate() : new Date();
             return {
                 id: doc.id,
                 ...data,
                 // Make sure to handle Firestore Timestamps
-                created_at: data.created_at?.toDate ? data.created_at.toDate().toISOString() : new Date().toISOString(),
+                created_at: created_at_ts.toISOString(),
+                // Add all timestamp fields for client-side processing
+                chef_approved_at: data.chef_approved_at?.toDate ? data.chef_approved_at.toDate().toISOString() : null,
+                cashier_approved_at: data.cashier_approved_at?.toDate ? data.cashier_approved_at.toDate().toISOString() : null,
+                customer_confirmed_at: data.customer_confirmed_at?.toDate ? data.customer_confirmed_at.toDate().toISOString() : null,
+                completed_at: data.completed_at?.toDate ? data.completed_at.toDate().toISOString() : null,
             } as Order
         });
 
