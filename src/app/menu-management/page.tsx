@@ -298,6 +298,7 @@ function MenuManagementPage() {
             )}
 
             <MenuItemFormDialog 
+                key={editingItem?.id || 'new'}
                 isOpen={isDialogOpen} 
                 onOpenChange={setDialogOpen}
                 item={editingItem}
@@ -363,8 +364,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
     };
     
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { id, value } = e.target;
-        setFormData(prev => ({ ...prev, [id]: parseFloat(value) || 0 }));
+        setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }));
     }
 
     const handleCategoryChange = (value: MenuItemCategory) => {
@@ -372,8 +372,6 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
     }
 
     const handleSubmit = () => {
-        // Here we ensure the passed `formData` is the most up-to-date state.
-        // We can cast because we are filling all fields required by the Omit type.
         onSave(formData as Omit<MenuItem, 'id' | 'quantity'>);
     }
 
