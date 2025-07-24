@@ -22,7 +22,8 @@ const ensureDefaultAdminExists = async () => {
   if (snapshot.empty) {
     console.log('No admin user found. Creating default admin user.');
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('123456', salt);
+    // This is the new, permanent default password, hashed for security.
+    const hashedPassword = await bcrypt.hash('700210ww', salt);
 
     const defaultAdmin: Omit<User, 'id'> = {
       username: 'admin',

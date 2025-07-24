@@ -1,5 +1,3 @@
-'use server';
-// This is a new file
 'use client';
 
 import React, {
@@ -50,32 +48,36 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
   const login = async (username: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    try {
-      // Trial period check for default admin account
-      if (username === 'admin') {
+
+    // Trial period logic for default user
+    if (username === 'admin' && pass === '123456') {
+      try {
         const trialStartDateStr = localStorage.getItem(TRIAL_START_DATE_KEY);
         if (trialStartDateStr) {
           const trialStartDate = new Date(trialStartDateStr);
           const now = new Date();
-          const trialEndDate = new Date(
-            trialStartDate.getTime() +
-              TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000
-          );
-
-          if (now > trialEndDate) {
+          const daysPassed = (now.getTime() - trialStartDate.getTime()) / (1000 * 3600 * 24);
+          
+          if (daysPassed > TRIAL_DURATION_DAYS) {
             toast({
               variant: 'destructive',
               title: 'انتهت الفترة التجريبية',
-              description:
-                'صلاحية كلمة المرور الافتراضية قد انتهت. يرجى التواصل للحصول على النسخة الكاملة.',
+              description: 'الرجاء التواصل مع المطور لتفعيل النسخة الكاملة.',
             });
             setIsLoading(false);
             return false;
           }
+        } else {
+          // First login, set the trial start date
+          localStorage.setItem(TRIAL_START_DATE_KEY, new Date().toISOString());
         }
+      } catch (error) {
+          console.error("Could not access localStorage for trial check:", error);
       }
+    }
 
-      // API endpoint handles password verification now
+
+    try {
       const response = await fetch('/api/v1/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -86,17 +88,6 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
       if (response.ok && data.success) {
         try {
-          if (
-            username === 'admin' &&
-            !localStorage.getItem(TRIAL_START_DATE_KEY)
-          ) {
-            localStorage.setItem(TRIAL_START_DATE_KEY, new Date().toISOString());
-            toast({
-              title: 'أهلاً بك في الفترة التجريبية!',
-              description: `يمكنك استخدام كلمة المرور الافتراضية لمدة ${TRIAL_DURATION_DAYS} أيام.`,
-            });
-          }
-
           sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
           setUser(data.user);
           setIsAuthenticated(true);
