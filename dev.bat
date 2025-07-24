@@ -1,0 +1,3 @@
+@echo off
+echo Starting the project in development mode...
+call npm run dev
