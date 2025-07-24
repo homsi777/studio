@@ -9,7 +9,7 @@ import { OrderFlowProvider } from '@/hooks/use-order-flow';
 
 
 export const metadata: Metadata = {
-  title: "Al-Alamiyah Manager",
+  title: "Al-Maida Manager",
   description: 'حلول ذكية ومتكاملة لإدارة المطاعم',
 };
 

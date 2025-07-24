@@ -1,4 +1,3 @@
-
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
@@ -63,6 +62,11 @@ export function AppContent({
     const title = currentTitleKey ? pageTitles[currentTitleKey] : null;
     if (title) {
       setPageTitle(t(title.ar, title.en));
+    } else {
+        // Fallback for dynamic routes like /menu/[uuid]
+        if (pathname.startsWith('/menu/')) {
+            setPageTitle(t('قائمة الزبون', 'Customer Menu'));
+        }
     }
   }, [pathname, language, t, pageTitles]);
   
