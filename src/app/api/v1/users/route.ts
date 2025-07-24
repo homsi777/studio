@@ -1,36 +1,42 @@
+'use server';
 // src/app/api/v1/users/route.ts
-import { type NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, addDoc, doc, getDoc, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { User } from '@/types';
-
-// WARNING: In a real-world scenario, you would use a proper authentication
-// system like Firebase Authentication. Exposing a user list like this is
-// not secure. This is simplified for the project's scope.
-
+import {type NextRequest, NextResponse} from 'next/server';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  doc,
+  getDoc,
+  query,
+  where,
+} from 'firebase/firestore';
+import {db} from '@/lib/firebase';
+import type {User} from '@/types';
+import bcrypt from 'bcryptjs';
 
 const ensureDefaultAdminExists = async () => {
-    const usersCol = collection(db, 'users');
-    const snapshot = await getDocs(usersCol);
+  const usersCol = collection(db, 'users');
+  const q = query(usersCol, where('username', '==', 'admin'));
+  const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-        console.log("No users found. Creating default admin user.");
-        // IMPORTANT: Storing plaintext passwords is a major security risk.
-        // This is for demonstration purposes only. In a real application,
-        // passwords must be hashed on the server (e.g., using bcrypt).
-        const defaultAdmin: Omit<User, 'id'> = {
-            username: 'admin',
-            password: '123456', // Default password
-            role: 'manager'
-        };
-        try {
-            await addDoc(usersCol, defaultAdmin);
-            console.log("Default admin user created successfully.");
-        } catch (error) {
-            console.error("Failed to create default admin user:", error);
-        }
+  if (snapshot.empty) {
+    console.log('No admin user found. Creating default admin user.');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('123456', salt);
+
+    const defaultAdmin: Omit<User, 'id'> = {
+      username: 'admin',
+      password: hashedPassword,
+      role: 'manager',
+    };
+    try {
+      await addDoc(usersCol, defaultAdmin);
+      console.log('Default admin user created successfully.');
+    } catch (error) {
+      console.error('Failed to create default admin user:', error);
     }
-}
+  }
+};
 
 /**
  * @swagger
@@ -59,14 +65,17 @@ export async function GET(request: NextRequest) {
 
     const usersCol = collection(db, 'users');
     const usersSnapshot = await getDocs(usersCol);
-    const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-    
-    // Note: It's generally not a good practice to send passwords to the client,
-    // even if they are hashed. This is simplified for the demo.
+    const usersList = usersSnapshot.docs.map(doc => {
+      const data = doc.data();
+      // IMPORTANT: Never send the password hash to the client.
+      delete data.password;
+      return {id: doc.id, ...data} as User;
+    });
+
     return NextResponse.json(usersList);
   } catch (error) {
     console.error('Failed to fetch users from Firestore:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({message: 'Internal Server Error'}, {status: 500});
   }
 }
 
@@ -96,37 +105,46 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const newUserData = await request.json() as Omit<User, 'id'>;
+    const newUserData = (await request.json()) as Omit<User, 'id'>;
 
     if (!newUserData.username || !newUserData.role || !newUserData.password) {
-      return NextResponse.json({ message: 'Bad Request: Missing required fields (username, password, role).' }, { status: 400 });
+      return NextResponse.json(
+        {message: 'Bad Request: Missing required fields (username, password, role).'},
+        {status: 400}
+      );
     }
 
     const usersCol = collection(db, 'users');
 
     // Check if username already exists
-    const q = query(usersCol, where("username", "==", newUserData.username));
+    const q = query(usersCol, where('username', '==', newUserData.username));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
-        return NextResponse.json({ message: 'Conflict: Username already exists.'}, { status: 409 });
+      return NextResponse.json(
+        {message: 'Conflict: Username already exists.'},
+        {status: 409}
+      );
     }
-    
-    // In a real app, you would HASH the password here before saving.
-    // e.g., using bcrypt: const hashedPassword = await bcrypt.hash(newUserData.password, 10);
-    // For this project, we're storing it in plain text for simplicity. THIS IS NOT SECURE.
-    const docRef = await addDoc(usersCol, newUserData);
+
+    // Hash the password before saving
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newUserData.password, salt);
+
+    const docRef = await addDoc(usersCol, {
+      username: newUserData.username,
+      role: newUserData.role,
+      password: hashedPassword,
+    });
 
     const createdUser: User = {
       id: docRef.id,
-      ...newUserData
+      username: newUserData.username,
+      role: newUserData.role,
     };
-    
-    // Don't send the password back in the response
-    const { password, ...userResponse } = createdUser;
-    
-    return NextResponse.json(userResponse, { status: 201 });
+
+    return NextResponse.json(createdUser, {status: 201});
   } catch (error) {
     console.error('Failed to create user in Firestore:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({message: 'Internal Server Error'}, {status: 500});
   }
 }

@@ -50,6 +50,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 const roleMap: Record<UserRole, { ar: string, en: string, className: string }> = {
     manager: { ar: 'مدير', en: 'Manager', className: 'bg-primary/20 text-primary-foreground' },
@@ -61,6 +62,7 @@ export function UserManagement() {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
+    const { user: currentUser } = useAuth();
 
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -108,11 +110,25 @@ export function UserManagement() {
         setConfirmDeleteOpen(true);
     };
 
-    const handleSaveUser = async (formData: Omit<User, 'id'>) => {
+    const handleSaveUser = async (formData: Partial<User>) => {
         if (editingUser) {
-            // TODO: Implement user update (PUT request to /api/v1/users/[id])
-            await fetchUsers(); // Refetch to get updated data
-            toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.username}.`, `User ${formData.username} has been updated.`) });
+             try {
+                const response = await fetch(`/api/v1/users/${editingUser.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                if (!response.ok) throw new Error(`Failed to update user. Status: ${response.status}`);
+                await fetchUsers(); // Refetch to get updated data
+                toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.username}.`, `User ${formData.username} has been updated.`) });
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: 'destructive',
+                    title: t('خطأ في التحديث', 'Update Error'),
+                    description: t('لم نتمكن من تحديث المستخدم.', 'Could not update the user.'),
+                });
+            }
         } else {
             try {
                 const response = await fetch('/api/v1/users', {
@@ -143,9 +159,15 @@ export function UserManagement() {
     
     const handleDeleteUser = async () => {
         if (userToDelete) {
-             // TODO: Implement user deletion (DELETE request to /api/v1/users/[id])
-            await fetchUsers();
-            toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.username}.`, `User ${userToDelete.username} has been deleted.`), variant: 'destructive' });
+             try {
+                const response = await fetch(`/api/v1/users/${userToDelete.id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete user');
+                await fetchUsers();
+                toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.username}.`, `User ${userToDelete.username} has been deleted.`) });
+             } catch (error) {
+                 console.error(error);
+                 toast({ variant: 'destructive', title: t('خطأ في الحذف', 'Delete Error'), description: t('لم نتمكن من حذف المستخدم.', 'Could not delete the user.') });
+             }
         }
         setConfirmDeleteOpen(false);
         setUserToDelete(null);
@@ -194,13 +216,17 @@ export function UserManagement() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
-                                                    <DropdownMenuItem onClick={() => openEditDialog(user)} disabled>
+                                                    <DropdownMenuItem onClick={() => openEditDialog(user)}>
                                                         <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('تعديل (قريباً)', 'Edit (soon)')}
+                                                        {t('تعديل', 'Edit')}
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-red-500 focus:text-red-500" disabled>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => openDeleteDialog(user)} 
+                                                        className="text-red-500 focus:text-red-500"
+                                                        disabled={user.username === 'admin' || user.id === currentUser?.id}
+                                                    >
                                                         <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('حذف (قريباً)', 'Delete (soon)')}
+                                                        {t('حذف', 'Delete')}
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -247,7 +273,7 @@ interface UserFormDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     user: User | null;
-    onSave: (formData: Omit<User, 'id'>) => void;
+    onSave: (formData: Partial<User>) => void;
 }
 
 function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogProps) {
@@ -273,7 +299,11 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ username, role, password });
+        const formData: Partial<User> = { username, role };
+        if (password) {
+            formData.password = password;
+        }
+        onSave(formData);
     };
 
     return (
