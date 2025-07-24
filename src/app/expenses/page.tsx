@@ -162,7 +162,7 @@ function ExpensesPage() {
         Object.keys(dataToSave).forEach(key => {
             const typedKey = key as keyof typeof dataToSave;
             if (dataToSave[typedKey] === '' || dataToSave[typedKey] === null) {
-                delete dataToSave[typedKey];
+                delete (dataToSave as any)[typedKey];
             }
         });
 
@@ -654,7 +654,7 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
                 description: expense.description,
                 description_en: expense.description_en || '',
                 amount: expense.amount,
-                date: expense.date,
+                date: expense.date.split('T')[0], // Ensure date is in YYYY-MM-DD format
                 category: expense.category,
                 user_id: expense.user_id || 'current_user_id',
                 payment_method: expense.payment_method || 'cash',
@@ -752,16 +752,16 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="space-y-2">
                             <Label htmlFor="supplier">{t('المورد/الجهة', 'Supplier/Beneficiary')}</Label>
-                            <Input id="supplier" value={formData.supplier} onChange={handleChange} />
+                            <Input id="supplier" value={formData.supplier || ''} onChange={handleChange} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="invoice_number">{t('رقم الفاتورة', 'Invoice Number')}</Label>
-                            <Input id="invoice_number" value={formData.invoice_number} onChange={handleChange} />
+                            <Input id="invoice_number" value={formData.invoice_number || ''} onChange={handleChange} />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="notes">{t('ملاحظات إضافية', 'Additional Notes')}</Label>
-                        <Textarea id="notes" value={formData.notes} onChange={handleChange} />
+                        <Textarea id="notes" value={formData.notes || ''} onChange={handleChange} />
                     </div>
                 </div>
                 <DialogFooter>
