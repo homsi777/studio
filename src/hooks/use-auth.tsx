@@ -49,7 +49,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
   const login = async (username: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
 
-    // Trial period logic for default user
+    // Trial period logic ONLY for the temporary 'admin' user
     if (username === 'admin' && pass === '123456') {
       try {
         const trialStartDateStr = localStorage.getItem(TRIAL_START_DATE_KEY);
@@ -68,7 +68,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
             return false;
           }
         } else {
-          // First login, set the trial start date
+          // First login with trial user, set the trial start date
           localStorage.setItem(TRIAL_START_DATE_KEY, new Date().toISOString());
         }
       } catch (error) {
@@ -95,6 +95,11 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
           return true;
         } catch (error) {
           console.error('Could not access sessionStorage:', error);
+          toast({
+            variant: "destructive",
+            title: "خطأ في المتصفح",
+            description: "لا يمكن الوصول إلى ذاكرة التخزين المؤقت للمتصفح. قد لا يعمل التطبيق بشكل صحيح.",
+          });
           return false;
         }
       } else {
@@ -104,8 +109,8 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       console.error('Login process failed:', error);
       toast({
         variant: 'destructive',
-        title: 'Login Error',
-        description: 'Could not connect to the authentication service.',
+        title: 'خطأ في الاتصال',
+        description: 'لا يمكن الاتصال بخدمة المصادقة. تحقق من اتصالك بالإنترنت.',
       });
       return false;
     } finally {

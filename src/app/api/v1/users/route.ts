@@ -9,35 +9,63 @@ import {
   getDoc,
   query,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import {db} from '@/lib/firebase';
 import type {User} from '@/types';
 import bcrypt from 'bcryptjs';
 
-const ensureDefaultAdminExists = async () => {
+const ensureDefaultUsersExist = async () => {
   const usersCol = collection(db, 'users');
-  const q = query(usersCol, where('username', '==', 'admin'));
-  const snapshot = await getDocs(q);
+  
+  // Check if any user exists to prevent running this multiple times
+  const initialCheck = await getDocs(query(usersCol, where('username', 'in', ['admin', 'superadmin'])));
+  
+  const existingUsernames = initialCheck.docs.map(d => d.data().username);
+  
+  const batch = writeBatch(db);
+  let batchHasWrites = false;
 
-  if (snapshot.empty) {
-    console.log('No admin user found. Creating default admin user.');
+  // 1. Ensure Temporary Trial Admin exists
+  if (!existingUsernames.includes('admin')) {
+    console.log('No trial admin user found. Creating trial admin user.');
     const salt = await bcrypt.genSalt(10);
-    // This is the new, permanent default password, hashed for security.
-    const hashedPassword = await bcrypt.hash('700210ww', salt);
-
-    const defaultAdmin: Omit<User, 'id'> = {
+    const hashedPassword = await bcrypt.hash('123456', salt);
+    const trialAdmin: Omit<User, 'id'> = {
       username: 'admin',
       password: hashedPassword,
       role: 'manager',
     };
+    const trialAdminRef = doc(collection(db, 'users'));
+    batch.set(trialAdminRef, trialAdmin);
+    batchHasWrites = true;
+  }
+
+  // 2. Ensure Permanent Super Admin exists
+  if (!existingUsernames.includes('superadmin')) {
+    console.log('No superadmin user found. Creating permanent superadmin user.');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('700210ww', salt);
+    const superAdmin: Omit<User, 'id'> = {
+      username: 'superadmin',
+      password: hashedPassword,
+      role: 'manager',
+    };
+    const superAdminRef = doc(collection(db, 'users'));
+    batch.set(superAdminRef, superAdmin);
+    batchHasWrites = true;
+  }
+
+  if (batchHasWrites) {
     try {
-      await addDoc(usersCol, defaultAdmin);
-      console.log('Default admin user created successfully.');
+      await batch.commit();
+      console.log('Default user creation process completed.');
     } catch (error) {
-      console.error('Failed to create default admin user:', error);
+      console.error('Failed to create default users:', error);
     }
   }
 };
+
 
 /**
  * @swagger
@@ -61,8 +89,7 @@ const ensureDefaultAdminExists = async () => {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Ensure the default admin exists if the database is empty.
-    await ensureDefaultAdminExists();
+    await ensureDefaultUsersExist();
 
     const usersCol = collection(db, 'users');
     const usersSnapshot = await getDocs(usersCol);
