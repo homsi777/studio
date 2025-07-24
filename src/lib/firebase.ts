@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence, initializeFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore, enableIndexedDbPersistence, initializeFirestore, memoryLocalCache, persistentLocalCache } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -14,27 +14,30 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with offline persistence
-// This is crucial for the app to work during internet outages.
+// Initialize Firestore. This should be a single instance.
 const db = getFirestore(app);
-try {
-  enableIndexedDbPersistence(db)
-  console.log("Firestore offline persistence enabled.");
-} catch (error: any) {
-    if (error.code == 'failed-precondition') {
-        // Multiple tabs open, persistence can only be enabled
-        // in one tab at a time.
-        console.warn('Firestore offline persistence failed: multiple tabs open.');
-    } else if (error.code == 'unimplemented') {
-        // The current browser does not support all of the
-        // features required to enable persistence
-        console.error('Firestore offline persistence is not supported in this browser.');
-    } else {
-      console.error("Firestore offline persistence initialization failed:", error);
-    }
-}
 
+// This is the CRITICAL FIX:
+// `enableIndexedDbPersistence` is a CLIENT-SIDE (BROWSER) function.
+// It should not run on the server. We check for `window` to ensure it only runs in the browser.
+if (typeof window !== 'undefined') {
+  try {
+    enableIndexedDbPersistence(db)
+      .then(() => console.log("Firestore offline persistence enabled."))
+      .catch((error: any) => {
+        if (error.code == 'failed-precondition') {
+          console.warn('Firestore offline persistence failed: multiple tabs open.');
+        } else if (error.code == 'unimplemented') {
+          console.error('Firestore offline persistence is not supported in this browser.');
+        } else {
+          console.error("Firestore offline persistence initialization failed:", error);
+        }
+      });
+  } catch(e) {
+    console.error("Error enabling persistence", e);
+  }
+}
 
 export { db };
