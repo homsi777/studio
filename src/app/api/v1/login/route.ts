@@ -6,6 +6,7 @@ import {collection, query, where, getDocs} from 'firebase/firestore';
 import {db} from '@/lib/firebase';
 import type {User} from '@/types';
 import bcrypt from 'bcryptjs';
+import { ensureDefaultUsersExist } from '../users/route';
 
 /**
  * @swagger
@@ -45,6 +46,9 @@ import bcrypt from 'bcryptjs';
  */
 export async function POST(request: NextRequest) {
   try {
+    // This is the critical fix: ensure users exist BEFORE attempting to log in.
+    await ensureDefaultUsersExist();
+
     const {username, password} = await request.json();
 
     if (!username || !password) {

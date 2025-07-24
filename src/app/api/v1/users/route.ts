@@ -15,13 +15,11 @@ import {db} from '@/lib/firebase';
 import type {User} from '@/types';
 import bcrypt from 'bcryptjs';
 
-const ensureDefaultUsersExist = async () => {
+export const ensureDefaultUsersExist = async () => {
   const usersCol = collection(db, 'users');
   
-  // Check if any user exists to prevent running this multiple times
   const initialCheck = await getDocs(query(usersCol));
   
-  // If there are any users at all, assume setup is complete.
   if (!initialCheck.empty) {
     return;
   }
@@ -82,7 +80,8 @@ const ensureDefaultUsersExist = async () => {
  */
 export async function GET(request: NextRequest) {
   try {
-    await ensureDefaultUsersExist();
+    // Note: ensureDefaultUsersExist is now called from login route
+    // to guarantee users exist before any operation.
 
     const usersCol = collection(db, 'users');
     const usersSnapshot = await getDocs(usersCol);
