@@ -19,50 +19,43 @@ const ensureDefaultUsersExist = async () => {
   const usersCol = collection(db, 'users');
   
   // Check if any user exists to prevent running this multiple times
-  const initialCheck = await getDocs(query(usersCol, where('username', 'in', ['admin', 'superadmin'])));
+  const initialCheck = await getDocs(query(usersCol));
   
-  const existingUsernames = initialCheck.docs.map(d => d.data().username);
+  // If there are any users at all, assume setup is complete.
+  if (!initialCheck.empty) {
+    return;
+  }
   
   const batch = writeBatch(db);
-  let batchHasWrites = false;
+  console.log('No users found. Creating default users.');
 
-  // 1. Ensure Temporary Trial Admin exists
-  if (!existingUsernames.includes('admin')) {
-    console.log('No trial admin user found. Creating trial admin user.');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('123456', salt);
-    const trialAdmin: Omit<User, 'id'> = {
-      username: 'admin',
-      password: hashedPassword,
-      role: 'manager',
-    };
-    const trialAdminRef = doc(collection(db, 'users'));
-    batch.set(trialAdminRef, trialAdmin);
-    batchHasWrites = true;
-  }
+  // 1. Create Temporary Trial Admin
+  const trialSalt = await bcrypt.genSalt(10);
+  const trialHashedPassword = await bcrypt.hash('123456', trialSalt);
+  const trialAdmin: Omit<User, 'id'> = {
+    username: 'admin',
+    password: trialHashedPassword,
+    role: 'manager',
+  };
+  const trialAdminRef = doc(collection(db, 'users'));
+  batch.set(trialAdminRef, trialAdmin);
 
-  // 2. Ensure Permanent Super Admin exists
-  if (!existingUsernames.includes('superadmin')) {
-    console.log('No superadmin user found. Creating permanent superadmin user.');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('700210ww', salt);
-    const superAdmin: Omit<User, 'id'> = {
-      username: 'superadmin',
-      password: hashedPassword,
-      role: 'manager',
-    };
-    const superAdminRef = doc(collection(db, 'users'));
-    batch.set(superAdminRef, superAdmin);
-    batchHasWrites = true;
-  }
+  // 2. Create Permanent Super Admin
+  const superAdminSalt = await bcrypt.genSalt(10);
+  const superAdminHashedPassword = await bcrypt.hash('700210ww', superAdminSalt);
+  const superAdmin: Omit<User, 'id'> = {
+    username: 'superadmin',
+    password: superAdminHashedPassword,
+    role: 'manager',
+  };
+  const superAdminRef = doc(collection(db, 'users'));
+  batch.set(superAdminRef, superAdmin);
 
-  if (batchHasWrites) {
-    try {
-      await batch.commit();
-      console.log('Default user creation process completed.');
-    } catch (error) {
-      console.error('Failed to create default users:', error);
-    }
+  try {
+    await batch.commit();
+    console.log('Default admin and superadmin users created successfully.');
+  } catch (error) {
+    console.error('Failed to create default users with batch:', error);
   }
 };
 
