@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence, initializeFirestore, memoryLocalCache, persistentLocalCache } from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -23,21 +23,18 @@ const db = getFirestore(app);
 // `enableIndexedDbPersistence` is a CLIENT-SIDE (BROWSER) function.
 // It should not run on the server. We check for `window` to ensure it only runs in the browser.
 if (typeof window !== 'undefined') {
-  try {
-    enableIndexedDbPersistence(db)
-      .then(() => console.log("Firestore offline persistence enabled."))
-      .catch((error: any) => {
-        if (error.code == 'failed-precondition') {
-          console.warn('Firestore offline persistence failed: multiple tabs open.');
-        } else if (error.code == 'unimplemented') {
-          console.error('Firestore offline persistence is not supported in this browser.');
-        } else {
-          console.error("Firestore offline persistence initialization failed:", error);
-        }
-      });
-  } catch(e) {
-    console.error("Error enabling persistence", e);
-  }
+  enableIndexedDbPersistence(db)
+    .catch((err) => {
+      if (err.code == 'failed-precondition') {
+        // Multiple tabs open, persistence can only be enabled
+        // in one tab at a time.
+        console.warn('Firestore persistence failed: multiple tabs open.');
+      } else if (err.code == 'unimplemented') {
+        // The current browser does not support all of the
+        // features required to enable persistence
+        console.warn('Firestore persistence is not available in this browser.');
+      }
+    });
 }
 
 export { db };
