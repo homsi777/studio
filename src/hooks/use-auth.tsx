@@ -102,6 +102,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       const data = await response.json();
 
       if (!response.ok) {
+        // Now the backend error message will be shown, which is more accurate.
         throw new Error(data.message || 'Login failed');
       }
       
@@ -131,13 +132,17 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
             return false;
           }
       } else {
+        // This case is for unexpected successful responses that don't match the contract.
         throw new Error(data.message || 'The credentials you entered are incorrect. Please try again.');
       }
     } catch (error: any) {
       console.error('Login process failed:', error);
-      const description = error.message.includes('fetch') 
+      
+      // Determine the error type and show a more specific message.
+      const isNetworkError = error instanceof TypeError && error.message === 'Failed to fetch';
+      const description = isNetworkError
         ? 'لا يمكن الاتصال بخدمة المصادقة. تحقق من اتصالك بالإنترنت.' 
-        : error.message;
+        : error.message || 'حدث خطأ غير متوقع.';
 
       toast({
         variant: 'destructive',

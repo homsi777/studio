@@ -26,34 +26,31 @@ import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 export default function LoginPage() {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-    const { login } = useAuth();
+    const { login, isLoading: isAuthLoading } = useAuth(); // Renamed to avoid conflict
     const { toast } = useToast();
     const { settings } = useRestaurantSettings();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false); // Local loading state for form submission
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setIsLoading(true);
+        setIsSubmitting(true);
 
-        try {
-            const success = await login(email, password);
-            if (!success) {
-                // The useAuth hook's login function will show a toast on failure,
-                // so we can set a local error state if we want to show it in the form as well.
-                setError(t('البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'Invalid email or password.'));
-            }
-        } catch (err) {
-            // This catch block might be redundant if useAuth handles all errors, but it's good for safety.
-            setError(t('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.', 'An unexpected error occurred. Please try again.'));
-        } finally {
-            setIsLoading(false);
-        }
+        const success = await login(email, password);
+        
+        // The useAuth hook now handles showing the toast with the specific error.
+        // We don't need to set a local error here anymore unless we want to display it inline,
+        // which could be redundant with the toast.
+        // If the login is successful, the hook will handle redirection.
+
+        setIsSubmitting(false);
     };
+    
+    const isLoading = isAuthLoading || isSubmitting;
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 select-none">
