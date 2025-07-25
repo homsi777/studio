@@ -15,6 +15,8 @@ import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
 import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
+import type { User } from '@/types';
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 function SettingsPage() {
@@ -27,8 +29,40 @@ function SettingsPage() {
   const [exchangeRate, setExchangeRate] = useState<number | null>(15000);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [isLoadingRate, setIsLoadingRate] = useState(false);
-  const [numberOfTables, setNumberOfTables] = useState(0);
-  const [isTableLoading, setIsTableLoading] = useState(true);
+  
+  const [users, setUsers] = useState<User[]>([]);
+  const [tables, setTables] = useState<{ id: number; uuid: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const fetchPageData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [usersRes, tablesRes] = await Promise.all([
+        fetch('/api/v1/users'),
+        fetch('/api/v1/tables')
+      ]);
+
+      if (!usersRes.ok) throw new Error(t('لم نتمكن من جلب قائمة المستخدمين.', 'Could not fetch the user list.'));
+      if (!tablesRes.ok) throw new Error(t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count'));
+
+      const usersData = await usersRes.json();
+      const tablesData = await tablesRes.json();
+
+      setUsers(usersData);
+      setTables(tablesData);
+    } catch (err: any) {
+      setError(err.message);
+      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: err.message });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [t, toast]);
+
+  useEffect(() => {
+    fetchPageData();
+  }, [fetchPageData]);
   
   const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -37,30 +71,12 @@ function SettingsPage() {
         [id]: value 
     }));
   }
-  
-  const fetchTableCount = useCallback(async () => {
-    setIsTableLoading(true);
-    try {
-      const response = await fetch('/api/v1/tables');
-      if (!response.ok) throw new Error(t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count'));
-      const data = await response.json();
-      setNumberOfTables(data.length);
-    } catch(error: any) {
-      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: error.message });
-    } finally {
-      setIsTableLoading(false);
-    }
-  }, [t, toast]);
-
-  useEffect(() => {
-    fetchTableCount();
-  }, [fetchTableCount]);
 
   const handleAddTable = async () => {
     try {
       const response = await fetch('/api/v1/tables', { method: 'POST' });
       if (!response.ok) throw new Error('Failed to add table');
-      await fetchTableCount();
+      await fetchPageData(); // Refetch all data
       toast({ title: t('تمت الإضافة', 'Table Added'), description: t('تمت إضافة طاولة جديدة بنجاح.', 'A new table has been added successfully.') });
     } catch(error) {
        toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من إضافة طاولة جديدة', 'Could not add a new table')});
@@ -68,11 +84,11 @@ function SettingsPage() {
   };
 
   const handleDeleteLastTable = async () => {
-    if (numberOfTables <= 0) return;
+    if (tables.length <= 0) return;
     try {
       const response = await fetch('/api/v1/tables', { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete table');
-      await fetchTableCount();
+      await fetchPageData(); // Refetch all data
       toast({ title: t('تم الحذف', 'Table Deleted'), description: t('تم حذف آخر طاولة بنجاح.', 'The last table has been deleted successfully.') });
     } catch(error) {
        toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من حذف الطاولة', 'Could not delete the table')});
@@ -148,7 +164,11 @@ function SettingsPage() {
                   </CardContent>
                 </Card>
                 
-                <UserManagement />
+                <UserManagement 
+                    users={users} 
+                    isLoading={isLoading}
+                    onUserChange={fetchPageData}
+                />
 
                 <Card>
                 <CardHeader>
@@ -176,7 +196,11 @@ function SettingsPage() {
                         <CardDescription>{t('إنشاء وطباعة رموز QR لتوجيه الزبائن إلى قائمة الطعام الرقمية لكل طاولة.', 'Generate and print QR codes to direct customers to the digital menu for each table.')}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <QrCodeGenerator numberOfTables={numberOfTables}/>
+                        {isLoading ? (
+                            <Skeleton className="h-48 w-full" />
+                        ) : (
+                            <QrCodeGenerator tables={tables}/>
+                        )}
                     </CardContent>
                 </Card>
                 <Card>
@@ -186,15 +210,19 @@ function SettingsPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                         <Label htmlFor="numberOfTables">{t('العدد الحالي للطاولات', 'Current Number of Tables')}</Label>
-                        <div className="flex items-center gap-2">
-                            <Button size="icon" variant="outline" onClick={handleDeleteLastTable} disabled={numberOfTables <= 0}>
-                                <Minus className="h-4 w-4" />
-                            </Button>
-                            <Input id="numberOfTables" type="number" value={numberOfTables} readOnly className="text-center font-bold" />
-                            <Button size="icon" variant="outline" onClick={handleAddTable}>
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        </div>
+                         {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <Button size="icon" variant="outline" onClick={handleDeleteLastTable} disabled={tables.length <= 0}>
+                                    <Minus className="h-4 w-4" />
+                                </Button>
+                                <Input id="numberOfTables" type="number" value={tables.length} readOnly className="text-center font-bold" />
+                                <Button size="icon" variant="outline" onClick={handleAddTable}>
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                         )}
                     </CardContent>
                 </Card>
                 <Card>

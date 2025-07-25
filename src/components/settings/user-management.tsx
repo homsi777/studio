@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { type User, type UserRole } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,44 +57,22 @@ const roleMap: Record<UserRole, { ar: string, en: string, className: string }> =
     employee: { ar: 'موظف', en: 'Employee', className: 'bg-secondary text-secondary-foreground' },
 };
 
+interface UserManagementProps {
+    users: User[];
+    isLoading: boolean;
+    onUserChange: () => void; // Callback to notify parent to refetch data
+}
 
-export function UserManagement() {
+export function UserManagement({ users, isLoading, onUserChange }: UserManagementProps) {
     const { language } = useLanguage();
     const { toast } = useToast();
     const { user: currentUser } = useAuth();
-
     const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
 
-    const [users, setUsers] = useState<User[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setFormOpen] = useState(false);
     const [isConfirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
-
-    const fetchUsers = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch('/api/v1/users');
-            if (!response.ok) throw new Error(t('لم نتمكن من جلب قائمة المستخدمين.', 'Could not fetch the user list.'));
-            const data = await response.json();
-            setUsers(data);
-        } catch (error: any) {
-            console.error(error);
-            toast({
-                variant: "destructive",
-                title: t("خطأ في جلب البيانات", "Fetch Error"),
-                description: error.message,
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [t, toast]);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
-
 
     const openAddDialog = () => {
         setEditingUser(null);
@@ -120,7 +98,7 @@ export function UserManagement() {
                     body: JSON.stringify(formData),
                 });
                 if (!response.ok) throw new Error(`Failed to update user. Status: ${response.status}`);
-                await fetchUsers(); // Refetch to get updated data
+                onUserChange(); // Refetch to get updated data
                 toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.email}.`, `User ${formData.email} has been updated.`) });
             } catch (error) {
                 console.error(error);
@@ -143,7 +121,7 @@ export function UserManagement() {
                 }
                 if (!response.ok) throw new Error('Failed to save user');
                 
-                await fetchUsers(); // Refetch to get the new user with its ID
+                onUserChange(); // Refetch to get the new user with its ID
                 toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.email}.`, `New user ${formData.email} has been added.`) });
 
             } catch (error) {
@@ -163,7 +141,7 @@ export function UserManagement() {
              try {
                 const response = await fetch(`/api/v1/users/${userToDelete.id}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('Failed to delete user');
-                await fetchUsers();
+                onUserChange();
                 toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.email}.`, `User ${userToDelete.email} has been deleted.`) });
              } catch (error) {
                  console.error(error);

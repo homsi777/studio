@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '../ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 type QrTarget = 'customer' | 'chef' | 'cashier';
 
@@ -23,11 +22,10 @@ interface GeneratedCode {
 }
 
 interface QrCodeGeneratorProps {
-  numberOfTables: number;
+  tables: { id: number; uuid: string }[];
 }
 
-
-export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
+export function QrCodeGenerator({ tables }: QrCodeGeneratorProps) {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
@@ -41,6 +39,8 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
     const [isLoadingQr, setIsLoadingQr] = useState(false);
     
     const printAreaRef = useRef<HTMLDivElement>(null);
+    
+    const numberOfTables = useMemo(() => tables.length, [tables]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -76,6 +76,7 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
         if (isClient) {
            validateTableNumber(tableNumber);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [target, tableNumber, numberOfTables, isClient, t]);
 
 
@@ -104,13 +105,10 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
             switch(target) {
                 case 'customer':
                     if (!tableNumber) return;
-                    const { data: tableData, error } = await supabase
-                        .from('tables')
-                        .select('uuid')
-                        .eq('id', tableNumber)
-                        .single();
+                    
+                    const tableData = tables.find(t => t.id === parseInt(tableNumber, 10));
 
-                    if (error || !tableData) {
+                    if (!tableData) {
                          toast({ variant: "destructive", title: "Error", description: `Could not find UUID for table ${tableNumber}`})
                          setIsLoadingQr(false);
                          return;
