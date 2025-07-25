@@ -28,7 +28,8 @@ interface QrCodeGeneratorProps {
 
 
 export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
-    const { language, t } = useLanguage();
+    const { language } = useLanguage();
+    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
     
     const [target, setTarget] = useState<QrTarget>('customer');
@@ -75,7 +76,7 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
         if (isClient) {
            validateTableNumber(tableNumber);
         }
-    }, [target, tableNumber, numberOfTables, isClient]);
+    }, [target, tableNumber, numberOfTables, isClient, t]);
 
 
     const handleTableNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
