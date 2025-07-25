@@ -3,7 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false
+    }
+});
 
 export const ensureDefaultUsersExist = async () => {
     try {
@@ -21,13 +26,18 @@ export const ensureDefaultUsersExist = async () => {
             for (const user of defaultUsers) {
                 const { data, error } = await supabaseAdmin.auth.admin.createUser(user);
                 if (error) {
-                    console.error(`Error creating user ${user.email}:`, error);
+                    // It's possible another server instance is creating the user at the same time.
+                    if (error.message.includes('already registered')) {
+                        console.log(`User ${user.email} already exists, skipping.`);
+                    } else {
+                        console.error(`Error creating user ${user.email}:`, error);
+                    }
                 } else {
                     console.log(`User ${data.user.email} created successfully`);
                 }
             }
         } else {
-             console.log("Default users already exist.");
+             // console.log("Default users already exist."); // This is too noisy
         }
     } catch (error) {
         console.error("Error in ensureDefaultUsersExist:", error);
