@@ -1,6 +1,6 @@
 // src/app/api/v1/orders/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Order } from '@/types';
 
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
 
         const ordersCol = collection(db, 'orders');
-        let q = status ? firestoreQuery(ordersCol, where("status", "==", status)) : firestoreQuery(ordersCol);
+        let q = status ? query(ordersCol, where("status", "==", status)) : query(ordersCol);
         
         const querySnapshot = await getDocs(q);
         const ordersList = querySnapshot.docs.map(doc => {
