@@ -32,37 +32,45 @@ function SettingsPage() {
   
   const [users, setUsers] = useState<User[]>([]);
   const [tables, setTables] = useState<{ id: number; uuid: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isLoadingTables, setIsLoadingTables] = useState(true);
   
-  const fetchPageData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchUsers = useCallback(async () => {
+    setIsLoadingUsers(true);
     try {
-      const [usersRes, tablesRes] = await Promise.all([
-        fetch('/api/v1/users'),
-        fetch('/api/v1/tables')
-      ]);
-
-      if (!usersRes.ok) throw new Error(t('لم نتمكن من جلب قائمة المستخدمين.', 'Could not fetch the user list.'));
-      if (!tablesRes.ok) throw new Error(t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count'));
-
+      const usersRes = await fetch('/api/v1/users');
+      if (!usersRes.ok) {
+        throw new Error(t('لم نتمكن من جلب قائمة المستخدمين.', 'Could not fetch the user list.'));
+      }
       const usersData = await usersRes.json();
-      const tablesData = await tablesRes.json();
-
       setUsers(usersData);
-      setTables(tablesData);
     } catch (err: any) {
-      setError(err.message);
       toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: err.message });
     } finally {
-      setIsLoading(false);
+      setIsLoadingUsers(false);
+    }
+  }, [t, toast]);
+
+  const fetchTables = useCallback(async () => {
+    setIsLoadingTables(true);
+    try {
+      const tablesRes = await fetch('/api/v1/tables');
+      if (!tablesRes.ok) {
+        throw new Error(t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count'));
+      }
+      const tablesData = await tablesRes.json();
+      setTables(tablesData);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: err.message });
+    } finally {
+      setIsLoadingTables(false);
     }
   }, [t, toast]);
 
   useEffect(() => {
-    fetchPageData();
-  }, [fetchPageData]);
+    fetchUsers();
+    fetchTables();
+  }, [fetchUsers, fetchTables]);
   
   const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -76,7 +84,7 @@ function SettingsPage() {
     try {
       const response = await fetch('/api/v1/tables', { method: 'POST' });
       if (!response.ok) throw new Error('Failed to add table');
-      await fetchPageData(); // Refetch all data
+      await fetchTables(); // Refetch tables data
       toast({ title: t('تمت الإضافة', 'Table Added'), description: t('تمت إضافة طاولة جديدة بنجاح.', 'A new table has been added successfully.') });
     } catch(error) {
        toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من إضافة طاولة جديدة', 'Could not add a new table')});
@@ -88,7 +96,7 @@ function SettingsPage() {
     try {
       const response = await fetch('/api/v1/tables', { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete table');
-      await fetchPageData(); // Refetch all data
+      await fetchTables(); // Refetch tables data
       toast({ title: t('تم الحذف', 'Table Deleted'), description: t('تم حذف آخر طاولة بنجاح.', 'The last table has been deleted successfully.') });
     } catch(error) {
        toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من حذف الطاولة', 'Could not delete the table')});
@@ -166,8 +174,8 @@ function SettingsPage() {
                 
                 <UserManagement 
                     users={users} 
-                    isLoading={isLoading}
-                    onUserChange={fetchPageData}
+                    isLoading={isLoadingUsers}
+                    onUserChange={fetchUsers}
                 />
 
                 <Card>
@@ -196,7 +204,7 @@ function SettingsPage() {
                         <CardDescription>{t('إنشاء وطباعة رموز QR لتوجيه الزبائن إلى قائمة الطعام الرقمية لكل طاولة.', 'Generate and print QR codes to direct customers to the digital menu for each table.')}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {isLoading ? (
+                        {isLoadingTables ? (
                             <Skeleton className="h-48 w-full" />
                         ) : (
                             <QrCodeGenerator tables={tables}/>
@@ -210,7 +218,7 @@ function SettingsPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                         <Label htmlFor="numberOfTables">{t('العدد الحالي للطاولات', 'Current Number of Tables')}</Label>
-                         {isLoading ? (
+                         {isLoadingTables ? (
                             <Skeleton className="h-10 w-full" />
                         ) : (
                             <div className="flex items-center gap-2">
@@ -262,3 +270,5 @@ export default function GuardedSettingsPage() {
         </AuthGuard>
     )
 }
+
+    
