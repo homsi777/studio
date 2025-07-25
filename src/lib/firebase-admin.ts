@@ -28,14 +28,15 @@ export const adminDb = getFirestore();
 export const ensureDefaultUsersExist = async () => {
     try {
         const usersCol = adminDb.collection('users');
-        const initialCheck = await usersCol.limit(1).get();
+        // This is the critical fix: We query the 'users' collection specifically.
+        const userSnapshot = await usersCol.limit(1).get();
 
-        if (!initialCheck.empty) {
+        if (!userSnapshot.empty) {
             // console.log('Users collection is not empty. Skipping default user creation.');
             return;
         }
 
-        console.log('No users found. Creating default users.');
+        console.log('No users found in "users" collection. Creating default users.');
 
         const batch = adminDb.batch();
 
