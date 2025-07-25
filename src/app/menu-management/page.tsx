@@ -38,6 +38,9 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 
 const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
@@ -193,7 +196,6 @@ function MenuManagementPage() {
                 title: t('خطأ في التحديث', 'Update Error'),
                 description: t('لم نتمكن من تحديث حالة الصنف. يرجى إعادة المحاولة.', 'Could not update item status. Please try again.'),
             });
-            // Revert on failure
             setItems(items);
         }
     }
@@ -331,114 +333,135 @@ interface MenuItemFormDialogProps {
     onSave: (formData: Omit<MenuItem, 'id' | 'quantity'>) => void;
 }
 
+const menuItemSchema = z.object({
+  name: z.string().min(1, { message: "الاسم بالعربية مطلوب." }),
+  name_en: z.string().min(1, { message: "الاسم بالإنجليزية مطلوب." }),
+  description: z.string().optional(),
+  description_en: z.string().optional(),
+  price: z.coerce.number().positive({ message: "السعر يجب أن يكون رقماً موجباً." }),
+  category: z.enum(['main', 'appetizer', 'drink', 'dessert'], { errorMap: () => ({ message: "الرجاء اختيار تصنيف." }) }),
+  offer: z.string().optional(),
+  offer_en: z.string().optional(),
+});
+type MenuItemFormData = z.infer<typeof menuItemSchema>;
+
+
 function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemFormDialogProps) {
-    const { language } = useLanguage();
+    const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    const [formData, setFormData] = useState<Omit<MenuItem, 'id' | 'quantity' | 'is_available'>>({
-        name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', offer: '', offer_en: ''
+    const { register, handleSubmit, formState: { errors, isValid }, reset, control } = useForm<MenuItemFormData>({
+        resolver: zodResolver(menuItemSchema),
+        mode: 'onChange',
     });
 
-    React.useEffect(() => {
-        if (item) {
-            setFormData({
-                name: item.name,
-                name_en: item.name_en || '',
-                description: item.description || '',
-                description_en: item.description_en || '',
-                price: item.price,
-                category: item.category,
-                offer: item.offer || '',
-                offer_en: item.offer_en || '',
-            });
-        } else {
-            setFormData({
-                 name: '', name_en: '', description: '', description_en: '', price: 0, category: 'main', offer: '', offer_en: ''
-            });
+    useEffect(() => {
+        if (isOpen) {
+            if (item) {
+                reset({
+                    name: item.name,
+                    name_en: item.name_en || '',
+                    description: item.description || '',
+                    description_en: item.description_en || '',
+                    price: item.price,
+                    category: item.category,
+                    offer: item.offer || '',
+                    offer_en: item.offer_en || '',
+                });
+            } else {
+                reset({
+                    name: '',
+                    name_en: '',
+                    description: '',
+                    description_en: '',
+                    price: 0,
+                    category: 'main',
+                    offer: '',
+                    offer_en: '',
+                });
+            }
         }
-    }, [item, isOpen]);
+    }, [item, isOpen, reset]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { id, value } = e.target;
-        setFormData(prev => ({ ...prev, [id]: value }));
+    const onSubmit = (data: MenuItemFormData) => {
+        onSave(data as Omit<MenuItem, 'id' | 'quantity'>);
     };
-    
-    // FIX: Ensure price is handled as a number
-    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }));
-    }
-
-    const handleCategoryChange = (value: MenuItemCategory) => {
-        setFormData(prev => ({ ...prev, category: value }));
-    }
-
-    const handleSubmit = () => {
-        onSave(formData as Omit<MenuItem, 'id' | 'quantity'>);
-    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle className="font-headline">{item ? t('تعديل الصنف', 'Edit Item') : t('إضافة صنف جديد', 'Add New Item')}</DialogTitle>
-                    <DialogDescription>
-                        {t('املأ التفاصيل أدناه لحفظ الصنف في قائمة الطعام.', 'Fill in the details below to save the item to the menu.')}
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                            <Label htmlFor="name">{t('الاسم (بالعربية)', 'Name (Arabic)')}</Label>
-                            <Input id="name" value={formData.name} onChange={handleChange} />
+            <DialogContent className="sm:max-w-[600px]" dir={dir}>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <DialogHeader>
+                        <DialogTitle className="font-headline">{item ? t('تعديل الصنف', 'Edit Item') : t('إضافة صنف جديد', 'Add New Item')}</DialogTitle>
+                        <DialogDescription>
+                            {t('املأ التفاصيل أدناه لحفظ الصنف في قائمة الطعام.', 'Fill in the details below to save the item to the menu.')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="name">{t('الاسم (بالعربية)', 'Name (Arabic)')}*</Label>
+                                <Input id="name" {...register('name')} />
+                                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="name_en">{t('الاسم (بالإنجليزية)', 'Name (English)')}*</Label>
+                                <Input id="name_en" {...register('name_en')} />
+                                {errors.name_en && <p className="text-xs text-destructive">{errors.name_en.message}</p>}
+                            </div>
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="name_en">{t('الاسم (بالإنجليزية)', 'Name (English)')}</Label>
-                            <Input id="name_en" value={formData.name_en} onChange={handleChange} />
+                            <Label htmlFor="description">{t('الوصف (بالعربية)', 'Description (Arabic)')}</Label>
+                            <Textarea id="description" {...register('description')} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="description_en">{t('الوصف (بالإنجليزية)', 'Description (English)')}</Label>
+                            <Textarea id="description_en" {...register('description_en')} />
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="price">{t('السعر (ل.س)', 'Price (SYP)')}*</Label>
+                                <Input id="price" type="number" {...register('price')} step="any" />
+                                {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="category">{t('التصنيف', 'Category')}*</Label>
+                                <Controller
+                                    control={control}
+                                    name="category"
+                                    render={({ field }) => (
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="appetizer">{t('مقبلات', 'Appetizer')}</SelectItem>
+                                                <SelectItem value="main">{t('طبق رئيسي', 'Main Course')}</SelectItem>
+                                                <SelectItem value="drink">{t('مشروب', 'Drink')}</SelectItem>
+                                                <SelectItem value="dessert">{t('حلويات', 'Dessert')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
+                                {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
+                            </div>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="offer">{t('العرض (بالعربية)', 'Offer (Arabic)')}</Label>
+                                <Input id="offer" {...register('offer')} placeholder="مثال: خصم 20%"/>
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="offer_en">{t('العرض (بالإنجليزية)', 'Offer (English)')}</Label>
+                                <Input id="offer_en" {...register('offer_en')} placeholder="e.g. 20% Off"/>
+                            </div>
                         </div>
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="description">{t('الوصف (بالعربية)', 'Description (Arabic)')}</Label>
-                        <Textarea id="description" value={formData.description} onChange={handleChange} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="description_en">{t('الوصف (بالإنجليزية)', 'Description (English)')}</Label>
-                        <Textarea id="description_en" value={formData.description_en} onChange={handleChange} />
-                    </div>
-                     <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                            <Label htmlFor="price">{t('السعر (ل.س)', 'Price (SYP)')}</Label>
-                            <Input id="price" type="number" value={formData.price} onChange={handlePriceChange}/>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="category">{t('التصنيف', 'Category')}</Label>
-                            <Select value={formData.category} onValueChange={handleCategoryChange}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="appetizer">{t('مقبلات', 'Appetizer')}</SelectItem>
-                                    <SelectItem value="main">{t('طبق رئيسي', 'Main Course')}</SelectItem>
-                                    <SelectItem value="drink">{t('مشروب', 'Drink')}</SelectItem>
-                                    <SelectItem value="dessert">{t('حلويات', 'Dessert')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                     <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                            <Label htmlFor="offer">{t('العرض (بالعربية)', 'Offer (Arabic)')}</Label>
-                            <Input id="offer" value={formData.offer || ''} onChange={handleChange} placeholder="مثال: خصم 20%"/>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="offer_en">{t('العرض (بالإنجليزية)', 'Offer (English)')}</Label>
-                            <Input id="offer_en" value={formData.offer_en || ''} onChange={handleChange} placeholder="e.g. 20% Off"/>
-                        </div>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="secondary" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
-                    <Button onClick={handleSubmit}>{t('حفظ الصنف', 'Save Item')}</Button>
-                </DialogFooter>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
+                        <Button type="submit" disabled={!isValid}>{t('حفظ الصنف', 'Save Item')}</Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     );
