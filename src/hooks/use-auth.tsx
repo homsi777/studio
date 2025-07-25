@@ -32,15 +32,15 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
   const loadUserFromSession = useCallback(() => {
     try {
-      const session = sessionStorage.getItem('supabase.auth.session');
-      if (session) {
-        const parsedSession = JSON.parse(session);
-        if (parsedSession.user) {
+      const sessionString = sessionStorage.getItem('supabase.auth.session');
+      if (sessionString) {
+        const session = JSON.parse(sessionString);
+        if (session.user) {
           const userData: User = {
-            id: parsedSession.user.id,
-            email: parsedSession.user.email,
-            username: parsedSession.user.email,
-            role: parsedSession.user.user_metadata.role || 'employee',
+            id: session.user.id,
+            email: session.user.email,
+            username: session.user.email,
+            role: session.user.user_metadata.role || 'employee',
           };
           setUser(userData);
         } else {
@@ -70,10 +70,18 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
           };
           setUser(userData);
           // Store session for persistence across page loads
-          sessionStorage.setItem('supabase.auth.session', JSON.stringify(session));
+          try {
+            sessionStorage.setItem('supabase.auth.session', JSON.stringify(session));
+          } catch (e) {
+            console.error("Could not write to sessionStorage:", e);
+          }
       } else {
           setUser(null);
-          sessionStorage.removeItem('supabase.auth.session');
+          try {
+            sessionStorage.removeItem('supabase.auth.session');
+          } catch(e) {
+            console.error("Could not remove from sessionStorage:", e);
+          }
       }
     });
 
@@ -101,7 +109,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
           const session = data.session;
           try {
              if (session) {
-                await supabase.auth.setSession(session);
+                await supabase.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
                 const userData: User = {
                     id: data.user.id,
                     email: data.user.email,
@@ -109,7 +117,6 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
                     role: data.user.role || 'employee',
                 };
                 setUser(userData);
-                 // The onAuthStateChange listener will handle storage.
                 router.push('/');
                 return true;
              }
@@ -128,15 +135,14 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       }
     } catch (error: any) {
       console.error('Login process failed:', error);
-      let description = 'لا يمكن الاتصال بخدمة المصادقة. تحقق من اتصالك بالإنترنت.';
-      if (error instanceof SyntaxError) {
-        description = 'حدث خطأ في الخادم. يرجى مراجعة سجلات الخادم.';
-      } else if (error.message) {
-        description = error.message;
-      }
+      // Use the error message from the backend if available, otherwise a generic one.
+      const description = error.message.includes('fetch') 
+        ? 'لا يمكن الاتصال بخدمة المصادقة. تحقق من اتصالك بالإنترنت.' 
+        : error.message;
+
       toast({
         variant: 'destructive',
-        title: 'خطأ في تسجيل الدخول',
+        title: 'فشل تسجيل الدخول',
         description: description,
       });
       return false;
@@ -148,7 +154,11 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    sessionStorage.removeItem('supabase.auth.session'); // Clear session on logout
+    try {
+        sessionStorage.removeItem('supabase.auth.session');
+    } catch(e) {
+        console.error("Could not remove from sessionStorage:", e);
+    }
     router.push('/login');
   };
   
@@ -159,7 +169,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       value={{isAuthenticated, user, login, logout, isLoading}}
     >
       {children}
-    </AuthContext.Provider>
+    </AuthProvider>
   );
 };
 

@@ -16,28 +16,22 @@ export const ensureDefaultUsersExist = async () => {
         
         if (listError) throw listError;
 
-        if (users.length === 0) {
-            console.log("No users found, creating default users...");
-            const defaultUsers = [
-                { email: 'admin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
-                { email: 'superadmin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
-            ];
+        const defaultUsers = [
+            { email: 'admin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
+            { email: 'superadmin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
+        ];
 
-            for (const user of defaultUsers) {
-                const { data, error } = await supabaseAdmin.auth.admin.createUser(user);
+        for (const defaultUser of defaultUsers) {
+            const userExists = users.some(u => u.email === defaultUser.email);
+            if (!userExists) {
+                console.log(`User ${defaultUser.email} not found, creating...`);
+                const { data, error } = await supabaseAdmin.auth.admin.createUser(defaultUser);
                 if (error) {
-                    // It's possible another server instance is creating the user at the same time.
-                    if (error.message.includes('already registered')) {
-                        console.log(`User ${user.email} already exists, skipping.`);
-                    } else {
-                        console.error(`Error creating user ${user.email}:`, error);
-                    }
+                    console.error(`Error creating user ${defaultUser.email}:`, error);
                 } else {
                     console.log(`User ${data.user.email} created successfully`);
                 }
             }
-        } else {
-             // console.log("Default users already exist."); // This is too noisy
         }
     } catch (error) {
         console.error("Error in ensureDefaultUsersExist:", error);
