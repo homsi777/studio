@@ -63,6 +63,14 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
           const errorData = JSON.parse(text);
           throw new Error(errorData.message || 'Login failed');
         } catch (e) {
+          if (e instanceof SyntaxError) {
+             console.error("The server returned non-JSON response. This is likely a server error page (HTML). Check server logs.");
+             toast({
+                variant: 'destructive',
+                title: 'خطأ في الخادم',
+                description: 'حدث خطأ في الخادم. الرجاء مراجعة سجلات الخادم.',
+             })
+          }
           throw new Error('Server returned an invalid response. Please check server logs.');
         }
       }
