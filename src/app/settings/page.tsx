@@ -18,7 +18,8 @@ import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 
 
 function SettingsPage() {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
+  const t = (ar: string, en: string) => language === 'ar' ? ar : en;
   const { toast } = useToast();
   
   const { settings, setSettings } = useRestaurantSettings();
