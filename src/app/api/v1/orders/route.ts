@@ -112,7 +112,10 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
 
         const ordersCol = collection(db, 'orders');
-        let q = status ? query(ordersCol, where("status", "==", status)) : query(ordersCol);
+        let q = query(ordersCol); // Correctly initialize the query
+        if (status) {
+            q = query(ordersCol, where("status", "==", status));
+        }
         
         const querySnapshot = await getDocs(q);
         const ordersList = querySnapshot.docs.map(doc => {

@@ -78,8 +78,6 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       } catch (error) {
           console.error("Could not access localStorage for trial check:", error);
       }
-    } else if (username === 'superadmin') {
-        // Superadmin bypasses trial logic
     }
 
 

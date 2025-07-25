@@ -128,11 +128,12 @@ function MenuManagementPage() {
     };
     
     const handleSave = async (formData: Omit<MenuItem, 'id' | 'quantity'>) => {
-        const dataToSave = { ...formData } as any;
+        const dataToSave: { [key: string]: any } = { ...formData };
+        
+        // Clean the data: remove any empty/null/undefined optional fields before sending
         Object.keys(dataToSave).forEach(key => {
-            const typedKey = key as keyof typeof dataToSave;
-            if (dataToSave[typedKey] === '' || dataToSave[typedKey] === null || dataToSave[typedKey] === undefined) {
-                delete dataToSave[typedKey];
+            if (dataToSave[key] === '' || dataToSave[key] === null || dataToSave[key] === undefined) {
+                delete dataToSave[key];
             }
         });
 
@@ -360,7 +361,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
 
     const { register, handleSubmit, formState: { errors, isValid }, reset, control } = useForm<MenuItemFormData>({
         resolver: zodResolver(menuItemSchema),
-        mode: 'onChange',
+        mode: 'onChange', // Validate on change to enable/disable button
     });
 
     useEffect(() => {
@@ -377,13 +378,14 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                     offer_en: item.offer_en || '',
                 });
             } else {
+                // Reset with default values for a new item
                 reset({
                     name: '',
                     name_en: '',
                     description: '',
                     description_en: '',
                     price: 0,
-                    category: 'main',
+                    category: 'main', // Default category fix
                     offer: '',
                     offer_en: '',
                 });
@@ -438,7 +440,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                                     control={control}
                                     name="category"
                                     render={({ field }) => (
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
                                             </SelectTrigger>

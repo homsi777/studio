@@ -36,10 +36,24 @@ import type { MenuItem } from '@/types';
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         const { id } = params;
-        const updatedData = await request.json() as Partial<Omit<MenuItem, 'id'>>;
+        // The incoming data is already partial, only containing what the form sends.
+        const updatedData = await request.json();
+        
         const itemRef = doc(db, 'menu-items', id);
-        await updateDoc(itemRef, updatedData);
-        return NextResponse.json({ id, ...updatedData }, { status: 200 });
+        
+        // No need to get the doc first unless you need to merge deeply.
+        // The form sends all necessary fields for an update.
+        await updateDoc(itemRef, {
+            ...updatedData,
+            last_updated: serverTimestamp()
+        });
+
+        // Fetch the updated document to return the complete object
+        const updatedDoc = await getDoc(itemRef);
+        const finalItemData = { id: updatedDoc.id, ...updatedDoc.data() };
+
+        return NextResponse.json(finalItemData, { status: 200 });
+
     } catch (error) {
         console.error(`Failed to update menu item with ID ${params.id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

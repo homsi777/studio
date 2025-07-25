@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
     const newItemData = await request.json() as Omit<MenuItem, 'id'>;
 
     // Basic validation
-    if (!newItemData.name || !newItemData.price || !newItemData.category) {
-      return NextResponse.json({ message: 'Bad Request: Missing required fields (name, price, category).' }, { status: 400 });
+    if (!newItemData.name || !newItemData.price) {
+      return NextResponse.json({ message: 'Bad Request: Missing required fields (name, price).' }, { status: 400 });
     }
 
     // Ensure new items are available by default

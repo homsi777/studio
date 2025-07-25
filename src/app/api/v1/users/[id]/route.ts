@@ -1,8 +1,7 @@
 'use server';
 // src/app/api/v1/users/[id]/route.ts
 import {type NextRequest, NextResponse} from 'next/server';
-import {doc, getDoc, updateDoc, deleteDoc} from 'firebase/firestore';
-import {db} from '@/lib/firebase';
+import { adminDb } from '@/lib/firebase-admin';
 import type {User} from '@/types';
 import bcrypt from 'bcryptjs';
 
@@ -42,9 +41,9 @@ export async function PUT(
   try {
     const {id} = params;
     const updatedData = (await request.json()) as Partial<Omit<User, 'id'>>;
-    const userRef = doc(db, 'users', id);
+    const userRef = adminDb.collection('users').doc(id);
 
-    const dataToUpdate: Partial<Omit<User, 'id'>> = {
+    const dataToUpdate: Partial<Omit<User, 'id' | 'password'>> & { password?: string } = {
       username: updatedData.username,
       role: updatedData.role,
     };
@@ -55,8 +54,8 @@ export async function PUT(
       dataToUpdate.password = await bcrypt.hash(updatedData.password, salt);
     }
 
-    await updateDoc(userRef, dataToUpdate);
-    const updatedDoc = await getDoc(userRef);
+    await userRef.update(dataToUpdate);
+    const updatedDoc = await userRef.get();
     const finalUserData = {
       id: updatedDoc.id,
       ...updatedDoc.data(),
@@ -99,22 +98,22 @@ export async function DELETE(
 ) {
   try {
     const {id} = params;
-    const userRef = doc(db, 'users', id);
-    const userSnap = await getDoc(userRef);
+    const userRef = adminDb.collection('users').doc(id);
+    const userSnap = await userRef.get();
 
-    if (!userSnap.exists()) {
+    if (!userSnap.exists) {
       return NextResponse.json({message: 'User not found.'}, {status: 404});
     }
 
     // Prevent deleting the default admin user
-    if (userSnap.data().username === 'admin') {
+    if (userSnap.data()?.username === 'admin' || userSnap.data()?.username === 'superadmin') {
       return NextResponse.json(
-        {message: 'Cannot delete the default admin user.'},
+        {message: 'Cannot delete the default admin or superadmin user.'},
         {status: 403}
       );
     }
 
-    await deleteDoc(userRef);
+    await userRef.delete();
 
     return new NextResponse(null, {status: 204});
   } catch (error) {

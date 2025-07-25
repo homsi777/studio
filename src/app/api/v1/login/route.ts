@@ -2,18 +2,16 @@
 // src/app/api/v1/login/route.ts
 
 import {type NextRequest, NextResponse} from 'next/server';
-import {collection, query, where, getDocs} from 'firebase/firestore';
-import {db} from '@/lib/firebase';
+import { adminDb, ensureDefaultUsersExist } from '@/lib/firebase-admin';
 import type {User} from '@/types';
 import bcrypt from 'bcryptjs';
-import { ensureDefaultUsersExist } from '@/lib/firebase-admin';
 
 /**
  * @swagger
  * /api/v1/login:
  *   post:
  *     summary: Authenticate a user
- *     description: Takes a username and password and returns a success status if credentials are valid.
+ *     description: Takes a username and password and returns a success status if credentials are valid. This now uses the Firebase Admin SDK for robust server-side authentication.
  *     tags:
  *       - Auth
  *     requestBody:
@@ -30,15 +28,6 @@ import { ensureDefaultUsersExist } from '@/lib/firebase-admin';
  *     responses:
  *       200:
  *         description: Login successful.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 user:
- *                   $ref: '#/components/schemas/User'
  *       401:
  *         description: Unauthorized - Invalid credentials.
  *       500:
@@ -46,8 +35,8 @@ import { ensureDefaultUsersExist } from '@/lib/firebase-admin';
  */
 export async function POST(request: NextRequest) {
   try {
-    // This is the critical fix: ensure users exist BEFORE attempting to log in.
-    // This is now handled by a dedicated admin-sdk initialized function.
+    // Ensure default users exist before attempting to log in.
+    // This is the ideal place to run this check.
     await ensureDefaultUsersExist();
 
     const {username, password} = await request.json();
@@ -59,11 +48,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const usersCol = collection(db, 'users');
-    const q = query(usersCol, where('username', '==', username));
-    const querySnapshot = await getDocs(q);
+    const usersCol = adminDb.collection('users');
+    const q = usersCol.where('username', '==', username);
+    const querySnapshot = await q.get();
 
     if (querySnapshot.empty) {
+      console.log(`Login failed: No user found with username '${username}'`);
       return NextResponse.json(
         {success: false, message: 'Invalid credentials.'},
         {status: 401}
@@ -71,21 +61,20 @@ export async function POST(request: NextRequest) {
     }
 
     const userDoc = querySnapshot.docs[0];
+    // The data includes the password hash now because we are using the Admin SDK.
     const userData = userDoc.data() as User;
 
-    // Compare hashed password
     const passwordMatch = await bcrypt.compare(
       password,
       userData.password || ''
     );
 
     if (passwordMatch) {
-      // IMPORTANT FIX: Include the document ID in the user object
+      // Create a user object to send back, EXCLUDING the password hash.
       const userResponseData: User = {
         id: userDoc.id,
         username: userData.username,
         role: userData.role,
-        // Do NOT send the password hash back to the client
       };
 
       return NextResponse.json(
@@ -96,13 +85,14 @@ export async function POST(request: NextRequest) {
         {status: 200}
       );
     } else {
+      console.log(`Login failed: Password mismatch for username '${username}'`);
       return NextResponse.json(
         {success: false, message: 'Invalid credentials.'},
         {status: 401}
       );
     }
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login API error:', error);
     return NextResponse.json(
       {success: false, message: 'Internal Server Error'},
       {status: 500}

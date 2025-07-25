@@ -9,6 +9,8 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+src/lib/serviceAccountKey.json
+
 
 # testing
 /coverage
@@ -43,3 +45,6 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# serviceAccountKey
+src/lib/serviceAccountKey.json

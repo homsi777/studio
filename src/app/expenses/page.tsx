@@ -162,6 +162,7 @@ function ExpensesPage() {
 
     const handleSave = async (formData: Omit<Expense, 'id'>) => {
         const dataToSave = { ...formData } as any;
+        // Clean the data: remove any empty/null optional fields before sending
         Object.keys(dataToSave).forEach(key => {
             const typedKey = key as keyof typeof dataToSave;
             if (dataToSave[typedKey] === '' || dataToSave[typedKey] === null || dataToSave[typedKey] === undefined) {
