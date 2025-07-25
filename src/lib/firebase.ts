@@ -10,7 +10,8 @@ const firebaseConfig = {
   "apiKey": "AIzaSyCX8uHmCBOJ6eQuNKUVnkjwvNUSzcUb2Gw",
   "authDomain": "al-maida-manager.firebaseapp.com",
   "measurementId": "",
-  "messagingSenderId": "78562067993"
+  "messagingSenderId": "78562067993",
+  "databaseURL": `https://al-maida-manager.firebaseio.com`
 };
 
 // Initialize Firebase
