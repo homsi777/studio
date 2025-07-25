@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, {
@@ -13,7 +14,7 @@ import {useRouter} from 'next/navigation';
 import type {User} from '@/types';
 import {useToast} from './use-toast';
 import { supabase } from '@/lib/supabase';
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -25,23 +26,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const mapSupabaseUserToAppUser = (supabaseUser: SupabaseUser): User => {
+    return {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        username: supabaseUser.email,
+        role: supabaseUser.user_metadata.role || 'employee',
+    };
+};
+
 export const AuthProvider = ({children}: {children: ReactNode}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
   const {toast} = useToast();
 
-  const handleAuthStateChange = useCallback((_event: AuthChangeEvent, session: Session | null) => {
+  const handleAuthStateChange = useCallback(async (_event: AuthChangeEvent, session: Session | null) => {
     try {
       if (session?.user) {
-        const userData: User = {
-          id: session.user.id,
-          email: session.user.email,
-          username: session.user.email,
-          role: session.user.user_metadata.role || 'employee',
-        };
-        setUser(userData);
-        sessionStorage.setItem('user', JSON.stringify(userData));
+        const appUser = mapSupabaseUserToAppUser(session.user);
+        setUser(appUser);
+        sessionStorage.setItem('user', JSON.stringify(appUser));
       } else {
         setUser(null);
         sessionStorage.removeItem('user');
@@ -50,12 +55,10 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       console.error('Could not access sessionStorage or parse session:', error);
       setUser(null);
     } finally {
-      // We are only done loading once we have checked for an existing session.
       setIsLoading(false);
     }
   }, []);
 
-  // Load user from session storage on initial load
   useEffect(() => {
     try {
       const sessionUser = sessionStorage.getItem('user');
@@ -65,10 +68,9 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
     } catch (error) {
        console.error("Could not read from sessionStorage:", error);
     }
-    setIsLoading(false); // Mark loading as false after checking session
+    setIsLoading(false);
   }, []);
 
-  // Listen for Supabase auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
     return () => {
@@ -79,29 +81,27 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Use Supabase client-side SDK directly for login
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: pass,
       });
 
       if (error) {
-        // Let Supabase provide the specific error message
         throw error;
       }
       
-      // onAuthStateChange will handle setting the user and session
       if (data.user) {
+        const appUser = mapSupabaseUserToAppUser(data.user);
+        setUser(appUser);
+        sessionStorage.setItem('user', JSON.stringify(appUser));
         router.push('/');
         return true;
       }
-      // This should ideally not be reached if Supabase flow is correct
+      
       return false;
 
     } catch (error: any) {
       console.error('Login process failed:', error);
-      
-      // Provide user-friendly error messages based on Supabase errors
       const t = (ar: string, en: string) => document.documentElement.lang === 'ar' ? ar : en;
       const description = error.message.includes('Invalid login credentials')
         ? t('البيانات التي أدخلتها غير صحيحة. يرجى المحاولة مرة أخرى.', 'The credentials you entered are incorrect. Please try again.')
@@ -120,7 +120,8 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    // onAuthStateChange will clear the user state
+    setUser(null);
+    sessionStorage.removeItem('user');
     router.push('/login');
   };
   
