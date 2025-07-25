@@ -59,9 +59,11 @@ const roleMap: Record<UserRole, { ar: string, en: string, className: string }> =
 
 
 export function UserManagement() {
-    const { language, t } = useLanguage();
+    const { language } = useLanguage();
     const { toast } = useToast();
     const { user: currentUser } = useAuth();
+
+    const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
 
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -246,7 +248,7 @@ export function UserManagement() {
                 onSave={handleSaveUser}
             />
 
-            <AlertDialog open={isConfirmDeleteOpen} onOpenChange={setConfirmDeleteOpen} dir={dir}>
+            <AlertDialog open={isConfirmDeleteOpen} onOpenChange={setConfirmDeleteOpen} dir={language === 'ar' ? 'rtl' : 'ltr'}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>{t('هل أنت متأكد تماماً؟', 'Are you absolutely sure?')}</AlertDialogTitle>
@@ -276,7 +278,8 @@ interface UserFormDialogProps {
 }
 
 function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogProps) {
-    const { language, dir, t } = useLanguage();
+    const { language, dir } = useLanguage();
+    const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
