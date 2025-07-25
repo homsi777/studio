@@ -38,23 +38,20 @@ export default function LoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-
-        if (!email || !password) {
-            setError(t('الرجاء إدخال البريد الإلكتروني وكلمة المرور.', 'Please enter email and password.'));
-            return;
-        }
-
         setIsLoading(true);
-        const success = await login(email, password);
-        setIsLoading(false);
 
-        if (!success) {
-            setError(t('البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'Invalid email or password.'));
-             toast({
-                variant: "destructive",
-                title: t('فشل تسجيل الدخول', 'Login Failed'),
-                description: t('البيانات التي أدخلتها غير صحيحة. يرجى المحاولة مرة أخرى.', 'The credentials you entered are incorrect. Please try again.'),
-            })
+        try {
+            const success = await login(email, password);
+            if (!success) {
+                // The useAuth hook's login function will show a toast on failure,
+                // so we can set a local error state if we want to show it in the form as well.
+                setError(t('البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'Invalid email or password.'));
+            }
+        } catch (err) {
+            // This catch block might be redundant if useAuth handles all errors, but it's good for safety.
+            setError(t('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.', 'An unexpected error occurred. Please try again.'));
+        } finally {
+            setIsLoading(false);
         }
     };
 
