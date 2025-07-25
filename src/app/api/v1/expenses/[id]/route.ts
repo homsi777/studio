@@ -1,45 +1,7 @@
-
-// src/app/api/v1/expenses/[id]/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Expense } from '@/types';
 
-/**
- * @swagger
- * /api/v1/expenses/{id}:
- *   put:
- *     summary: Update an existing expense
- *     description: Modifies the details of a specific expense in Firestore.
- *     tags:
- *       - Expenses
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the expense to update.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Expense'
- *     responses:
- *       200:
- *         description: The updated expense.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Expense'
- *       400:
- *         description: Bad Request - Missing required fields.
- *       404:
- *         description: Not Found - Expense with the given ID does not exist.
- *       500:
- *         description: Internal Server Error
- */
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         const { id } = params;
@@ -49,68 +11,41 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             return NextResponse.json({ message: 'Bad Request: Missing required fields.' }, { status: 400 });
         }
 
-        const expenseRef = doc(db, 'expenses', id);
-        const expenseSnap = await getDoc(expenseRef);
+        const { data, error } = await supabaseAdmin
+            .from('expenses')
+            .update({ 
+                ...updatedData, 
+                amount: Number(updatedData.amount),
+                last_updated: new Date().toISOString() 
+            })
+            .eq('id', id)
+            .select()
+            .single();
 
-        if (!expenseSnap.exists()) {
-            return NextResponse.json({ message: 'Expense not found.' }, { status: 404 });
+        if (error) {
+            console.error('Supabase update error:', error);
+            return NextResponse.json({ message: 'Expense not found or error updating.' }, { status: 404 });
         }
         
-        const finalUpdateData = {
-          ...updatedData,
-          amount: Number(updatedData.amount) || 0, // Ensure amount is a number
-          last_updated: serverTimestamp()
-        };
-
-        await updateDoc(expenseRef, finalUpdateData);
-        
-        const updatedDoc = await getDoc(expenseRef);
-        const finalExpenseData = {
-            id: updatedDoc.id,
-            ...updatedDoc.data()
-        } as Expense;
-
-        return NextResponse.json(finalExpenseData, { status: 200 });
+        return NextResponse.json(data, { status: 200 });
     } catch (error) {
         console.error(`Failed to update expense with ID ${params.id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
 
-/**
- * @swagger
- * /api/v1/expenses/{id}:
- *   delete:
- *     summary: Delete an expense
- *     description: Removes a specific expense from the Firestore 'expenses' collection.
- *     tags:
- *       - Expenses
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the expense to delete.
- *     responses:
- *       204:
- *         description: No Content - Expense deleted successfully.
- *       404:
- *         description: Not Found - Expense with the given ID does not exist.
- *       500:
- *         description: Internal Server Error
- */
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         const { id } = params;
-        const expenseRef = doc(db, 'expenses', id);
-        const expenseSnap = await getDoc(expenseRef);
+        const { error } = await supabaseAdmin
+            .from('expenses')
+            .delete()
+            .eq('id', id);
 
-        if (!expenseSnap.exists()) {
-            return NextResponse.json({ message: 'Expense not found.' }, { status: 404 });
+        if (error) {
+            console.error('Supabase delete error:', error);
+            return NextResponse.json({ message: 'Expense not found or error deleting.' }, { status: 404 });
         }
-
-        await deleteDoc(expenseRef);
 
         return new NextResponse(null, { status: 204 });
     } catch (error) {
@@ -118,4 +53,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
-    

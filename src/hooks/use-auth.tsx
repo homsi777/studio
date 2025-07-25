@@ -23,8 +23,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'alamiyah_auth_user';
-const TRIAL_START_DATE_KEY = 'alamiyah_trial_start_date';
-const TRIAL_DURATION_DAYS = 4;
 
 export const AuthProvider = ({children}: {children: ReactNode}) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -52,35 +50,6 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
   const login = async (username: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-
-    // Trial period logic ONLY for the temporary 'admin' user
-    if (username === 'admin') {
-      try {
-        const trialStartDateStr = localStorage.getItem(TRIAL_START_DATE_KEY);
-        if (trialStartDateStr) {
-          const trialStartDate = new Date(trialStartDateStr);
-          const now = new Date();
-          const daysPassed = (now.getTime() - trialStartDate.getTime()) / (1000 * 3600 * 24);
-          
-          if (daysPassed > TRIAL_DURATION_DAYS) {
-            toast({
-              variant: 'destructive',
-              title: 'انتهت الفترة التجريبية',
-              description: 'الرجاء التواصل مع المطور لتفعيل النسخة الكاملة.',
-            });
-            setIsLoading(false);
-            return false;
-          }
-        } else {
-          // First login with trial user, set the trial start date
-          localStorage.setItem(TRIAL_START_DATE_KEY, new Date().toISOString());
-        }
-      } catch (error) {
-          console.error("Could not access localStorage for trial check:", error);
-      }
-    }
-
-
     try {
       const response = await fetch('/api/v1/login', {
         method: 'POST',
@@ -89,14 +58,11 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       });
 
       if (!response.ok) {
-        // If response is not ok, it might be a server error returning HTML
         const text = await response.text();
         try {
-          // Try to parse it as JSON first, it might be a valid error response
           const errorData = JSON.parse(text);
           throw new Error(errorData.message || 'Login failed');
         } catch (e) {
-          // If it fails, it's likely the HTML error page.
           throw new Error('Server returned an invalid response. Please check server logs.');
         }
       }

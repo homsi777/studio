@@ -1,96 +1,46 @@
-// src/app/api/v1/menu-items/route.ts
 import { type NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { MenuItem } from '@/types';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
-/**
- * @swagger
- * /api/v1/menu-items:
- *   get:
- *     summary: Retrieve a list of menu items from Firestore
- *     description: Fetches all available menu items from the Firestore 'menu-items' collection.
- *     tags:
- *       - Menu
- *     responses:
- *       200:
- *         description: A list of menu items.
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/MenuItem'
- *       500:
- *         description: Internal Server Error
- */
 export async function GET(request: NextRequest) {
   try {
-    const menuItemsCol = collection(db, 'menu-items');
-    const menuItemsSnapshot = await getDocs(menuItemsCol);
-    const menuItemsList = menuItemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+    const { data, error } = await supabaseAdmin
+        .from('menu_items')
+        .select('*')
+        .order('name', { ascending: true });
+
+    if (error) throw error;
     
-    return NextResponse.json(menuItemsList);
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Failed to fetch menu items from Firestore:', error);
-    // It's good practice to hide specific error details in production
+    console.error('Failed to fetch menu items from Supabase:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-/**
- * @swagger
- * /api/v1/menu-items:
- *   post:
- *     summary: Create a new menu item
- *     description: Adds a new menu item to the Firestore 'menu-items' collection.
- *     tags:
- *       - Menu
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/MenuItem'
- *     responses:
- *       201:
- *         description: The created menu item.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/MenuItem'
- *       400:
- *         description: Bad Request - Missing required fields
- *       500:
- *         description: Internal Server Error
- */
 export async function POST(request: NextRequest) {
   try {
-    const newItemData = await request.json() as Omit<MenuItem, 'id'>;
+    const newItemData = await request.json();
 
-    // Basic validation
     if (!newItemData.name || !newItemData.price) {
       return NextResponse.json({ message: 'Bad Request: Missing required fields (name, price).' }, { status: 400 });
     }
 
-    // Ensure new items are available by default
     const dataToSave = {
         ...newItemData,
         is_available: newItemData.is_available ?? true
-    }
+    };
 
-    const menuItemsCol = collection(db, 'menu-items');
-    const docRef = await addDoc(menuItemsCol, dataToSave);
+    const { data, error } = await supabaseAdmin
+        .from('menu_items')
+        .insert(dataToSave)
+        .select()
+        .single();
 
-    const createdItem: MenuItem = {
-      id: docRef.id,
-      ...dataToSave
-    } as MenuItem;
+    if (error) throw error;
     
-    return NextResponse.json(createdItem, { status: 201 });
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    console.error('Failed to create menu item in Firestore:', error);
+    console.error('Failed to create menu item in Supabase:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
-    

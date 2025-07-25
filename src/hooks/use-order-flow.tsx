@@ -2,26 +2,16 @@
 "use client"
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import type { Order, Table, MenuItem } from '@/types';
+import type { Order } from '@/types';
 import { useToast } from './use-toast';
 import { BellRing } from 'lucide-react';
-import { uuidToTableMap } from '@/lib/utils';
-import { collection, onSnapshot, query, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from './use-auth';
+import { supabase } from '@/lib/supabase';
 
-
-// --- MOCK DATA ---
-const initialTables: Table[] = Array.from({ length: 12 }, (_, i) => ({
-  id: i + 1,
-  status: 'available',
-  order: null,
-}));
 
 // --- CONTEXT TYPE ---
 interface OrderFlowContextType {
     orders: Order[];
-    tables: Table[];
     submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => Promise<void>;
     approveOrderByChef: (orderId: string) => Promise<void>;
     approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
@@ -30,7 +20,7 @@ interface OrderFlowContextType {
     completeOrder: (orderId: string) => Promise<void>;
     requestBill: (orderId: string) => Promise<void>;
     requestAttention: (orderId: string) => Promise<void>;
-    addDummyOrder: (tableUuid: string) => void;
+    fetchOrders: () => Promise<void>;
 }
 
 const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefined);
@@ -38,63 +28,77 @@ const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefin
 // --- PROVIDER COMPONENT ---
 export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     const [orders, setOrders] = useState<Order[]>([]);
-    const [tables, setTables] = useState<Table[]>(initialTables);
     const { toast } = useToast();
     const { isAuthenticated } = useAuth();
 
+    const fetchOrders = useCallback(async () => {
+        if (!isAuthenticated) {
+            setOrders([]);
+            return;
+        }
+        try {
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const formattedOrders = data.map((o: any) => ({
+                id: o.id,
+                items: o.items,
+                subtotal: o.subtotal,
+                serviceCharge: o.service_charge,
+                tax: o.tax,
+                finalTotal: o.final_total,
+                tableId: o.table_id,
+                tableUuid: o.table_uuid,
+                sessionId: o.session_id,
+                status: o.status,
+                timestamp: new Date(o.created_at).getTime(),
+                confirmationTimestamp: o.customer_confirmed_at ? new Date(o.customer_confirmed_at).getTime() : undefined,
+            }));
+
+            setOrders(formattedOrders);
+        } catch (error) {
+            console.error("Error fetching orders:", error);
+            toast({
+                variant: "destructive",
+                title: "خطأ",
+                description: "لم نتمكن من جلب الطلبات.",
+            });
+        }
+    }, [isAuthenticated, toast]);
+
+
     useEffect(() => {
-      if (!isAuthenticated) {
-        setOrders([]);
-        return;
-      };
+        if (!isAuthenticated) return;
 
-      const q = query(collection(db, "orders"));
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const ordersData: Order[] = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const newOrder = { 
-              id: doc.id, 
-              ...data,
-              // Convert Firestore timestamp to JS Date number
-              timestamp: data.created_at?.toDate().getTime() || Date.now(),
-              confirmationTimestamp: data.customer_confirmed_at?.toDate().getTime(),
-            } as Order;
+        fetchOrders(); // Initial fetch
 
-            ordersData.push(newOrder);
-        });
-        
-        // Sort orders by creation time, newest first might be better for some views
-        ordersData.sort((a,b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
-        
-        setOrders(ordersData);
-      }, (error) => {
-          console.error("Error listening to orders collection (this is expected when offline):", error);
-          // We will no longer show a toast message for connection errors.
-          // The offline persistence will handle the user experience gracefully.
-      });
+        const channel = supabase.channel('realtime-orders')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+            console.log('Change received!', payload);
+            fetchOrders(); // Refetch all orders on any change
+          })
+          .subscribe();
 
-      // Cleanup subscription on unmount
-      return () => unsubscribe();
-    }, [isAuthenticated]);
+        // Cleanup subscription on unmount
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isAuthenticated, fetchOrders]);
 
 
     const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => {
         try {
-            const subtotal = orderData.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-            await addDoc(collection(db, "orders"), {
-                ...orderData,
-                status: 'pending_chef_approval',
-                created_at: serverTimestamp(),
-                chef_approved_at: null,
-                cashier_approved_at: null,
-                customer_confirmed_at: null,
-                completed_at: null,
-                subtotal,
-                serviceCharge: 0,
-                tax: 0,
-                finalTotal: subtotal,
+            const response = await fetch('/api/v1/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
             });
+
+            if (!response.ok) throw new Error('Failed to submit order');
 
             toast({
                 title: (
@@ -115,34 +119,17 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [toast]);
     
-    const addDummyOrder = useCallback((tableUuid: string) => {
-        const tableId = parseInt(uuidToTableMap[tableUuid] || '0', 10);
-        if (!tableId) {
-            console.error("Invalid table UUID for dummy order");
-            return;
-        }
-        
-        const dummySessionId = `dummy-sid-${Date.now()}`;
-        const dummyOrder: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'> = {
-            tableId: tableId,
-            tableUuid: tableUuid,
-            sessionId: dummySessionId,
-            items: [{ id: 'item-5', name: 'فتوش', name_en: 'Fattoush', price: 20000, category: 'appetizer', description: '', quantity:1, image: 'https://placehold.co/600x400.png', image_hint: 'food salad' }],
-            subtotal: 20000,
-        };
-        submitOrder(dummyOrder);
-    }, [submitOrder]);
-
-    const updateOrderStatus = async (orderId: string, newStatus: Order['status'], updates: object = {}) => {
-        const orderRef = doc(db, 'orders', orderId);
+    const updateOrderStatus = async (orderId: string, updates: object) => {
         try {
-            await updateDoc(orderRef, {
-                status: newStatus,
-                ...updates,
-            });
+            const { error } = await supabase
+                .from('orders')
+                .update(updates)
+                .eq('id', orderId);
+            
+            if (error) throw error;
             return true;
         } catch (error) {
-             console.error(`Error updating order ${orderId} to ${newStatus}:`, error);
+             console.error(`Error updating order ${orderId}:`, error);
              toast({
                 variant: "destructive",
                 title: "خطأ في التحديث",
@@ -154,7 +141,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
 
 
     const approveOrderByChef = async (orderId: string) => {
-       const success = await updateOrderStatus(orderId, 'pending_cashier_approval', { chef_approved_at: serverTimestamp() });
+       const success = await updateOrderStatus(orderId, { status: 'pending_cashier_approval', chef_approved_at: new Date().toISOString() });
        if(success) toast({ title: 'بانتظار موافقة المحاسب', description: `تم تأكيد الطلب ${orderId.substring(0,5)}... من الشيف.` });
     };
 
@@ -163,42 +150,43 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         if (!order) return;
         const finalTotal = order.subtotal + serviceCharge + tax;
 
-       const success = await updateOrderStatus(orderId, 'pending_final_confirmation', { 
-           cashier_approved_at: serverTimestamp(),
-           serviceCharge,
+       const success = await updateOrderStatus(orderId, { 
+           status: 'pending_final_confirmation', 
+           cashier_approved_at: new Date().toISOString(),
+           service_charge: serviceCharge,
            tax,
-           finalTotal,
+           final_total: finalTotal,
        });
        if(success) toast({ title: 'بانتظار التأكيد النهائي من الزبون', description: `تم إرسال الفاتورة النهائية للطلب ${orderId.substring(0,5)}...` });
     };
 
     const confirmFinalOrder = async (orderId: string) => {
-       const success = await updateOrderStatus(orderId, 'confirmed', { customer_confirmed_at: serverTimestamp() });
+       const success = await updateOrderStatus(orderId, { status: 'confirmed', customer_confirmed_at: new Date().toISOString() });
        if(success) toast({ title: 'تم تأكيد الطلب نهائياً', description: `الطلب ${orderId.substring(0,5)}... قيد التحضير الآن.` });
     };
 
     const confirmOrderReady = async (orderId: string) => {
-        const success = await updateOrderStatus(orderId, 'ready', { completed_at: serverTimestamp() }); // Using completed_at for ready timestamp for now
+        const success = await updateOrderStatus(orderId, { status: 'ready', completed_at: new Date().toISOString() });
         if(success) toast({ title: 'الطلب جاهز', description: `الطلب ${orderId.substring(0,5)}... جاهز للتسليم.` });
     };
 
     const completeOrder = async (orderId: string) => {
-        const success = await updateOrderStatus(orderId, 'completed', { completed_at: serverTimestamp() });
+        const success = await updateOrderStatus(orderId, { status: 'completed', completed_at: new Date().toISOString() });
         if(success) toast({ title: 'تم إتمام الطلب', description: `تم إغلاق الطلب ${orderId.substring(0,5)}... بنجاح.` });
     }
 
     const requestBill = async (orderId: string) => {
-        await updateOrderStatus(orderId, 'paying');
+        await updateOrderStatus(orderId, { status: 'paying' });
     }
     
     const requestAttention = async (orderId: string) => {
-        await updateOrderStatus(orderId, 'needs_attention');
+        await updateOrderStatus(orderId, { status: 'needs_attention' });
     }
 
     return (
         <OrderFlowContext.Provider value={{
             orders,
-            tables,
+            fetchOrders,
             submitOrder,
             approveOrderByChef,
             approveOrderByCashier,
@@ -207,7 +195,6 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             completeOrder,
             requestBill,
             requestAttention,
-            addDummyOrder,
         }}>
             {children}
         </OrderFlowContext.Provider>
