@@ -58,6 +58,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         
         const finalUpdateData = {
           ...updatedData,
+          amount: Number(updatedData.amount) || 0, // Ensure amount is a number
           last_updated: serverTimestamp()
         };
 

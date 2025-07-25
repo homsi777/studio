@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -151,6 +152,7 @@ function QuickPOSPage() {
 
     const filteredItems = useMemo(() =>
         menuItems.filter(item =>
+            (item.is_available) &&
             (activeCategory === 'all' || item.category === activeCategory) &&
             ((t(item.name, item.name_en || item.name).toLowerCase().includes(searchTerm.toLowerCase())))
         ), [menuItems, searchTerm, activeCategory, language, t]);

@@ -63,6 +63,9 @@ import { ar } from 'date-fns/locale';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { Textarea } from '@/components/ui/textarea';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 
 const categoryMap: Record<ExpenseCategory, { ar: string, en: string, className: string, color: string }> = {
@@ -637,6 +640,19 @@ function ExpensesPage() {
     );
 }
 
+const expenseSchema = z.object({
+  description: z.string().min(1, { message: "وصف المصروف مطلوب." }),
+  amount: z.coerce.number().positive({ message: "المبلغ يجب أن يكون رقماً موجباً." }),
+  date: z.string().min(1, { message: "التاريخ مطلوب." }),
+  category: z.enum(['rent', 'bills', 'salaries', 'supplies', 'maintenance', 'other'], { errorMap: () => ({ message: "الرجاء اختيار تصنيف." }) }),
+  payment_method: z.string().optional(),
+  supplier: z.string().optional(),
+  invoice_number: z.string().optional(),
+  notes: z.string().optional(),
+  user_id: z.string().optional(),
+});
+type ExpenseFormData = z.infer<typeof expenseSchema>;
+
 interface ExpenseFormDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
@@ -647,60 +663,50 @@ interface ExpenseFormDialogProps {
 function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFormDialogProps) {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+
+    const { register, handleSubmit, formState: { errors, isValid }, reset, control } = useForm<ExpenseFormData>({
+        resolver: zodResolver(expenseSchema),
+        mode: 'onChange',
+    });
     
-    const getInitialFormData = useCallback((): Omit<Expense, 'id'> => {
-        if (expense) {
-            return {
-                description: expense.description,
-                description_en: expense.description_en || '',
-                amount: expense.amount,
-                date: expense.date.split('T')[0], // Ensure date is in YYYY-MM-DD format
-                category: expense.category,
-                user_id: expense.user_id || 'current_user_id',
-                payment_method: expense.payment_method || 'cash',
-                supplier: expense.supplier || '',
-                invoice_number: expense.invoice_number || '',
-                notes: expense.notes || '',
-            };
+    useEffect(() => {
+        if (isOpen) {
+            if (expense) {
+                reset({
+                    description: expense.description,
+                    amount: expense.amount,
+                    date: expense.date.split('T')[0], // Ensure YYYY-MM-DD
+                    category: expense.category,
+                    payment_method: expense.payment_method || 'cash',
+                    supplier: expense.supplier || '',
+                    invoice_number: expense.invoice_number || '',
+                    notes: expense.notes || '',
+                    user_id: expense.user_id || 'current_user_id',
+                });
+            } else {
+                reset({
+                    description: '',
+                    amount: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    category: 'supplies',
+                    payment_method: 'cash',
+                    supplier: '',
+                    invoice_number: '',
+                    notes: '',
+                    user_id: 'current_user_id',
+                });
+            }
         }
-        return { 
-            description: '', 
-            description_en: '', 
-            amount: 0, 
-            date: new Date().toISOString().split('T')[0], 
-            category: 'supplies' as ExpenseCategory,
-            user_id: 'current_user_id', // Should be replaced with actual logged-in user ID
-            payment_method: 'cash',
-            supplier: '',
-            invoice_number: '',
-            notes: '',
-        };
-    }, [expense]);
+    }, [expense, isOpen, reset]);
 
-    const [formData, setFormData] = useState<Omit<Expense, 'id'>>(getInitialFormData);
-    
-    React.useEffect(() => {
-        setFormData(getInitialFormData());
-    }, [expense, isOpen, getInitialFormData]);
-
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { id, value, type } = e.target;
-        // FIX: Ensure amount is parsed as a number
-        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
-    };
-
-    const handleSelectChange = (id: string, value: string) => {
-        setFormData(prev => ({ ...prev, [id]: value }));
-    }
-
-    const handleSubmit = () => {
-        onSave(formData);
+    const onSubmit = (data: ExpenseFormData) => {
+        onSave(data as Omit<Expense, 'id'>);
     }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange} dir={dir}>
             <DialogContent className="sm:max-w-xl">
+              <form onSubmit={handleSubmit(onSubmit)}>
                 <DialogHeader>
                     <DialogTitle className="font-headline">{expense ? t('تعديل المصروف', 'Edit Expense') : t('تسجيل مصروف جديد', 'Record New Expense')}</DialogTitle>
                     <DialogDescription>
@@ -710,65 +716,82 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
                 <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
                      <div className="space-y-2">
                         <Label htmlFor="description">{t('وصف المصروف', 'Description')}*</Label>
-                        <Input id="description" value={formData.description} onChange={handleChange} required/>
+                        <Input id="description" {...register('description')} required/>
+                         {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="space-y-2">
                             <Label htmlFor="amount">{t('المبلغ (ل.س)', 'Amount (SYP)')}*</Label>
-                            <Input id="amount" type="number" value={formData.amount} onChange={handleChange} required/>
+                            <Input id="amount" type="number" {...register('amount')} required step="any" />
+                            {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="date">{t('التاريخ', 'Date')}*</Label>
-                            <Input id="date" type="date" value={formData.date} onChange={handleChange} required/>
+                            <Input id="date" type="date" {...register('date')} required/>
+                             {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="category">{t('التصنيف', 'Category')}*</Label>
-                            <Select value={formData.category} onValueChange={(v) => handleSelectChange('category', v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {(Object.keys(categoryMap) as Array<keyof typeof categoryMap>).map((cat) => (
-                                    <SelectItem key={cat} value={cat}>{t(categoryMap[cat].ar, categoryMap[cat].en)}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                             <Controller
+                                name="category"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={t('اختر تصنيفاً', 'Select a category')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(Object.keys(categoryMap) as Array<keyof typeof categoryMap>).map((cat) => (
+                                            <SelectItem key={cat} value={cat}>{t(categoryMap[cat].ar, categoryMap[cat].en)}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                             {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="payment_method">{t('طريقة الدفع', 'Payment Method')}*</Label>
-                             <Select value={formData.payment_method} onValueChange={(v) => handleSelectChange('payment_method', v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('اختر طريقة الدفع', 'Select a payment method')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="cash">{t('نقداً', 'Cash')}</SelectItem>
-                                    <SelectItem value="credit_card">{t('بطاقة ائتمان', 'Credit Card')}</SelectItem>
-                                    <SelectItem value="bank_transfer">{t('تحويل بنكي', 'Bank Transfer')}</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Label htmlFor="payment_method">{t('طريقة الدفع', 'Payment Method')}</Label>
+                             <Controller
+                                name="payment_method"
+                                control={control}
+                                render={({ field }) => (
+                                     <Select value={field.value} onValueChange={field.onChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={t('اختر طريقة الدفع', 'Select a payment method')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="cash">{t('نقداً', 'Cash')}</SelectItem>
+                                            <SelectItem value="credit_card">{t('بطاقة ائتمان', 'Credit Card')}</SelectItem>
+                                            <SelectItem value="bank_transfer">{t('تحويل بنكي', 'Bank Transfer')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                             />
                         </div>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="space-y-2">
                             <Label htmlFor="supplier">{t('المورد/الجهة', 'Supplier/Beneficiary')}</Label>
-                            <Input id="supplier" value={formData.supplier || ''} onChange={handleChange} />
+                            <Input id="supplier" {...register('supplier')} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="invoice_number">{t('رقم الفاتورة', 'Invoice Number')}</Label>
-                            <Input id="invoice_number" value={formData.invoice_number || ''} onChange={handleChange} />
+                            <Input id="invoice_number" {...register('invoice_number')} />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="notes">{t('ملاحظات إضافية', 'Additional Notes')}</Label>
-                        <Textarea id="notes" value={formData.notes || ''} onChange={handleChange} />
+                        <Textarea id="notes" {...register('notes')} />
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="secondary" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
-                    <Button onClick={handleSubmit}>{t('حفظ', 'Save')}</Button>
+                    <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
+                    <Button type="submit" disabled={!isValid}>{t('حفظ', 'Save')}</Button>
                 </DialogFooter>
+              </form>
             </DialogContent>
         </Dialog>
     );
