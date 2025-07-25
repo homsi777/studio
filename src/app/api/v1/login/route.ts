@@ -35,8 +35,8 @@ import bcrypt from 'bcryptjs';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Ensure default users exist before attempting to log in.
-    // This is the ideal place to run this check.
+    // IMPORTANT: Call this function here. It will check and create users if needed.
+    // This is the most reliable place to ensure the DB is ready before a login attempt.
     await ensureDefaultUsersExist();
 
     const {username, password} = await request.json();
@@ -93,8 +93,10 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Login API error:', error);
+    // Provide a more specific error message for easier debugging.
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json(
-      {success: false, message: 'Internal Server Error'},
+      {success: false, message: `Internal Server Error: ${errorMessage}`},
       {status: 500}
     );
   }
