@@ -128,12 +128,20 @@ function MenuManagementPage() {
     };
     
     const handleSave = async (formData: Omit<MenuItem, 'id' | 'quantity'>) => {
+        const dataToSave = { ...formData } as any;
+        Object.keys(dataToSave).forEach(key => {
+            const typedKey = key as keyof typeof dataToSave;
+            if (dataToSave[typedKey] === '' || dataToSave[typedKey] === null || dataToSave[typedKey] === undefined) {
+                delete dataToSave[typedKey];
+            }
+        });
+
         if (editingItem) {
             try {
                  const response = await fetch(`/api/v1/menu-items/${editingItem.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify(dataToSave),
                 });
                 if (!response.ok) throw new Error('Failed to update item');
                 const updatedItem = await response.json();
@@ -154,7 +162,7 @@ function MenuManagementPage() {
                  const response = await fetch('/api/v1/menu-items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...formData, is_available: true }),
+                    body: JSON.stringify({ ...dataToSave, is_available: true }),
                 });
 
                 if (!response.ok) {
@@ -164,7 +172,7 @@ function MenuManagementPage() {
                 setItems(prev => [newItem, ...prev]);
                 toast({
                     title: t("تمت الإضافة بنجاح", "Item Added"),
-                    description: t(`تمت إضافة صنف "${formData.name}" إلى القائمة.`, `"${formData.name}" has been added to the menu.`),
+                    description: t(`تمت إضافة صنف "${dataToSave.name}" إلى القائمة.`, `"${dataToSave.name}" has been added to the menu.`),
                 });
             } catch(error) {
                  console.error(error);
@@ -438,7 +446,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                                                 <SelectItem value="appetizer">{t('مقبلات', 'Appetizer')}</SelectItem>
                                                 <SelectItem value="main">{t('طبق رئيسي', 'Main Course')}</SelectItem>
                                                 <SelectItem value="drink">{t('مشروب', 'Drink')}</SelectItem>
-                                                <SelectItem value="dessert">{t('حلويات', 'Dessert')}</SelectItem>
+                                                <SelectItem value="dessert">{t('حلويات', 'Desserts')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     )}

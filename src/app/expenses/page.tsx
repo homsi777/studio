@@ -161,11 +161,11 @@ function ExpensesPage() {
     }
 
     const handleSave = async (formData: Omit<Expense, 'id'>) => {
-        const dataToSave = { ...formData };
+        const dataToSave = { ...formData } as any;
         Object.keys(dataToSave).forEach(key => {
             const typedKey = key as keyof typeof dataToSave;
-            if (dataToSave[typedKey] === '' || dataToSave[typedKey] === null) {
-                delete (dataToSave as any)[typedKey];
+            if (dataToSave[typedKey] === '' || dataToSave[typedKey] === null || dataToSave[typedKey] === undefined) {
+                delete dataToSave[typedKey];
             }
         });
 
@@ -275,7 +275,7 @@ function ExpensesPage() {
                 )
             },
             cell: ({ row }) => {
-                const amount = parseFloat(row.getValue('amount'));
+                const amount = parseFloat(String(row.getValue('amount')));
                 return <div className="text-right font-mono">{amount.toLocaleString()} {t('ل.س', 'SYP')}</div>
             },
         },
