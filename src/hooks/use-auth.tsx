@@ -135,7 +135,6 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       }
     } catch (error: any) {
       console.error('Login process failed:', error);
-      // Use the error message from the backend if available, otherwise a generic one.
       const description = error.message.includes('fetch') 
         ? 'لا يمكن الاتصال بخدمة المصادقة. تحقق من اتصالك بالإنترنت.' 
         : error.message;
@@ -169,7 +168,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       value={{isAuthenticated, user, login, logout, isLoading}}
     >
       {children}
-    </AuthProvider>
+    </AuthContext.Provider>
   );
 };
 
