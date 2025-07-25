@@ -5,58 +5,13 @@ import {
   collection,
   getDocs,
   addDoc,
-  doc,
-  getDoc,
   query,
   where,
-  writeBatch,
 } from 'firebase/firestore';
 import {db} from '@/lib/firebase';
 import type {User} from '@/types';
 import bcrypt from 'bcryptjs';
-
-export const ensureDefaultUsersExist = async () => {
-  const usersCol = collection(db, 'users');
-  
-  const initialCheck = await getDocs(query(usersCol));
-  
-  if (!initialCheck.empty) {
-    return;
-  }
-  
-  const batch = writeBatch(db);
-  console.log('No users found. Creating default users.');
-
-  // 1. Create Temporary Trial Admin
-  const trialSalt = await bcrypt.genSalt(10);
-  const trialHashedPassword = await bcrypt.hash('123456', trialSalt);
-  const trialAdmin: Omit<User, 'id'> = {
-    username: 'admin',
-    password: trialHashedPassword,
-    role: 'manager',
-  };
-  const trialAdminRef = doc(collection(db, 'users'));
-  batch.set(trialAdminRef, trialAdmin);
-
-  // 2. Create Permanent Super Admin
-  const superAdminSalt = await bcrypt.genSalt(10);
-  const superAdminHashedPassword = await bcrypt.hash('700210ww', superAdminSalt);
-  const superAdmin: Omit<User, 'id'> = {
-    username: 'superadmin',
-    password: superAdminHashedPassword,
-    role: 'manager',
-  };
-  const superAdminRef = doc(collection(db, 'users'));
-  batch.set(superAdminRef, superAdmin);
-
-  try {
-    await batch.commit();
-    console.log('Default admin and superadmin users created successfully.');
-  } catch (error) {
-    console.error('Failed to create default users with batch:', error);
-  }
-};
-
+import { ensureDefaultUsersExist } from '@/lib/firebase-admin';
 
 /**
  * @swagger
@@ -80,8 +35,8 @@ export const ensureDefaultUsersExist = async () => {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Note: ensureDefaultUsersExist is now called from login route
-    // to guarantee users exist before any operation.
+    // Ensure users exist if the collection is ever empty when this route is called.
+    await ensureDefaultUsersExist();
 
     const usersCol = collection(db, 'users');
     const usersSnapshot = await getDocs(usersCol);

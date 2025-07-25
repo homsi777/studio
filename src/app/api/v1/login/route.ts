@@ -6,7 +6,7 @@ import {collection, query, where, getDocs} from 'firebase/firestore';
 import {db} from '@/lib/firebase';
 import type {User} from '@/types';
 import bcrypt from 'bcryptjs';
-import { ensureDefaultUsersExist } from '../users/route';
+import { ensureDefaultUsersExist } from '@/lib/firebase-admin';
 
 /**
  * @swagger
@@ -47,6 +47,7 @@ import { ensureDefaultUsersExist } from '../users/route';
 export async function POST(request: NextRequest) {
   try {
     // This is the critical fix: ensure users exist BEFORE attempting to log in.
+    // This is now handled by a dedicated admin-sdk initialized function.
     await ensureDefaultUsersExist();
 
     const {username, password} = await request.json();
