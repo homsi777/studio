@@ -26,31 +26,19 @@ import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 export default function LoginPage() {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-    const { login, isLoading: isAuthLoading } = useAuth(); // Renamed to avoid conflict
+    const { login, isLoading } = useAuth();
     const { toast } = useToast();
     const { settings } = useRestaurantSettings();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false); // Local loading state for form submission
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        setIsSubmitting(true);
-
-        const success = await login(email, password);
-        
-        // The useAuth hook now handles showing the toast with the specific error.
-        // We don't need to set a local error here anymore unless we want to display it inline,
-        // which could be redundant with the toast.
-        // If the login is successful, the hook will handle redirection.
-
-        setIsSubmitting(false);
+        // The useAuth hook will now handle showing toasts for errors and redirection on success.
+        // This component just needs to call the login function.
+        await login(email, password);
     };
-    
-    const isLoading = isAuthLoading || isSubmitting;
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 select-none">
@@ -96,14 +84,6 @@ export default function LoginPage() {
                                 autoComplete="current-password"
                             />
                         </div>
-                        {error && (
-                             <Alert variant="destructive" className="p-2 text-sm">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertDescription>
-                                    {error}
-                                </AlertDescription>
-                            </Alert>
-                        )}
                     </CardContent>
                     <CardFooter>
                         <Button type="submit" className="w-full" disabled={isLoading}>

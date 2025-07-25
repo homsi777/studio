@@ -4,6 +4,35 @@ import {type NextRequest, NextResponse} from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type {User} from '@/types';
 
+
+const ensureDefaultUsersExist = async () => {
+    try {
+        const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (listError) throw listError;
+
+        const defaultUsers = [
+            { email: 'admin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
+            { email: 'superadmin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
+        ];
+
+        for (const defaultUser of defaultUsers) {
+            const userExists = users.some(u => u.email === defaultUser.email);
+            if (!userExists) {
+                console.log(`User ${defaultUser.email} not found, creating...`);
+                const { data, error } = await supabaseAdmin.auth.admin.createUser(defaultUser);
+                if (error) {
+                    console.error(`Error creating user ${defaultUser.email}:`, error);
+                } else {
+                    console.log(`User ${data.user.email} created successfully`);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error in ensureDefaultUsersExist:", error);
+    }
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
@@ -26,6 +55,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // We can ensure defaults exist before trying to create a new one.
+    await ensureDefaultUsersExist();
+
     const newUser = (await request.json()) as Omit<User, 'id'>;
 
     if (!newUser.email || !newUser.password || !newUser.role) {
