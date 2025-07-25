@@ -34,6 +34,7 @@ function SettingsPage() {
   const [tables, setTables] = useState<{ id: number; uuid: string }[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isLoadingTables, setIsLoadingTables] = useState(true);
+  const [isTableUpdating, setIsTableUpdating] = useState(false);
   
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
@@ -81,6 +82,7 @@ function SettingsPage() {
   }
 
   const handleAddTable = async () => {
+    setIsTableUpdating(true);
     try {
       const response = await fetch('/api/v1/tables', { method: 'POST' });
       if (!response.ok) throw new Error('Failed to add table');
@@ -88,11 +90,14 @@ function SettingsPage() {
       toast({ title: t('تمت الإضافة', 'Table Added'), description: t('تمت إضافة طاولة جديدة بنجاح.', 'A new table has been added successfully.') });
     } catch(error) {
        toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من إضافة طاولة جديدة', 'Could not add a new table')});
+    } finally {
+        setIsTableUpdating(false);
     }
   };
 
   const handleDeleteLastTable = async () => {
     if (tables.length <= 0) return;
+    setIsTableUpdating(true);
     try {
       const response = await fetch('/api/v1/tables', { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete table');
@@ -100,6 +105,8 @@ function SettingsPage() {
       toast({ title: t('تم الحذف', 'Table Deleted'), description: t('تم حذف آخر طاولة بنجاح.', 'The last table has been deleted successfully.') });
     } catch(error) {
        toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من حذف الطاولة', 'Could not delete the table')});
+    } finally {
+        setIsTableUpdating(false);
     }
   }
 
@@ -222,11 +229,14 @@ function SettingsPage() {
                             <Skeleton className="h-10 w-full" />
                         ) : (
                             <div className="flex items-center gap-2">
-                                <Button size="icon" variant="outline" onClick={handleDeleteLastTable} disabled={tables.length <= 0}>
+                                <Button size="icon" variant="outline" onClick={handleDeleteLastTable} disabled={tables.length <= 0 || isTableUpdating}>
                                     <Minus className="h-4 w-4" />
                                 </Button>
-                                <Input id="numberOfTables" type="number" value={tables.length} readOnly className="text-center font-bold" />
-                                <Button size="icon" variant="outline" onClick={handleAddTable}>
+                                <div className="relative flex-1">
+                                    <Input id="numberOfTables" type="number" value={tables.length} readOnly className="text-center font-bold" />
+                                    {isTableUpdating && <div className="absolute inset-0 flex items-center justify-center bg-background/80"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
+                                </div>
+                                <Button size="icon" variant="outline" onClick={handleAddTable} disabled={isTableUpdating}>
                                     <Plus className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -270,5 +280,7 @@ export default function GuardedSettingsPage() {
         </AuthGuard>
     )
 }
+
+    
 
     
