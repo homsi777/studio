@@ -88,10 +88,22 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
         body: JSON.stringify({username, password: pass}),
       });
 
+      if (!response.ok) {
+        // If response is not ok, it might be a server error returning HTML
+        const text = await response.text();
+        try {
+          // Try to parse it as JSON first, it might be a valid error response
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.message || 'Login failed');
+        } catch (e) {
+          // If it fails, it's likely the HTML error page.
+          throw new Error('Server returned an invalid response. Please check server logs.');
+        }
+      }
+      
       const data = await response.json();
 
-      // IMPORTANT FIX: Check for user and user.id to ensure valid response
-      if (response.ok && data.success && data.user && data.user.id) {
+      if (data.success && data.user && data.user.id) {
         try {
           sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
           setUser(data.user);
@@ -108,14 +120,25 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
           return false;
         }
       } else {
+        toast({
+            variant: "destructive",
+            title: 'فشل تسجيل الدخول',
+            description: data.message || 'البيانات التي أدخلتها غير صحيحة. يرجى المحاولة مرة أخرى.',
+        });
         return false;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login process failed:', error);
+      let description = 'لا يمكن الاتصال بخدمة المصادقة. تحقق من اتصالك بالإنترنت.';
+      if (error instanceof SyntaxError) {
+        description = 'حدث خطأ في الخادم. يرجى مراجعة سجلات الخادم.';
+      } else if (error.message) {
+        description = error.message;
+      }
       toast({
         variant: 'destructive',
-        title: 'خطأ في الاتصال',
-        description: 'لا يمكن الاتصال بخدمة المصادقة. تحقق من اتصالك بالإنترنت.',
+        title: 'خطأ في تسجيل الدخول',
+        description: description,
       });
       return false;
     } finally {
