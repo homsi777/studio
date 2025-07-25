@@ -25,6 +25,28 @@ interface OrderFlowContextType {
 
 const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefined);
 
+// --- HELPER FUNCTION ---
+const formatOrder = (dbOrder: any): Order => ({
+    id: dbOrder.id,
+    items: dbOrder.items,
+    subtotal: dbOrder.subtotal,
+    serviceCharge: dbOrder.service_charge,
+    tax: dbOrder.tax,
+    finalTotal: dbOrder.final_total,
+    tableId: dbOrder.table_id,
+    tableUuid: dbOrder.table_uuid,
+    sessionId: dbOrder.session_id,
+    status: dbOrder.status,
+    timestamp: new Date(dbOrder.created_at).getTime(),
+    confirmationTimestamp: dbOrder.customer_confirmed_at ? new Date(dbOrder.customer_confirmed_at).getTime() : undefined,
+    created_at: dbOrder.created_at,
+    chef_approved_at: dbOrder.chef_approved_at,
+    cashier_approved_at: dbOrder.cashier_approved_at,
+    customer_confirmed_at: dbOrder.customer_confirmed_at,
+    completed_at: dbOrder.completed_at,
+});
+
+
 // --- PROVIDER COMPONENT ---
 export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -44,21 +66,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
 
             if (error) throw error;
 
-            const formattedOrders = data.map((o: any) => ({
-                id: o.id,
-                items: o.items,
-                subtotal: o.subtotal,
-                serviceCharge: o.service_charge,
-                tax: o.tax,
-                finalTotal: o.final_total,
-                tableId: o.table_id,
-                tableUuid: o.table_uuid,
-                sessionId: o.session_id,
-                status: o.status,
-                timestamp: new Date(o.created_at).getTime(),
-                confirmationTimestamp: o.customer_confirmed_at ? new Date(o.customer_confirmed_at).getTime() : undefined,
-            }));
-
+            const formattedOrders = data.map(formatOrder);
             setOrders(formattedOrders);
         } catch (error) {
             console.error("Error fetching orders:", error);
@@ -77,9 +85,19 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         fetchOrders(); // Initial fetch
 
         const channel = supabase.channel('realtime-orders')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-            console.log('Change received!', payload);
-            fetchOrders(); // Refetch all orders on any change
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+                console.log('New order received:', payload.new);
+                const newOrder = formatOrder(payload.new);
+                setOrders(currentOrders => [newOrder, ...currentOrders]);
+          })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
+              console.log('Order update received:', payload.new);
+              const updatedOrder = formatOrder(payload.new);
+              setOrders(currentOrders => currentOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+          })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'orders' }, (payload) => {
+               console.log('Order delete received:', payload.old);
+               setOrders(currentOrders => currentOrders.filter(o => o.id !== payload.old.id));
           })
           .subscribe();
 

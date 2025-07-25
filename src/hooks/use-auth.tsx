@@ -7,6 +7,7 @@ import React, {
   useContext,
   ReactNode,
   useEffect,
+  useCallback,
 } from 'react';
 import {useRouter} from 'next/navigation';
 import type {User} from '@/types';
@@ -23,32 +24,63 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_STORAGE_KEY = 'alamiyah_auth_user';
-const SESSION_STORAGE_KEY = 'alamiyah_auth_session';
-
 export const AuthProvider = ({children}: {children: ReactNode}) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
   const {toast} = useToast();
 
-  useEffect(() => {
+  const loadUserFromSession = useCallback(() => {
     try {
-      const storedUser = sessionStorage.getItem(AUTH_STORAGE_KEY);
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser) as User;
-        if (parsedUser && parsedUser.id) { // Ensure user object is valid
-          setUser(parsedUser);
-          setIsAuthenticated(true);
+      const session = sessionStorage.getItem('supabase.auth.session');
+      if (session) {
+        const parsedSession = JSON.parse(session);
+        if (parsedSession.user) {
+          const userData: User = {
+            id: parsedSession.user.id,
+            email: parsedSession.user.email,
+            username: parsedSession.user.email,
+            role: parsedSession.user.user_metadata.role || 'employee',
+          };
+          setUser(userData);
+        } else {
+           setUser(null);
         }
+      } else {
+        setUser(null);
       }
     } catch (error) {
-      console.error('Could not access sessionStorage:', error);
+      console.error('Could not access sessionStorage or parse session:', error);
+      setUser(null);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    loadUserFromSession();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+         const userData: User = {
+            id: session.user.id,
+            email: session.user.email,
+            username: session.user.email,
+            role: session.user.user_metadata.role || 'employee',
+          };
+          setUser(userData);
+          // Store session for persistence across page loads
+          sessionStorage.setItem('supabase.auth.session', JSON.stringify(session));
+      } else {
+          setUser(null);
+          sessionStorage.removeItem('supabase.auth.session');
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [loadUserFromSession]);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
@@ -66,22 +98,31 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
       }
       
       if (data.success && data.user && data.user.id) {
-        try {
-          sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
-          sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data.session));
-          setUser(data.user);
-          setIsAuthenticated(true);
-          router.push('/');
-          return true;
-        } catch (error) {
-          console.error('Could not access sessionStorage:', error);
-          toast({
-            variant: "destructive",
-            title: "خطأ في المتصفح",
-            description: "لا يمكن الوصول إلى ذاكرة التخزين المؤقت للمتصفح. قد لا يعمل التطبيق بشكل صحيح.",
-          });
-          return false;
-        }
+          const session = data.session;
+          try {
+             if (session) {
+                await supabase.auth.setSession(session);
+                const userData: User = {
+                    id: data.user.id,
+                    email: data.user.email,
+                    username: data.user.email,
+                    role: data.user.role || 'employee',
+                };
+                setUser(userData);
+                 // The onAuthStateChange listener will handle storage.
+                router.push('/');
+                return true;
+             }
+             throw new Error("Session data is missing from login response.");
+          } catch (error) {
+            console.error('Could not set session or access storage:', error);
+            toast({
+              variant: "destructive",
+              title: "خطأ في المتصفح",
+              description: "لا يمكن الوصول إلى ذاكرة التخزين المؤقت للمتصفح. قد لا يعمل التطبيق بشكل صحيح.",
+            });
+            return false;
+          }
       } else {
         throw new Error(data.message || 'The credentials you entered are incorrect. Please try again.');
       }
@@ -105,18 +146,13 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
   };
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      sessionStorage.removeItem(AUTH_STORAGE_KEY);
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch (error) {
-      console.error('Error during logout:', error);
-    } finally {
-      setUser(null);
-      setIsAuthenticated(false);
-      router.push('/login');
-    }
+    await supabase.auth.signOut();
+    setUser(null);
+    sessionStorage.removeItem('supabase.auth.session'); // Clear session on logout
+    router.push('/login');
   };
+  
+  const isAuthenticated = !!user;
 
   return (
     <AuthContext.Provider
