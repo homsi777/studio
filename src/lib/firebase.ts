@@ -6,10 +6,9 @@ import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 const firebaseConfig = {
   "projectId": "al-maida-manager",
   "appId": "1:78562067993:web:9f182ea593d2804d084c88",
-  "storageBucket": "al-maida-manager.firebasestorage.app",
+  "storageBucket": "al-maida-manager.appspot.com",
   "apiKey": "AIzaSyCX8uHmCBOJ6eQuNKUVnkjwvNUSzcUb2Gw",
   "authDomain": "al-maida-manager.firebaseapp.com",
-  "measurementId": "",
   "messagingSenderId": "78562067993",
   "databaseURL": `https://al-maida-manager.firebaseio.com`
 };
