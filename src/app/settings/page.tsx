@@ -12,7 +12,7 @@ import { UserManagement } from "@/components/settings/user-management";
 import { useLanguage } from "@/hooks/use-language";
 import { AuthGuard } from "@/components/auth-guard";
 import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 
@@ -27,14 +27,58 @@ function SettingsPage() {
   const [exchangeRate, setExchangeRate] = useState<number | null>(15000);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [isLoadingRate, setIsLoadingRate] = useState(false);
+  const [numberOfTables, setNumberOfTables] = useState(0);
+  const [isTableLoading, setIsTableLoading] = useState(true);
   
   const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value, type } = e.target;
+    const { id, value } = e.target;
     setSettings(prev => ({ 
         ...prev, 
-        [id]: type === 'number' ? parseInt(value, 10) || 0 : value 
+        [id]: value 
     }));
   }
+  
+  const fetchTableCount = async () => {
+    setIsTableLoading(true);
+    try {
+      const response = await fetch('/api/v1/tables');
+      if (!response.ok) throw new Error('Failed to fetch tables');
+      const data = await response.json();
+      setNumberOfTables(data.length);
+    } catch(error) {
+      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count')});
+    } finally {
+      setIsTableLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchTableCount();
+  }, []);
+
+  const handleAddTable = async () => {
+    try {
+      const response = await fetch('/api/v1/tables', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to add table');
+      await fetchTableCount();
+      toast({ title: t('تمت الإضافة', 'Table Added'), description: t('تمت إضافة طاولة جديدة بنجاح.', 'A new table has been added successfully.') });
+    } catch(error) {
+       toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من إضافة طاولة جديدة', 'Could not add a new table')});
+    }
+  };
+
+  const handleDeleteLastTable = async () => {
+    if (numberOfTables <= 0) return;
+    try {
+      const response = await fetch('/api/v1/tables', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete table');
+      await fetchTableCount();
+      toast({ title: t('تم الحذف', 'Table Deleted'), description: t('تم حذف آخر طاولة بنجاح.', 'The last table has been deleted successfully.') });
+    } catch(error) {
+       toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من حذف الطاولة', 'Could not delete the table')});
+    }
+  }
+
 
   const handleFetchRate = async () => {
     setIsLoadingRate(true);
@@ -59,8 +103,6 @@ function SettingsPage() {
   };
 
   const handleSaveSettings = () => {
-    // The settings are already saved to localStorage via the hook's useEffect.
-    // This button provides explicit user feedback.
     toast({
       title: t("تم الحفظ", "Settings Saved"),
       description: t("تم حفظ التغييرات بنجاح.", "Your changes have been saved successfully."),
@@ -134,7 +176,7 @@ function SettingsPage() {
                         <CardDescription>{t('إنشاء وطباعة رموز QR لتوجيه الزبائن إلى قائمة الطعام الرقمية لكل طاولة.', 'Generate and print QR codes to direct customers to the digital menu for each table.')}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <QrCodeGenerator />
+                        <QrCodeGenerator numberOfTables={numberOfTables}/>
                     </CardContent>
                 </Card>
                 <Card>
@@ -143,8 +185,16 @@ function SettingsPage() {
                         <CardDescription>{t('تحديد العدد الإجمالي للطاولات في المطعم.', 'Set the total number of tables in the restaurant.')}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        <Label htmlFor="numberOfTables">{t('عدد الطاولات', 'Number of Tables')}</Label>
-                        <Input id="numberOfTables" type="number" value={settings.numberOfTables} onChange={handleSettingsChange} min="1"/>
+                        <Label htmlFor="numberOfTables">{t('العدد الحالي للطاولات', 'Current Number of Tables')}</Label>
+                        <div className="flex items-center gap-2">
+                            <Button size="icon" variant="outline" onClick={handleDeleteLastTable} disabled={numberOfTables <= 0}>
+                                <Minus className="h-4 w-4" />
+                            </Button>
+                            <Input id="numberOfTables" type="number" value={numberOfTables} readOnly className="text-center font-bold" />
+                            <Button size="icon" variant="outline" onClick={handleAddTable}>
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
                 <Card>

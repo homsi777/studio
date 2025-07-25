@@ -1,54 +1,74 @@
 
 "use client";
 
+import { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { type Table } from '@/types';
+import { type Table, type Order as OrderType } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
 import { AuthGuard } from '@/components/auth-guard';
-import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useOrderFlow } from '@/hooks/use-order-flow';
-import { tableIdToUuidMap } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
+import { supabase } from '@/lib/supabase';
 
 function CustomerTablesPage() {
-  const { settings } = useRestaurantSettings();
   const { orders } = useOrderFlow();
   const { language } = useLanguage();
+  const [dbTables, setDbTables] = useState<{ id: number; uuid: string }[]>([]);
 
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-  const handleSelectTable = (tableId: number) => {
-    const uuid = tableIdToUuidMap[tableId.toString()];
-    if (uuid) {
-      window.open(`/menu/${uuid}`, '_blank');
-    } else {
-      console.error(`No UUID found for table ${tableId}`);
-    }
+  useEffect(() => {
+    const fetchTables = async () => {
+      const { data, error } = await supabase.from('tables').select('id, uuid').order('id');
+      if (error) {
+        console.error('Error fetching tables:', error);
+      } else {
+        setDbTables(data);
+      }
+    };
+    fetchTables();
+  }, []);
+
+  const handleSelectTable = (table: Table) => {
+      window.open(`/menu/${table.uuid}`, '_blank');
   };
 
-  const getTableData = (tableId: number): Table => {
-    const activeOrder = orders.find(o => o.tableId === tableId && o.status !== 'completed' && o.status !== 'cancelled');
-    if (activeOrder) {
-      let status: Table['status'] = 'occupied';
-      if (activeOrder.status === 'pending_chef_approval') status = 'new_order';
-      if (activeOrder.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
-      if (activeOrder.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
-      if (activeOrder.status === 'confirmed') status = 'confirmed';
-      if (activeOrder.status === 'paying') status = 'paying';
-      if (activeOrder.status === 'needs_attention') status = 'needs_attention';
-
-      return {
-        id: tableId,
-        status: status,
-        order: activeOrder,
-        seatingDuration: '10 min', // Mock data
-        chefConfirmationTimestamp: activeOrder.confirmationTimestamp
-      };
+  const tablesData = useMemo(() => {
+    const tableMap = new Map<number, Table>();
+    
+    // Initialize all tables from the database as available
+    for (const dbTable of dbTables) {
+        tableMap.set(dbTable.id, { id: dbTable.id, uuid: dbTable.uuid, status: 'available', order: null });
     }
-    return { id: tableId, status: 'available', order: null };
-  };
 
-  const displayTables = Array.from({ length: settings.numberOfTables }, (_, i) => getTableData(i + 1));
+    // Populate with active orders
+    const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+
+    for (const order of activeOrders) {
+      if (tableMap.has(order.tableId)) {
+        let status: Table['status'] = 'occupied';
+        if (order.status === 'pending_chef_approval') status = 'new_order';
+        if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
+        if (order.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
+        if (order.status === 'confirmed') status = 'confirmed';
+        if (order.status === 'paying') status = 'paying';
+        if (order.status === 'needs_attention') status = 'needs_attention';
+
+        const existingTable = tableMap.get(order.tableId)!;
+        const tableData: Table = {
+          ...existingTable,
+          status: status,
+          order: order,
+          seatingDuration: '10 min', // Mock data
+          chefConfirmationTimestamp: order.confirmationTimestamp
+        };
+        tableMap.set(order.tableId, tableData);
+      }
+    }
+
+    return Array.from(tableMap.values()).sort((a,b) => a.id - b.id);
+
+  }, [dbTables, orders]);
 
   return (
     <main className="flex-1 p-4 sm:p-6">
@@ -58,7 +78,7 @@ function CustomerTablesPage() {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
         <AnimatePresence>
-          {displayTables.map((table, i) => (
+          {tablesData.map((table, i) => (
             <motion.div
               key={table.id}
               initial={{ opacity: 0, y: 20 }}
@@ -67,7 +87,7 @@ function CustomerTablesPage() {
             >
               <TableCard
                 table={table}
-                onSelect={() => handleSelectTable(table.id)}
+                onSelect={() => handleSelectTable(table)}
               />
             </motion.div>
           ))}

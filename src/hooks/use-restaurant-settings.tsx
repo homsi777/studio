@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
@@ -9,7 +8,6 @@ interface RestaurantSettings {
     address: string;
     phone: string;
     email: string;
-    numberOfTables: number;
 }
 
 interface RestaurantSettingsContextType {
@@ -26,7 +24,6 @@ const defaultSettings: RestaurantSettings = {
     address: 'دمشق، سوريا',
     phone: '+963 912 345 678',
     email: 'info@alamiyah.com',
-    numberOfTables: 12,
 };
 
 export const RestaurantSettingsProvider = ({ children }: { children: ReactNode }) => {
@@ -38,7 +35,9 @@ export const RestaurantSettingsProvider = ({ children }: { children: ReactNode }
         try {
             const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
             if (storedSettings) {
-                setSettings(JSON.parse(storedSettings));
+                // Merge stored settings with defaults to avoid missing properties on update
+                const parsedSettings = JSON.parse(storedSettings);
+                setSettings(prev => ({ ...prev, ...parsedSettings }));
             }
         } catch (error) {
             console.error("Could not access localStorage:", error);

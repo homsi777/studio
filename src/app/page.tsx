@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { type Table, type TableStatus } from '@/types';
+import { type Table, type TableStatus, type Order as OrderType } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
 import { OrderDetailsSheet } from '@/components/dashboard/order-details-sheet';
 import { AuthGuard } from '@/components/auth-guard';
-import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useOrderFlow } from '@/hooks/use-order-flow';
+import { supabase } from '@/lib/supabase';
 
 const statusPriority: Record<TableStatus, number> = {
     needs_attention: 1,
@@ -24,8 +24,20 @@ const statusPriority: Record<TableStatus, number> = {
 
 function DashboardPage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const { settings } = useRestaurantSettings();
   const { orders } = useOrderFlow();
+  const [dbTables, setDbTables] = useState<{ id: number; uuid: string }[]>([]);
+
+  useEffect(() => {
+    const fetchTables = async () => {
+      const { data, error } = await supabase.from('tables').select('id, uuid').order('id');
+      if (error) {
+        console.error('Error fetching tables for dashboard:', error);
+      } else {
+        setDbTables(data);
+      }
+    };
+    fetchTables();
+  }, []);
 
   const handleSelectTable = (table: Table) => {
     if(table.status !== 'available') {
@@ -40,33 +52,36 @@ function DashboardPage() {
   const tablesData = useMemo(() => {
     const tableMap = new Map<number, Table>();
     
-    // Initialize all tables as available
-    for (let i = 1; i <= settings.numberOfTables; i++) {
-        tableMap.set(i, { id: i, status: 'available', order: null });
+    // Initialize all tables from the database as available
+    for (const dbTable of dbTables) {
+        tableMap.set(dbTable.id, { id: dbTable.id, uuid: dbTable.uuid, status: 'available', order: null });
     }
 
     // Populate with active orders
     const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
 
     for (const order of activeOrders) {
-      let status: Table['status'] = 'occupied';
-      if (order.status === 'pending_chef_approval') status = 'new_order';
-      if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
-      if (order.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
-      if (order.status === 'confirmed') status = 'confirmed';
-      if (order.status === 'ready') status = 'ready';
-      if (order.status === 'paying') status = 'paying';
-      if (order.status === 'needs_attention') status = 'needs_attention';
-
-      const tableData: Table = {
-        id: order.tableId,
-        status: status,
-        order: order,
-        // Mock data, consider calculating this based on order start time
-        seatingDuration: '10 min', 
-        chefConfirmationTimestamp: order.confirmationTimestamp
-      };
-      tableMap.set(order.tableId, tableData);
+      if (tableMap.has(order.tableId)) {
+        let status: Table['status'] = 'occupied';
+        if (order.status === 'pending_chef_approval') status = 'new_order';
+        if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
+        if (order.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
+        if (order.status === 'confirmed') status = 'confirmed';
+        if (order.status === 'ready') status = 'ready';
+        if (order.status === 'paying') status = 'paying';
+        if (order.status === 'needs_attention') status = 'needs_attention';
+        
+        const existingTable = tableMap.get(order.tableId)!;
+        const tableData: Table = {
+          ...existingTable,
+          status: status,
+          order: order,
+          // Mock data, consider calculating this based on order start time
+          seatingDuration: '10 min', 
+          chefConfirmationTimestamp: order.confirmationTimestamp
+        };
+        tableMap.set(order.tableId, tableData);
+      }
     }
 
     return Array.from(tableMap.values()).sort((a,b) => {
@@ -79,7 +94,7 @@ function DashboardPage() {
         return a.id - b.id;
     });
 
-  }, [settings.numberOfTables, orders]);
+  }, [dbTables, orders]);
 
   return (
     <main className="flex-1 p-4 sm:p-6">

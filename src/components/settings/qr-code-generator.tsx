@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -10,11 +9,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { QrCode, Printer, ChefHat, User, Laptop } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '../ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { tableIdToUuidMap } from '@/lib/utils';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 type QrTarget = 'customer' | 'chef' | 'cashier';
 
@@ -24,11 +22,14 @@ interface GeneratedCode {
     path: string;
 }
 
+interface QrCodeGeneratorProps {
+  numberOfTables: number;
+}
 
-export function QrCodeGenerator() {
+
+export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
     const { language } = useLanguage();
     const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
-    const { settings } = useRestaurantSettings();
     const { toast } = useToast();
     
     const [target, setTarget] = useState<QrTarget>('customer');
@@ -37,14 +38,11 @@ export function QrCodeGenerator() {
     const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(null);
     const [baseUrl, setBaseUrl] = useState('');
     const [isClient, setIsClient] = useState(false);
+    const [isLoadingQr, setIsLoadingQr] = useState(false);
     
     const printAreaRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // This effect runs only on the client-side.
-        // `window.location.origin` dynamically gets the current base URL
-        // (e.g., http://localhost:3000, or https://192.168.1.10:3000 on a client's network).
-        // This ensures QR codes work automatically in any environment without manual setup.
         if (typeof window !== "undefined") {
             setBaseUrl(window.location.origin);
             setIsClient(true);
@@ -56,7 +54,7 @@ export function QrCodeGenerator() {
         if (isClient) {
            validateTableNumber(tableNumber);
         }
-    }, [target, tableNumber, settings.numberOfTables, isClient]);
+    }, [target, tableNumber, numberOfTables, isClient]);
 
 
     const validateTableNumber = (value: string) => {
@@ -73,8 +71,8 @@ export function QrCodeGenerator() {
             setValidationError(t('الرجاء إدخال رقم طاولة صحيح.', 'Please enter a valid table number.'));
             return false;
         }
-        if (num > settings.numberOfTables) {
-            setValidationError(t(`رقم الطاولة يجب أن لا يتجاوز ${settings.numberOfTables}.`, `Table number cannot exceed ${settings.numberOfTables}.`));
+        if (num > numberOfTables) {
+            setValidationError(t(`رقم الطاولة يجب أن لا يتجاوز ${numberOfTables}.`, `Table number cannot exceed ${numberOfTables}.`));
             return false;
         }
         setValidationError('');
@@ -82,48 +80,62 @@ export function QrCodeGenerator() {
     }
 
     const generateQRCode = async () => {
+        setIsLoadingQr(true);
         if (target === 'customer' && !validateTableNumber(tableNumber)) {
              toast({
                 variant: "destructive",
                 title: t("خطأ في التحقق", "Validation Error"),
                 description: validationError,
             });
+            setIsLoadingQr(false);
             return;
         }
 
         let path = '';
         let title = '';
 
-        const getPathAndTitle = (target: QrTarget, tableNumber?: string): {path: string, title: string} => {
+        try {
             switch(target) {
                 case 'customer':
-                    if (!tableNumber) return {path: '', title: ''};
-                    const tableUuid = tableIdToUuidMap[tableNumber];
-                    if (!tableUuid) {
-                        toast({ variant: "destructive", title: "Error", description: `Could not find UUID for table ${tableNumber}`})
-                        return {path: '', title: ''};
-                    }
-                    return {
-                        path: `/menu/${tableUuid}`,
-                        title: `${t('الطاولة', 'Table')} ${tableNumber}`
-                    }
-                case 'chef':
-                    return { path: '/chef', title: t('واجهة الشيف', 'Chef Interface') };
-                case 'cashier':
-                    return { path: '/pos', title: t('نقطة البيع السريعة', 'Quick POS') };
-                default:
-                    return {path: '', title: ''};
-            }
-        }
-        
-        const { path: securePath, title: codeTitle } = getPathAndTitle(target, tableNumber);
-        
-        if (!securePath) return;
+                    if (!tableNumber) return;
+                    const { data: tableData, error } = await supabase
+                        .from('tables')
+                        .select('uuid')
+                        .eq('id', tableNumber)
+                        .single();
 
-        const fullUrl = `${baseUrl}${securePath}`;
-        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(fullUrl)}`;
+                    if (error || !tableData) {
+                         toast({ variant: "destructive", title: "Error", description: `Could not find UUID for table ${tableNumber}`})
+                         return;
+                    }
+                    path = `/menu/${tableData.uuid}`;
+                    title = `${t('الطاولة', 'Table')} ${tableNumber}`;
+                    break;
+                case 'chef':
+                    path = '/chef';
+                    title = t('واجهة الشيف', 'Chef Interface');
+                    break;
+                case 'cashier':
+                    path = '/pos';
+                    title = t('نقطة البيع السريعة', 'Quick POS');
+                    break;
+                default:
+                     return;
+            }
         
-        setGeneratedCode({ url: qrApiUrl, title: codeTitle, path: securePath });
+            if (!path) return;
+
+            const fullUrl = `${baseUrl}${path}`;
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(fullUrl)}`;
+            
+            setGeneratedCode({ url: qrApiUrl, title: title, path: path });
+
+        } catch (e) {
+            console.error(e);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not generate QR code.'})
+        } finally {
+            setIsLoadingQr(false);
+        }
     };
     
     const handlePrint = () => {
@@ -135,7 +147,7 @@ export function QrCodeGenerator() {
             printWindow.document.write('<html><head><title>Print QR Code</title>');
             printWindow.document.write('<style>@page { size: 10cm 10cm; margin: 0; } body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; font-family: sans-serif; text-align: center; } img { max-width: 80%; height: auto; } h2, h3 { margin: 0; } h2 { font-size: 1.5rem; } h3 { font-size: 1.2rem; font-weight: 500; margin-bottom: 1rem; } </style>');
             printWindow.document.write('</head><body>');
-            printWindow.document.write(`<h2>${settings.restaurantName}</h2>`);
+            printWindow.document.write(`<h2>Al-Maida Restaurant</h2>`); // Consider getting name from settings
             printWindow.document.write(printContent.innerHTML);
             printWindow.document.write('</body></html>');
             printWindow.document.close();
@@ -150,7 +162,7 @@ export function QrCodeGenerator() {
         return <div className="h-64 bg-muted rounded-md animate-pulse"></div>;
     }
 
-    const isGenerateDisabled = !baseUrl || (target === 'customer' && (!tableNumber || !!validationError));
+    const isGenerateDisabled = isLoadingQr || !baseUrl || (target === 'customer' && (!tableNumber || !!validationError));
 
     return (
         <div className="space-y-6">
@@ -188,7 +200,7 @@ export function QrCodeGenerator() {
                                 onChange={(e) => setTableNumber(e.target.value)}
                                 placeholder={t('أدخل رقم الطاولة...', 'Enter table number...')}
                                 required={target === 'customer'}
-                                max={settings.numberOfTables}
+                                max={numberOfTables}
                                 min="1"
                             />
                              {validationError && (
@@ -205,7 +217,7 @@ export function QrCodeGenerator() {
             </div>
 
             <Button onClick={generateQRCode} className="w-full" disabled={isGenerateDisabled}>
-                <QrCode className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                {isLoadingQr ? <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" /> : <QrCode className="ltr:mr-2 rtl:ml-2 h-4 w-4" />}
                 {t('توليد الرمز', 'Generate Code')}
             </Button>
 
