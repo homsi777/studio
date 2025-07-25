@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +18,7 @@ import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
 
 
 function SettingsPage() {
-  const { language } = useLanguage();
-  const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
+  const { language, t } = useLanguage();
   const { toast } = useToast();
   
   const { settings, setSettings } = useRestaurantSettings();
@@ -38,23 +37,23 @@ function SettingsPage() {
     }));
   }
   
-  const fetchTableCount = async () => {
+  const fetchTableCount = useCallback(async () => {
     setIsTableLoading(true);
     try {
       const response = await fetch('/api/v1/tables');
-      if (!response.ok) throw new Error('Failed to fetch tables');
+      if (!response.ok) throw new Error(t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count'));
       const data = await response.json();
       setNumberOfTables(data.length);
-    } catch(error) {
-      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count')});
+    } catch(error: any) {
+      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: error.message });
     } finally {
       setIsTableLoading(false);
     }
-  }
+  }, [t, toast]);
 
   useEffect(() => {
     fetchTableCount();
-  }, []);
+  }, [fetchTableCount]);
 
   const handleAddTable = async () => {
     try {

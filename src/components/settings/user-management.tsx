@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { type User, type UserRole } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,8 +59,7 @@ const roleMap: Record<UserRole, { ar: string, en: string, className: string }> =
 
 
 export function UserManagement() {
-    const { language, dir } = useLanguage();
-    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+    const { language, t } = useLanguage();
     const { toast } = useToast();
     const { user: currentUser } = useAuth();
 
@@ -71,28 +70,28 @@ export function UserManagement() {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
+        setIsLoading(true);
         try {
-            setIsLoading(true);
             const response = await fetch('/api/v1/users');
-            if (!response.ok) throw new Error('Failed to fetch users');
+            if (!response.ok) throw new Error(t('لم نتمكن من جلب قائمة المستخدمين.', 'Could not fetch the user list.'));
             const data = await response.json();
             setUsers(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             toast({
                 variant: "destructive",
                 title: t("خطأ في جلب البيانات", "Fetch Error"),
-                description: t("لم نتمكن من جلب قائمة المستخدمين.", "Could not fetch the user list."),
+                description: error.message,
             });
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [t, toast]);
 
     useEffect(() => {
         fetchUsers();
-    }, [t, toast]);
+    }, [fetchUsers]);
 
 
     const openAddDialog = () => {
@@ -277,8 +276,7 @@ interface UserFormDialogProps {
 }
 
 function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogProps) {
-    const { language, dir } = useLanguage();
-    const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+    const { language, dir, t } = useLanguage();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

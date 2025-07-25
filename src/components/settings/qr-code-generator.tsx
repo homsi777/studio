@@ -28,8 +28,7 @@ interface QrCodeGeneratorProps {
 
 
 export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
-    const { language } = useLanguage();
-    const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
+    const { language, t } = useLanguage();
     const { toast } = useToast();
     
     const [target, setTarget] = useState<QrTarget>('customer');
@@ -48,14 +47,6 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
             setIsClient(true);
         }
     }, []);
-
-    useEffect(() => {
-        setGeneratedCode(null);
-        if (isClient) {
-           validateTableNumber(tableNumber);
-        }
-    }, [target, tableNumber, numberOfTables, isClient]);
-
 
     const validateTableNumber = (value: string) => {
         if (target !== 'customer') {
@@ -77,6 +68,20 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
         }
         setValidationError('');
         return true;
+    }
+
+    useEffect(() => {
+        setGeneratedCode(null);
+        if (isClient) {
+           validateTableNumber(tableNumber);
+        }
+    }, [target, tableNumber, numberOfTables, isClient]);
+
+
+    const handleTableNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setTableNumber(value);
+        validateTableNumber(value);
     }
 
     const generateQRCode = async () => {
@@ -106,6 +111,7 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
 
                     if (error || !tableData) {
                          toast({ variant: "destructive", title: "Error", description: `Could not find UUID for table ${tableNumber}`})
+                         setIsLoadingQr(false);
                          return;
                     }
                     path = `/menu/${tableData.uuid}`;
@@ -120,10 +126,14 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
                     title = t('نقطة البيع السريعة', 'Quick POS');
                     break;
                 default:
+                     setIsLoadingQr(false);
                      return;
             }
         
-            if (!path) return;
+            if (!path) {
+                setIsLoadingQr(false);
+                return;
+            }
 
             const fullUrl = `${baseUrl}${path}`;
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(fullUrl)}`;
@@ -197,7 +207,7 @@ export function QrCodeGenerator({ numberOfTables }: QrCodeGeneratorProps) {
                                 id="table-number" 
                                 type="number" 
                                 value={tableNumber}
-                                onChange={(e) => setTableNumber(e.target.value)}
+                                onChange={handleTableNumberChange}
                                 placeholder={t('أدخل رقم الطاولة...', 'Enter table number...')}
                                 required={target === 'customer'}
                                 max={numberOfTables}
