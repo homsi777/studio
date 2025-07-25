@@ -686,6 +686,7 @@ function ExpenseFormDialog({ isOpen, onOpenChange, onSave, expense }: ExpenseFor
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value, type } = e.target;
+        // FIX: Ensure amount is parsed as a number
         setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
     };
 

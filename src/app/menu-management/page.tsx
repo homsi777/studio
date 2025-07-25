@@ -363,6 +363,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
         setFormData(prev => ({ ...prev, [id]: value }));
     };
     
+    // FIX: Ensure price is handled as a number
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }));
     }
