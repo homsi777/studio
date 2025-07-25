@@ -10,7 +10,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             .from('menu_items')
             .update({
                 ...updatedData,
-                last_updated: new Date().toISOString()
+                updated_at: new Date().toISOString()
             })
             .eq('id', id)
             .select()
