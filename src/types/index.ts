@@ -7,11 +7,11 @@ export type OrderStatus = 'pending_chef_approval' | 'pending_cashier_approval' |
 export type MenuItemCategory = 'main' | 'appetizer' | 'drink' | 'dessert';
 
 export type MenuItem = {
-  id: string;
+  id: string; // UUID
   name: string;
   name_en?: string;
   price: number;
-  quantity: number;
+  quantity: number; // This is a client-side addition, not in the DB table
   description?: string;
   description_en?: string;
   category: MenuItemCategory;
@@ -20,59 +20,71 @@ export type MenuItem = {
   offer_en?: string;
   image?: string;
   image_hint?: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Order = {
-  id: string;
-  items: MenuItem[];
+  id: string; // UUID
+  items: MenuItem[]; // Stored as JSONB
   subtotal: number;
   serviceCharge: number;
   tax: number;
   finalTotal: number;
   tableId: number;
-  tableUuid: string;
-  sessionId: string; // Unique identifier for the customer's session
+  tableUuid: string; // UUID
+  sessionId: string; // UUID, Foreign key to CustomerSession
   status: OrderStatus;
-  timestamp: number;
-  confirmationTimestamp?: number;
+  timestamp: number; // Converted from created_at
+  confirmationTimestamp?: number; // Converted from customer_confirmed_at
+  created_at: string;
+  chef_approved_at?: string;
+  cashier_approved_at?: string;
+  customer_confirmed_at?: string;
+  completed_at?: string;
 };
 
 export type Table = {
   id: number;
-  status: TableStatus;
+  uuid: string; // UUID
+  status: TableStatus; // This is a client-side derived status
   order: Order | null;
   seatingDuration?: string;
   chefConfirmationTimestamp?: number;
 };
 
+
 export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies' | 'maintenance' | 'other';
 export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer';
 
 export type Expense = {
-    id: string;
+    id: string; // UUID
     description: string;
     description_en?: string;
     amount: number;
-    date: string;
+    date: string; // YYYY-MM-DD
     category: ExpenseCategory;
     payment_method?: PaymentMethod;
     supplier?: string;
     invoice_number?: string;
     notes?: string;
-    user_id?: string;
-    invoice_image_url?: string;
+    user_id?: string; // UUID, Foreign key to auth.users
+    created_at: string;
+    last_updated: string;
 };
 
 export type UserRole = 'manager' | 'employee';
 
 export type User = {
-    id: string;
-    username: string; // Will be the email address
+    id: string; // UUID from auth.users
+    username: string; // This will be the email address
     email: string;
     role: UserRole;
-    password?: string;
+    password?: string; // Only for creating/updating, not stored
 };
 
-    
-
-    
+export type CustomerSession = {
+    id: string; // UUID
+    table_uuid: string; // UUID, Foreign key to tables
+    created_at: string;
+}
