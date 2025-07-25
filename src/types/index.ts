@@ -67,9 +67,10 @@ export type UserRole = 'manager' | 'employee';
 
 export type User = {
     id: string;
-    username: string;
+    username: string; // Will be the email address
+    email: string;
     role: UserRole;
-    password?: string; // Note: For demonstration. Passwords should be handled securely on the backend.
+    password?: string;
 };
 
     

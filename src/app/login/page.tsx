@@ -30,7 +30,7 @@ export default function LoginPage() {
     const { toast } = useToast();
     const { settings } = useRestaurantSettings();
 
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -39,17 +39,17 @@ export default function LoginPage() {
         e.preventDefault();
         setError('');
 
-        if (!username || !password) {
-            setError(t('الرجاء إدخال اسم المستخدم وكلمة المرور.', 'Please enter username and password.'));
+        if (!email || !password) {
+            setError(t('الرجاء إدخال البريد الإلكتروني وكلمة المرور.', 'Please enter email and password.'));
             return;
         }
 
         setIsLoading(true);
-        const success = await login(username, password);
+        const success = await login(email, password);
         setIsLoading(false);
 
         if (!success) {
-            setError(t('اسم المستخدم أو كلمة المرور غير صحيحة.', 'Invalid username or password.'));
+            setError(t('البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'Invalid email or password.'));
              toast({
                 variant: "destructive",
                 title: t('فشل تسجيل الدخول', 'Login Failed'),
@@ -77,16 +77,16 @@ export default function LoginPage() {
                 <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username">{t('اسم المستخدم', 'Username')}</Label>
+                            <Label htmlFor="email">{t('البريد الإلكتروني', 'Email')}</Label>
                             <Input
-                                id="username"
-                                type="text"
-                                placeholder="admin"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                id="email"
+                                type="email"
+                                placeholder="admin@alalamiya.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 required
                                 disabled={isLoading}
-                                autoComplete="username"
+                                autoComplete="email"
                             />
                         </div>
                         <div className="space-y-2">

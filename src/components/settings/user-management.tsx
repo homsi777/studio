@@ -120,7 +120,7 @@ export function UserManagement() {
                 });
                 if (!response.ok) throw new Error(`Failed to update user. Status: ${response.status}`);
                 await fetchUsers(); // Refetch to get updated data
-                toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.username}.`, `User ${formData.username} has been updated.`) });
+                toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.email}.`, `User ${formData.email} has been updated.`) });
             } catch (error) {
                 console.error(error);
                 toast({
@@ -137,13 +137,13 @@ export function UserManagement() {
                     body: JSON.stringify(formData),
                 });
                 if (response.status === 409) {
-                     toast({ variant: "destructive", title: t("خطأ", "Error"), description: t("اسم المستخدم موجود بالفعل.", "Username already exists.") });
+                     toast({ variant: "destructive", title: t("خطأ", "Error"), description: t("البريد الإلكتروني موجود بالفعل.", "Email already exists.") });
                      return;
                 }
                 if (!response.ok) throw new Error('Failed to save user');
                 
                 await fetchUsers(); // Refetch to get the new user with its ID
-                toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.username}.`, `New user ${formData.username} has been added.`) });
+                toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.email}.`, `New user ${formData.email} has been added.`) });
 
             } catch (error) {
                  console.error(error);
@@ -163,7 +163,7 @@ export function UserManagement() {
                 const response = await fetch(`/api/v1/users/${userToDelete.id}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('Failed to delete user');
                 await fetchUsers();
-                toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.username}.`, `User ${userToDelete.username} has been deleted.`) });
+                toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.email}.`, `User ${userToDelete.email} has been deleted.`) });
              } catch (error) {
                  console.error(error);
                  toast({ variant: 'destructive', title: t('خطأ في الحذف', 'Delete Error'), description: t('لم نتمكن من حذف المستخدم.', 'Could not delete the user.') });
@@ -195,7 +195,7 @@ export function UserManagement() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>{t('اسم المستخدم', 'Username')}</TableHead>
+                                    <TableHead>{t('البريد الإلكتروني', 'Email')}</TableHead>
                                     <TableHead>{t('الدور', 'Role')}</TableHead>
                                     <TableHead><span className="sr-only">{t('الإجراءات', 'Actions')}</span></TableHead>
                                 </TableRow>
@@ -203,9 +203,9 @@ export function UserManagement() {
                             <TableBody>
                                 {users.map((user) => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="font-medium">{user.username}</TableCell>
+                                        <TableCell className="font-medium">{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge className={roleMap[user.role].className}>{roleMap[user.role][language]}</Badge>
+                                            <Badge className={roleMap[user.role]?.className || ''}>{roleMap[user.role] ? roleMap[user.role][language] : user.role}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
@@ -223,7 +223,7 @@ export function UserManagement() {
                                                     <DropdownMenuItem 
                                                         onClick={() => openDeleteDialog(user)} 
                                                         className="text-red-500 focus:text-red-500"
-                                                        disabled={user.username === 'admin' || user.id === currentUser?.id}
+                                                        disabled={user.id === currentUser?.id}
                                                     >
                                                         <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                                                         {t('حذف', 'Delete')}
@@ -252,7 +252,7 @@ export function UserManagement() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>{t('هل أنت متأكد تماماً؟', 'Are you absolutely sure?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                           {t('هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف المستخدم بشكل دائم', 'This action cannot be undone. This will permanently delete the user')} "{userToDelete?.username}".
+                           {t('هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف المستخدم بشكل دائم', 'This action cannot be undone. This will permanently delete the user')} "{userToDelete?.email}".
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -280,18 +280,18 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<UserRole>('employee');
     const [showPassword, setShowPassword] = useState(false);
 
     React.useEffect(() => {
         if (isOpen && user) {
-            setUsername(user.username);
+            setEmail(user.email);
             setRole(user.role);
             setPassword(''); // Clear password field when editing
         } else if (isOpen && !user) {
-            setUsername('');
+            setEmail('');
             setPassword('');
             setRole('employee');
         }
@@ -299,7 +299,7 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const formData: Partial<User> = { username, role };
+        const formData: Partial<User> = { email, role };
         if (password) {
             formData.password = password;
         }
@@ -318,8 +318,8 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username">{t('اسم المستخدم', 'Username')}</Label>
-                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                            <Label htmlFor="email">{t('البريد الإلكتروني', 'Email')}</Label>
+                            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">{t('كلمة المرور', 'Password')}</Label>

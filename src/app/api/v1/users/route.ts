@@ -3,17 +3,21 @@
 import {type NextRequest, NextResponse} from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type {User} from '@/types';
-import bcrypt from 'bcryptjs';
 
 export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await supabaseAdmin
-        .from('users')
-        .select('id, username, role');
+    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) throw error;
 
-    return NextResponse.json(data);
+    const responseData = users.map(user => ({
+      id: user.id,
+      email: user.email,
+      role: user.user_metadata.role || 'employee',
+      username: user.email,
+    }));
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Failed to fetch users:', error);
     return NextResponse.json({message: 'Internal Server Error'}, {status: 500});
@@ -24,41 +28,35 @@ export async function POST(request: NextRequest) {
   try {
     const newUser = (await request.json()) as Omit<User, 'id'>;
 
-    if (!newUser.username || !newUser.password || !newUser.role) {
+    if (!newUser.email || !newUser.password || !newUser.role) {
       return NextResponse.json(
         {message: 'Bad Request: Missing required fields.'},
         {status: 400}
       );
     }
     
-    const { data: existingUser, error: existingUserError } = await supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('username', newUser.username)
-        .single();
-    
-    if (existingUser) {
-        return NextResponse.json({ message: 'Username already exists.' }, { status: 409 });
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: newUser.email,
+        password: newUser.password,
+        email_confirm: true, // Auto-confirm email for simplicity
+        user_metadata: { role: newUser.role }
+    });
+
+    if (error) {
+        if (error.message.includes('already registered')) {
+             return NextResponse.json({ message: 'Email already exists.' }, { status: 409 });
+        }
+        throw error;
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newUser.password, salt);
+    const responseData = {
+        id: data.user.id,
+        email: data.user.email,
+        role: data.user.user_metadata.role,
+        username: data.user.email
+    }
 
-    const userData = {
-      username: newUser.username,
-      password: hashedPassword,
-      role: newUser.role,
-    };
-    
-    const { data, error } = await supabaseAdmin
-        .from('users')
-        .insert(userData)
-        .select('id, username, role')
-        .single();
-
-    if (error) throw error;
-
-    return NextResponse.json(data, {status: 201});
+    return NextResponse.json(responseData, {status: 201});
   } catch (error) {
     console.error('Failed to create user:', error);
     return NextResponse.json({message: 'Internal Server Error'}, {status: 500});

@@ -11,11 +11,12 @@ import React, {
 import {useRouter} from 'next/navigation';
 import type {User} from '@/types';
 import {useToast} from './use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (user: string, pass: string) => Promise<boolean>;
+  login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -23,6 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'alamiyah_auth_user';
+const SESSION_STORAGE_KEY = 'alamiyah_auth_session';
 
 export const AuthProvider = ({children}: {children: ReactNode}) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -48,38 +50,25 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
     }
   }, []);
 
-  const login = async (username: string, pass: string): Promise<boolean> => {
+  const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/v1/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({username, password: pass}),
+        body: JSON.stringify({email, password: pass}),
       });
 
-      if (!response.ok) {
-        const text = await response.text();
-        try {
-          const errorData = JSON.parse(text);
-          throw new Error(errorData.message || 'Login failed');
-        } catch (e) {
-          if (e instanceof SyntaxError) {
-             console.error("The server returned non-JSON response. This is likely a server error page (HTML). Check server logs.");
-             toast({
-                variant: 'destructive',
-                title: 'خطأ في الخادم',
-                description: 'حدث خطأ في الخادم. الرجاء مراجعة سجلات الخادم.',
-             })
-          }
-          throw new Error('Server returned an invalid response. Please check server logs.');
-        }
-      }
-      
       const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+      
       if (data.success && data.user && data.user.id) {
         try {
           sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+          sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data.session));
           setUser(data.user);
           setIsAuthenticated(true);
           router.push('/');
@@ -94,12 +83,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
           return false;
         }
       } else {
-        toast({
-            variant: "destructive",
-            title: 'فشل تسجيل الدخول',
-            description: data.message || 'البيانات التي أدخلتها غير صحيحة. يرجى المحاولة مرة أخرى.',
-        });
-        return false;
+        throw new Error(data.message || 'The credentials you entered are incorrect. Please try again.');
       }
     } catch (error: any) {
       console.error('Login process failed:', error);
@@ -120,11 +104,13 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     try {
+      await supabase.auth.signOut();
       sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
     } catch (error) {
-      console.error('Could not access sessionStorage:', error);
+      console.error('Error during logout:', error);
     } finally {
       setUser(null);
       setIsAuthenticated(false);

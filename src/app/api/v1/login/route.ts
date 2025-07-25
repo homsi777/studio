@@ -1,63 +1,55 @@
 'use server';
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { User } from '@/types';
-import bcrypt from 'bcryptjs';
+import { supabaseAdmin, ensureDefaultUsersExist } from '@/lib/supabase-admin';
+import { supabase } from '@/lib/supabase';
+
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    // Ensure default users exist before attempting to log in
+    await ensureDefaultUsersExist();
 
-    if (!username || !password) {
+    const { email, password } = await request.json();
+
+    if (!email || !password) {
       return NextResponse.json(
-        { success: false, message: 'Username and password are required.' },
+        { success: false, message: 'Email and password are required.' },
         { status: 400 }
       );
     }
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
 
-    if (error || !user) {
-      console.log(`Login failed: No user found with username '${username}'`);
-      return NextResponse.json(
-        { success: false, message: 'Invalid credentials.' },
-        { status: 401 }
-      );
+    if (error) {
+        return NextResponse.json({ success: false, message: error.message }, { status: 401 });
     }
     
-    const userData = user as User;
-    
-    const passwordMatch = await bcrypt.compare(
-      password,
-      userData.password || ''
+    if (data.user) {
+        const userResponseData = {
+            id: data.user.id,
+            email: data.user.email,
+            role: data.user.user_metadata.role || 'employee',
+        };
+
+        return NextResponse.json(
+            {
+                success: true,
+                user: userResponseData,
+                session: data.session
+            },
+            { status: 200 }
+        );
+    }
+
+    return NextResponse.json(
+        { success: false, message: 'An unknown error occurred.' },
+        { status: 500 }
     );
 
-    if (passwordMatch) {
-      const userResponseData: Omit<User, 'password'> = {
-        id: userData.id,
-        username: userData.username,
-        role: userData.role,
-      };
-
-      return NextResponse.json(
-        {
-          success: true,
-          user: userResponseData,
-        },
-        { status: 200 }
-      );
-    } else {
-      console.log(`Login failed: Password mismatch for username '${username}'`);
-      return NextResponse.json(
-        { success: false, message: 'Invalid credentials.' },
-        { status: 401 }
-      );
-    }
   } catch (error) {
     console.error('Login API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
