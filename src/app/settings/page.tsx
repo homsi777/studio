@@ -14,10 +14,9 @@ import { AuthGuard } from "@/components/auth-guard";
 import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
 import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
+import { useRestaurantSettings, type RestaurantSettings } from '@/hooks/use-restaurant-settings';
 import type { User } from '@/types';
 import { Skeleton } from "@/components/ui/skeleton";
-import type { RestaurantSettings } from '@/hooks/use-restaurant-settings';
 
 // Helper function to handle API responses and throw errors with details
 async function handleApiResponse(response: Response, errorMessage: string): Promise<any> {
@@ -312,5 +311,3 @@ export default function GuardedSettingsPage() {
         </AuthGuard>
     )
 }
-
-    
