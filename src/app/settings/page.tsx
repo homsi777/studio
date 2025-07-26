@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -123,17 +124,21 @@ function SettingsPage() {
         }
     }
 
-    // Fetch exchange rate
+    // Fetch exchange rate and then save
     const handleFetchRate = async () => {
         setIsLoadingRate(true);
         try {
             const rate = await fetchExchangeRate();
             const now = new Date();
-            setSettings(prev => ({
-                ...prev,
+            const newSettings: Partial<RestaurantSettings> = {
                 currencyExchangeRate: rate,
                 lastExchangeRateUpdate: now.toISOString()
+            };
+            setSettings(prev => ({
+                ...prev,
+                ...newSettings
             }));
+            saveSettings({ ...settings, ...newSettings }); // Save the updated settings immediately
             toast({
                 title: t("تم التحديث بنجاح", "Update Successful"),
                 description: t(`سعر الصرف الجديد هو ${rate} ل.س للدولار الواحد.`, `The new exchange rate is ${rate} SYP per USD.`),
@@ -151,8 +156,8 @@ function SettingsPage() {
     };
 
     // Save all restaurant settings
-    const handleSaveRestaurantSettings = async () => {
-        saveSettings();
+    const handleSaveRestaurantSettings = () => {
+        saveSettings(settings); // Pass the current settings object
         toast({
             title: t("تم الحفظ", "Settings Saved"),
             description: t("تم حفظ التغييرات بنجاح.", "Your changes have been saved successfully."),
@@ -307,3 +312,5 @@ export default function GuardedSettingsPage() {
         </AuthGuard>
     )
 }
+
+    

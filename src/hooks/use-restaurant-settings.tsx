@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
 
 export interface RestaurantSettings {
     restaurantName: string;
@@ -16,7 +16,7 @@ export interface RestaurantSettings {
 interface RestaurantSettingsContextType {
     settings: RestaurantSettings;
     setSettings: React.Dispatch<React.SetStateAction<RestaurantSettings>>;
-    saveSettings: () => void;
+    saveSettings: (settingsToSave: RestaurantSettings) => void;
 }
 
 const defaultSettings: RestaurantSettings = {
@@ -45,18 +45,13 @@ export const RestaurantSettingsProvider = ({ children }: { children: ReactNode }
         return defaultSettings;
     });
 
-    const saveSettings = useCallback(() => {
+    const saveSettings = useCallback((settingsToSave: RestaurantSettings) => {
         try {
-            localStorage.setItem('restaurantSettings', JSON.stringify(settings));
+            localStorage.setItem('restaurantSettings', JSON.stringify(settingsToSave));
         } catch (error) {
             console.error("Failed to save settings to localStorage", error);
         }
-    }, [settings]);
-
-    useEffect(() => {
-        saveSettings();
-    }, [settings, saveSettings]);
-    
+    }, []);
 
     return (
         <RestaurantSettingsContext.Provider value={{ settings, setSettings, saveSettings }}>
@@ -72,3 +67,5 @@ export const useRestaurantSettings = () => {
     }
     return context;
 };
+
+    
