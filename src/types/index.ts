@@ -78,7 +78,7 @@ export type UserRole = 'manager' | 'chef' | 'employee';
 
 export type User = {
     id: string; // UUID from auth.users
-    username: string; // This will be the email address
+    username: string;
     email: string;
     role: UserRole;
     password?: string; // Only for creating/updating, not stored

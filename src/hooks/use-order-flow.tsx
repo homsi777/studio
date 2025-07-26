@@ -31,12 +31,12 @@ export const formatOrderFromDb = (dbOrder: any): Order => ({
     id: dbOrder.id,
     items: dbOrder.items,
     subtotal: dbOrder.subtotal,
-    serviceCharge: dbOrder.service_charge,
+    service_charge: dbOrder.service_charge,
     tax: dbOrder.tax,
-    finalTotal: dbOrder.final_total,
-    tableId: dbOrder.table_id,
-    tableUuid: dbOrder.table_uuid,
-    sessionId: dbOrder.session_id,
+    final_total: dbOrder.final_total,
+    table_id: dbOrder.table_id,
+    table_uuid: dbOrder.table_uuid,
+    session_id: dbOrder.session_id,
     status: dbOrder.status,
     timestamp: new Date(dbOrder.created_at).getTime(),
     confirmationTimestamp: dbOrder.customer_confirmed_at ? new Date(dbOrder.customer_confirmed_at).getTime() : undefined,
@@ -139,29 +139,32 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [toast]);
     
-    const updateOrderStatus = async (orderId: string, updates: object) => {
+    const updateOrderStatusViaApi = async (orderId: string, action: string, body?: object) => {
         try {
-            const { error } = await supabase
-                .from('orders')
-                .update(updates)
-                .eq('id', orderId);
-            
-            if (error) throw error;
+            const response = await fetch(`/api/v1/orders/${orderId}/${action}`, {
+                method: 'PUT',
+                headers: body ? { 'Content-Type': 'application/json' } : {},
+                body: body ? JSON.stringify(body) : undefined,
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Failed to ${action}`);
+            }
             return true;
-        } catch (error) {
-             console.error(`Error updating order ${orderId}:`, error);
-             toast({
+        } catch (error: any) {
+            console.error(`Error in ${action} for order ${orderId}:`, error);
+            toast({
                 variant: "destructive",
                 title: "خطأ في التحديث",
-                description: "لم نتمكن من تحديث حالة الطلب.",
-             })
-             return false;
+                description: error.message || "لم نتمكن من تحديث حالة الطلب.",
+            });
+            return false;
         }
-    };
+    }
 
 
     const approveOrderByChef = async (orderId: string) => {
-       const success = await updateOrderStatus(orderId, { status: 'pending_cashier_approval', chef_approved_at: new Date().toISOString() });
+       const success = await updateOrderStatusViaApi(orderId, 'approve-chef');
        if(success) toast({ title: 'بانتظار موافقة المحاسب', description: `تم تأكيد الطلب ${orderId.substring(0,5)}... من الشيف.` });
     };
 
@@ -170,42 +173,40 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         if (!order) return;
         const finalTotal = order.subtotal + serviceCharge + tax;
 
-       const success = await updateOrderStatus(orderId, { 
-           status: 'pending_final_confirmation', 
-           cashier_approved_at: new Date().toISOString(),
-           service_charge: serviceCharge,
+       const success = await updateOrderStatusViaApi(orderId, 'approve-cashier', {
+           serviceCharge,
            tax,
-           final_total: finalTotal,
+           finalTotal,
        });
        if(success) toast({ title: 'بانتظار التأكيد النهائي من الزبون', description: `تم إرسال الفاتورة النهائية للطلب ${orderId.substring(0,5)}...` });
     };
 
     const confirmFinalOrder = async (orderId: string) => {
-       const success = await updateOrderStatus(orderId, { status: 'confirmed', customer_confirmed_at: new Date().toISOString() });
+       const success = await updateOrderStatusViaApi(orderId, 'confirm-customer');
        if(success) toast({ title: 'تم تأكيد الطلب نهائياً', description: `الطلب ${orderId.substring(0,5)}... قيد التحضير الآن.` });
     };
 
     const confirmOrderReady = async (orderId: string) => {
-        const success = await updateOrderStatus(orderId, { status: 'ready', completed_at: new Date().toISOString() });
+        const success = await updateOrderStatusViaApi(orderId, 'ready');
         if(success) toast({ title: 'الطلب جاهز', description: `الطلب ${orderId.substring(0,5)}... جاهز للتسليم.` });
     };
 
     const completeOrder = async (orderId: string) => {
-        const success = await updateOrderStatus(orderId, { status: 'completed', completed_at: new Date().toISOString() });
+        const success = await updateOrderStatusViaApi(orderId, 'complete');
         if(success) toast({ title: 'تم إتمام الطلب', description: `تم إغلاق الطلب ${orderId.substring(0,5)}... بنجاح.` });
     }
     
     const cancelOrder = async (orderId: string) => {
-        const success = await updateOrderStatus(orderId, { status: 'cancelled' });
+        const success = await updateOrderStatusViaApi(orderId, 'cancel');
         if(success) toast({ title: 'تم إلغاء الطلب', description: `تم إلغاء الطلب ${orderId.substring(0,5)}... بنجاح.`, variant: 'destructive' });
     }
 
     const requestBill = async (orderId: string) => {
-        await updateOrderStatus(orderId, { status: 'paying' });
+        await updateOrderStatusViaApi(orderId, 'set-status', { status: 'paying' });
     }
     
     const requestAttention = async (orderId: string) => {
-        await updateOrderStatus(orderId, { status: 'needs_attention' });
+        await updateOrderStatusViaApi(orderId, 'set-status', { status: 'needs_attention' });
     }
 
     return (

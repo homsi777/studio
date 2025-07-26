@@ -7,7 +7,6 @@ import { DashboardClient } from '@/components/dashboard/dashboard-client';
 async function getInitialDashboardData() {
   try {
     const tablesPromise = supabaseAdmin.from('tables').select('*').order('id');
-    // Fetch all non-completed/cancelled orders, filtering will be done client-side for robustness
     const ordersPromise = supabaseAdmin.from('orders').select('*').not('status', 'in', '("completed", "cancelled")');
     
     const [tablesRes, ordersRes] = await Promise.all([tablesPromise, ordersPromise]);
