@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '../ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { Table } from '@/types';
 
 type QrTarget = 'customer' | 'chef' | 'cashier';
 
@@ -22,7 +23,7 @@ interface GeneratedCode {
 }
 
 interface QrCodeGeneratorProps {
-  tables: { id: number; uuid: string }[];
+  tables: Table[];
 }
 
 export function QrCodeGenerator({ tables }: QrCodeGeneratorProps) {

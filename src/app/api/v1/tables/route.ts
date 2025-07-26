@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { v4 as uuidv4 } from 'uuid';
+
 
 // GET all tables
 export async function GET(request: NextRequest) {
@@ -22,10 +24,9 @@ export async function GET(request: NextRequest) {
 // POST to add a new table
 export async function POST(request: NextRequest) {
   try {
-    // No specific data is needed from the body as SERIAL handles ID and UUID is auto-generated.
     const { data, error } = await supabaseAdmin
         .from('tables')
-        .insert({})
+        .insert([{}]) // insert a row with default values
         .select()
         .single();
 
@@ -36,36 +37,4 @@ export async function POST(request: NextRequest) {
     console.error('Failed to create table in Supabase:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
-}
-
-// DELETE the last table
-export async function DELETE(request: NextRequest) {
-    try {
-        // First, find the highest table ID
-        const { data: maxIdData, error: maxIdError } = await supabaseAdmin
-            .from('tables')
-            .select('id')
-            .order('id', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (maxIdError) throw maxIdError;
-        if (!maxIdData) {
-            return NextResponse.json({ message: 'No tables to delete' }, { status: 404 });
-        }
-
-        // Then, delete the table with the highest ID
-        const { error: deleteError } = await supabaseAdmin
-            .from('tables')
-            .delete()
-            .eq('id', maxIdData.id);
-
-        if (deleteError) throw deleteError;
-        
-        return new NextResponse(null, { status: 204 });
-
-    } catch (error) {
-        console.error('Failed to delete last table from Supabase:', error);
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
-    }
 }

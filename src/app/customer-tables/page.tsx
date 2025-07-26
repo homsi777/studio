@@ -13,13 +13,13 @@ import { supabase } from '@/lib/supabase';
 function CustomerTablesPage() {
   const { orders } = useOrderFlow();
   const { language } = useLanguage();
-  const [dbTables, setDbTables] = useState<{ id: number; uuid: string }[]>([]);
+  const [dbTables, setDbTables] = useState<Table[]>([]);
 
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
   useEffect(() => {
     const fetchTables = async () => {
-      const { data, error } = await supabase.from('tables').select('id, uuid').order('id');
+      const { data, error } = await supabase.from('tables').select('*').order('id');
       if (error) {
         console.error('Error fetching tables:', error);
       } else {
@@ -38,7 +38,7 @@ function CustomerTablesPage() {
     
     // Initialize all tables from the database as available
     for (const dbTable of dbTables) {
-        tableMap.set(dbTable.id, { id: dbTable.id, uuid: dbTable.uuid, status: 'available', order: null });
+        tableMap.set(dbTable.id, { ...dbTable, status: 'available', order: null });
     }
 
     // Populate with active orders

@@ -15,7 +15,7 @@ import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
 import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRestaurantSettings, type RestaurantSettings } from '@/hooks/use-restaurant-settings';
-import type { User } from '@/types';
+import type { User, Table } from '@/types';
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper function to handle API responses and throw errors with details
@@ -31,7 +31,7 @@ async function handleApiResponse(response: Response, errorMessage: string): Prom
 
 function SettingsPage() {
     const { language } = useLanguage();
-    const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
+    const t = useCallback((ar: string, en: string) => (language === 'ar' ? ar : en), [language]);
     const { toast } = useToast();
 
     // Use settings hook to fetch and save restaurant settings
@@ -39,7 +39,7 @@ function SettingsPage() {
 
     // State for users and tables
     const [users, setUsers] = useState<User[]>([]);
-    const [tables, setTables] = useState<{ id: number; uuid: string }[]>([]);
+    const [tables, setTables] = useState<Table[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [isLoadingTables, setIsLoadingTables] = useState(true);
     const [isTableUpdating, setIsTableUpdating] = useState(false);
@@ -111,7 +111,8 @@ function SettingsPage() {
         if (tables.length <= 0) return;
         setIsTableUpdating(true);
         try {
-            const response = await fetch('/api/v1/tables', { method: 'DELETE' });
+            const lastTable = tables[tables.length - 1]; // Assuming tables are sorted by creation time or ID
+            const response = await fetch(`/api/v1/tables/${lastTable.uuid}`, { method: 'DELETE' });
             await handleApiResponse(response, t('فشل حذف طاولة', 'Failed to delete table'));
             await fetchTables(); // Refetch tables data after deleting
             toast({ title: t('تم الحذف', 'Table Deleted'), description: t('تم حذف آخر طاولة بنجاح.', 'The last table has been deleted successfully.') });

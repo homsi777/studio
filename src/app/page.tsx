@@ -6,7 +6,7 @@ import { DashboardClient } from '@/components/dashboard/dashboard-client';
 
 async function getInitialDashboardData() {
   try {
-    const tablesPromise = supabaseAdmin.from('tables').select('id, uuid').order('id');
+    const tablesPromise = supabaseAdmin.from('tables').select('*').order('id');
     const ordersPromise = supabaseAdmin.from('orders').select('*').in('status', ['pending_chef_approval', 'pending_cashier_approval', 'awaiting_final_confirmation', 'confirmed', 'ready', 'paying', 'needs_attention']);
     
     const [tablesRes, ordersRes] = await Promise.all([tablesPromise, ordersPromise]);
@@ -33,7 +33,7 @@ async function DashboardPage() {
 
   return (
     <main className="flex-1 p-4 sm:p-6">
-       <DashboardClient initialDbTables={initialTables} initialOrders={initialOrders as any[]} />
+       <DashboardClient initialDbTables={initialTables as Table[]} initialOrders={initialOrders as any[]} />
     </main>
   );
 }

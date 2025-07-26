@@ -51,6 +51,7 @@ export type Table = {
   order: Order | null;
   seatingDuration?: string;
   chefConfirmationTimestamp?: number;
+  is_active?: boolean;
 };
 
 

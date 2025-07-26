@@ -21,7 +21,7 @@ const statusPriority: Record<TableStatus, number> = {
 };
 
 interface DashboardClientProps {
-    initialDbTables: { id: number; uuid: string }[];
+    initialDbTables: Table[];
     initialOrders: any[];
 }
 
@@ -53,7 +53,7 @@ export function DashboardClient({ initialDbTables, initialOrders: rawInitialOrde
     
     // Initialize all tables from the database as available
     for (const dbTable of initialDbTables) {
-        tableMap.set(dbTable.id, { id: dbTable.id, uuid: dbTable.uuid, status: 'available', order: null });
+        tableMap.set(dbTable.id, { ...dbTable, status: 'available', order: null });
     }
 
     // Populate with active orders
