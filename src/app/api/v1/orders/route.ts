@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       subtotal: subtotal,
       service_charge: 0,
       tax: 0,
-      final_total: subtotal,
+      final_total: subtotal, // Initial final_total is the same as subtotal
     };
     
     const { data, error } = await supabaseAdmin
@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+        console.error("Supabase order insert error:", error);
+        throw error;
+    };
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
