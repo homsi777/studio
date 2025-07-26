@@ -1,17 +1,22 @@
 
 "use client"
 
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import type { Order } from '@/types';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useMemo } from 'react';
+import type { Order, Table, TableStatus, MenuItem } from '@/types';
 import { useToast } from './use-toast';
 import { BellRing } from 'lucide-react';
 import { useAuth } from './use-auth';
 import { supabase } from '@/lib/supabase';
-
+import { db, getCachedData, saveToCache, addToSyncQueue, getSyncQueue, clearSyncQueueItem } from '@/lib/indexeddb';
 
 // --- CONTEXT TYPE ---
 interface OrderFlowContextType {
     orders: Order[];
+    tables: Table[];
+    menuItems: MenuItem[];
+    loading: boolean;
+    isOnline: boolean;
+    isSyncing: boolean;
     submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp'>) => Promise<void>;
     approveOrderByChef: (orderId: string) => Promise<void>;
     approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
@@ -21,7 +26,7 @@ interface OrderFlowContextType {
     cancelOrder: (orderId: string) => Promise<void>;
     requestBill: (orderId: string) => Promise<void>;
     requestAttention: (orderId: string) => Promise<void>;
-    fetchOrders: () => Promise<void>;
+    fetchAllData: () => Promise<void>;
 }
 
 const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefined);
@@ -51,64 +56,152 @@ export const formatOrderFromDb = (dbOrder: any): Order => ({
 // --- PROVIDER COMPONENT ---
 export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     const [orders, setOrders] = useState<Order[]>([]);
+    const [tables, setTables] = useState<Table[]>([]);
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isOnline, setIsOnline] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
+    
     const { toast } = useToast();
     const { isAuthenticated } = useAuth();
-
-    const fetchOrders = useCallback(async () => {
-        if (!isAuthenticated) {
-            setOrders([]);
-            return;
-        }
-        try {
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            const formattedOrders = data.map(formatOrderFromDb);
-            setOrders(formattedOrders);
-        } catch (error) {
-            console.error("Error fetching orders:", error);
-            toast({
-                variant: "destructive",
-                title: "خطأ",
-                description: "لم نتمكن من جلب الطلبات.",
-            });
-        }
-    }, [isAuthenticated, toast]);
-
-
+    
     useEffect(() => {
-        if (!isAuthenticated) return;
+        setIsOnline(typeof window !== 'undefined' ? navigator.onLine : true);
+    }, []);
 
-        // Don't fetch here, let the initial server load handle it
-        // fetchOrders(); 
+    const fetchAllData = useCallback(async (forceOnline = false) => {
+        const online = forceOnline || (typeof window !== 'undefined' && navigator.onLine);
+        setIsOnline(online);
+        setLoading(true);
 
-        const channel = supabase.channel('realtime-orders')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
-                console.log('New order received:', payload.new);
-                const newOrder = formatOrderFromDb(payload.new);
-                setOrders(currentOrders => [newOrder, ...currentOrders.filter(o => o.id !== newOrder.id)]);
+        if (online) {
+            console.log('Online: Fetching from Supabase...');
+            try {
+                const [tablesRes, ordersRes, menuItemsRes] = await Promise.all([
+                    supabase.from('tables').select('*'),
+                    supabase.from('orders').select('*'),
+                    supabase.from('menu_items').select('*'),
+                ]);
+
+                if (tablesRes.error) throw tablesRes.error;
+                if (ordersRes.error) throw ordersRes.error;
+                if (menuItemsRes.error) throw menuItemsRes.error;
+
+                const formattedOrders = ordersRes.data.map(formatOrderFromDb);
+                
+                setTables(tablesRes.data);
+                setOrders(formattedOrders);
+                setMenuItems(menuItemsRes.data);
+
+                await saveToCache('tables', tablesRes.data);
+                await saveToCache('orders', formattedOrders);
+                await saveToCache('menuItems', menuItemsRes.data);
+                
+                console.log('Data fetched from Supabase and cached.');
+            } catch (error: any) {
+                console.error('Error fetching data from Supabase:', error.message);
+                toast({ title: 'خطأ', description: `فشل جلب البيانات: ${error.message}`, variant: 'destructive' });
+                console.log('Falling back to IndexedDB...');
+                const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
+                    getCachedData<Table>('tables'),
+                    getCachedData<Order>('orders'),
+                    getCachedData<MenuItem>('menuItems'),
+                ]);
+                setTables(cachedTables);
+                setOrders(cachedOrders);
+                setMenuItems(cachedMenuItems);
+            }
+        } else {
+            console.log('Offline: Fetching from IndexedDB cache...');
+            const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
+                getCachedData<Table>('tables'),
+                getCachedData<Order>('orders'),
+                getCachedData<MenuItem>('menuItems'),
+            ]);
+            setTables(cachedTables);
+            setOrders(cachedOrders);
+            setMenuItems(cachedMenuItems);
+            toast({ title: 'تنبيه', description: 'أنت غير متصل بالإنترنت. البيانات المعروضة قد تكون غير محدثة.', variant: "default" });
+        }
+        setLoading(false);
+    }, [toast]);
+    
+    // Derived state for tables with their current orders/status
+    const tablesWithStatus = useMemo(() => {
+        const tableMap = new Map<number, Table>();
+
+        for (const dbTable of tables) {
+            tableMap.set(dbTable.id, { ...dbTable, status: 'available', order: null });
+        }
+
+        const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+
+        for (const order of activeOrders) {
+            if (tableMap.has(order.tableId)) {
+                let status: TableStatus = 'occupied';
+                if (order.status === 'pending_chef_approval') status = 'new_order';
+                if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
+                if (order.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
+                if (order.status === 'confirmed') status = 'confirmed';
+                if (order.status === 'ready') status = 'ready';
+                if (order.status === 'paying') status = 'paying';
+                if (order.status === 'needs_attention') status = 'needs_attention';
+                
+                const existingTable = tableMap.get(order.tableId)!;
+                const tableData: Table = {
+                ...existingTable,
+                status: status,
+                order: order,
+                seatingDuration: '10 min', 
+                chefConfirmationTimestamp: order.confirmationTimestamp
+                };
+                tableMap.set(order.tableId, tableData);
+            }
+        }
+        return Array.from(tableMap.values()).sort((a,b) => a.id - b.id);
+
+    }, [tables, orders]);
+
+
+    // Effect to fetch initial data and subscribe to changes
+    useEffect(() => {
+        if (!isAuthenticated) {
+            setLoading(false);
+            return;
+        };
+
+        fetchAllData();
+
+        const handleOnline = () => fetchAllData(true);
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        const ordersChannel = supabase.channel('realtime-orders-flow')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, 
+          (payload) => {
+              console.log('Order change received:', payload);
+              fetchAllData(true);
           })
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
-              console.log('Order update received:', payload.new);
-              const updatedOrder = formatOrderFromDb(payload.new);
-              setOrders(currentOrders => currentOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-          })
-          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'orders' }, (payload) => {
-               console.log('Order delete received:', payload.old);
-               setOrders(currentOrders => currentOrders.filter(o => o.id !== payload.old.id));
+          .subscribe();
+        
+        const tablesChannel = supabase.channel('realtime-tables-flow')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' },
+          (payload) => {
+              console.log('Table change received:', payload);
+              fetchAllData(true);
           })
           .subscribe();
 
-        // Cleanup subscription on unmount
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(ordersChannel);
+            supabase.removeChannel(tablesChannel);
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
         };
-    }, [isAuthenticated]);
-
+    }, [isAuthenticated, fetchAllData]);
+    
 
     const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp'>) => {
         try {
@@ -202,17 +295,24 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const requestBill = async (orderId: string) => {
-        await updateOrderStatusViaApi(orderId, 'set-status', { status: 'paying' });
+       const success = await updateOrderStatusViaApi(orderId, 'set-status', { status: 'paying' });
+       if(success) toast({ title: 'تم طلب الفاتورة', description: `تم تغيير حالة الطلب ${orderId.substring(0,5)}... إلى الدفع.` });
     }
     
     const requestAttention = async (orderId: string) => {
-        await updateOrderStatusViaApi(orderId, 'set-status', { status: 'needs_attention' });
+       const success = await updateOrderStatusViaApi(orderId, 'set-status', { status: 'needs_attention' });
+       if(success) toast({ title: 'تم طلب المساعدة', description: `الطلب ${orderId.substring(0,5)}... يحتاج مساعدة.` });
     }
 
     return (
         <OrderFlowContext.Provider value={{
             orders,
-            fetchOrders,
+            tables: tablesWithStatus,
+            menuItems,
+            loading,
+            isOnline,
+            isSyncing,
+            fetchAllData,
             submitOrder,
             approveOrderByChef,
             approveOrderByCashier,
