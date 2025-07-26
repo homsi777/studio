@@ -5,7 +5,7 @@ import type { Table, Order, MenuItem } from '@/types';
 export interface PendingSyncOperation {
   id?: number;
   type: 'insert' | 'update' | 'delete';
-  tableName: 'tables' | 'orders' | 'menu_items';
+  tableName: 'tables' | 'orders' | 'menu_items' | string;
   payload: any;
   timestamp: number;
 }
@@ -20,7 +20,7 @@ class MaidaDatabase extends Dexie {
   constructor() {
     super('maidaAppDb'); // اسم قاعدة البيانات
     this.version(1).stores({
-      tables: '&id, table_number, status', // &id is primary key
+      tables: '&id, table_number, status', // &id is primary key and is a string (uuid)
       orders: '&id, tableId, status, created_at',
       menuItems: '&id, name, category, is_available',
       pendingSyncOperations: '++id, type, tableName, timestamp',
@@ -43,8 +43,7 @@ export const getCachedData = async <T>(tableName: 'tables' | 'orders' | 'menuIte
 
 export const saveToCache = async <T>(tableName: 'tables' | 'orders' | 'menuItems', data: T[]) => {
   try {
-    // @ts-ignore
-    await db[tableName].bulkPut(data);
+    await db[tableName].bulkPut(data as any[]); // Cast to any[] to satisfy Dexie's bulkPut
     console.log(`Saved ${data.length} items to ${tableName} in IndexedDB cache.`);
   } catch(error) {
     console.error(`Error saving to ${tableName}:`, error);
@@ -61,7 +60,7 @@ export const addToSyncQueue = async (
 };
 
 export const getSyncQueue = async (): Promise<PendingSyncOperation[]> => {
-  return await db.pendingSyncOperations.toArray();
+  return await db.pendingSyncOperations.orderBy('timestamp').toArray();
 };
 
 export const clearSyncQueueItem = async (id: number) => {
