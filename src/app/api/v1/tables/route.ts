@@ -24,13 +24,20 @@ export async function GET(request: NextRequest) {
 // POST to add a new table
 export async function POST(request: NextRequest) {
   try {
+    const newTableData = {
+      uuid: uuidv4()
+    };
+
     const { data, error } = await supabaseAdmin
         .from('tables')
-        .insert([{}]) // insert a row with default values
+        .insert([newTableData]) 
         .select()
         .single();
 
-    if (error) throw error;
+    if (error) {
+        console.error('Supabase create table error:', error);
+        throw error;
+    };
     
     return NextResponse.json(data, { status: 201 });
   } catch (error) {

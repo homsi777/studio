@@ -20,8 +20,8 @@ export type MenuItem = {
   offer_en?: string;
   image?: string;
   image_hint?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Order = {
@@ -70,8 +70,8 @@ export type Expense = {
     invoice_number?: string;
     notes?: string;
     user_id?: string; // UUID, Foreign key to auth.users
-    created_at: string;
-    last_updated: string;
+    created_at?: string;
+    last_updated?: string;
 };
 
 export type UserRole = 'manager' | 'employee';
