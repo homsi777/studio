@@ -121,7 +121,11 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    sessionStorage.removeItem('user');
+    try {
+        sessionStorage.removeItem('user');
+    } catch(e) {
+        console.error("Could not remove 'user' from sessionStorage", e);
+    }
     router.push('/login');
   };
   
