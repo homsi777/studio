@@ -21,9 +21,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Helper function to handle API responses and throw errors with details
 async function handleApiResponse(response: Response, errorMessage: string): Promise<any> {
     if (!response.ok) {
-        const errorDetail = await response.text();
+        let errorDetail = 'Could not retrieve error details.';
+        try {
+            errorDetail = await response.text();
+        } catch(e) {
+            // Ignore if can't parse body
+        }
         console.error("API Response Error:", response.status, errorDetail);
-        throw new Error(`${errorMessage} (${response.status}): ${errorDetail.substring(0, 150)}${errorDetail.length > 150 ? '...' : ''}`);
+        throw new Error(`${errorMessage} (Status: ${response.status})`);
     }
     if (response.status === 204) return null; // Handle no content response
     return response.json();

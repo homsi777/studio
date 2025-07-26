@@ -90,78 +90,64 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
     }, []);
 
     const handleSaveUser = useCallback(async (formData: Partial<User>) => {
-        if (editingUser) {
-            try {
-                const response = await fetch(`/api/v1/users/${editingUser.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
-                });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("API Error - update user:", response.status, errorText);
-                    throw new Error(`Failed to update user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
-                }
-                onUserChange(); // Refetch to get updated data
-                toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.email}.`, `User ${formData.email} has been updated.`) });
-            } catch (error: any) {
-                console.error("Error updating user:", error);
-                toast({
-                    variant: 'destructive',
-                    title: t('خطأ في التحديث', 'Update Error'),
-                    description: t('لم نتمكن من تحديث المستخدم.', 'Could not update the user.') + (error.message ? `: ${error.message}` : ''),
-                });
-            }
-        } else {
-            try {
-                const response = await fetch('/api/v1/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
-                });
-                if (response.status === 409) {
-                    toast({ variant: "destructive", title: t("خطأ", "Error"), description: t("البريد الإلكتروني موجود بالفعل.", "Email already exists.") });
-                    return;
-                }
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("API Error - save new user:", response.status, errorText);
-                    throw new Error(`Failed to save user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
-                }
+        const url = editingUser ? `/api/v1/users/${editingUser.id}` : '/api/v1/users';
+        const method = editingUser ? 'PUT' : 'POST';
 
-                onUserChange(); // Refetch to get the new user with its ID
-                toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.email}.`, `New user ${formData.email} has been added.`) });
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
 
-            } catch (error: any) {
-                console.error("Error saving new user:", error);
-                toast({
-                    variant: "destructive",
-                    title: t("خطأ في الحفظ", "Save Error"),
-                    description: t("لم نتمكن من حفظ المستخدم الجديد.", "Could not save the new user.") + (error.message ? `: ${error.message}` : ''),
-                });
+            if (response.status === 409) {
+                 toast({ variant: "destructive", title: t("خطأ", "Error"), description: t("البريد الإلكتروني موجود بالفعل.", "Email already exists.") });
+                 return;
             }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to save user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
+            }
+
+            onUserChange(); // Refetch data
+            const successMessage = editingUser
+                ? t(`تم تحديث بيانات المستخدم ${formData.email}.`, `User ${formData.email} has been updated.`)
+                : t(`تمت إضافة المستخدم الجديد ${formData.email}.`, `New user ${formData.email} has been added.`);
+            
+            toast({ title: t('تم بنجاح', 'Success'), description: successMessage });
+
+        } catch (error: any) {
+            console.error("Error saving user:", error);
+            toast({
+                variant: 'destructive',
+                title: t('خطأ في الحفظ', 'Save Error'),
+                description: t('لم نتمكن من حفظ المستخدم.', 'Could not save the user.') + (error.message ? `: ${error.message}` : ''),
+            });
+        } finally {
+            setFormOpen(false);
         }
-        setFormOpen(false);
     }, [editingUser, onUserChange, t, toast]);
 
+
     const handleDeleteUser = useCallback(async () => {
-        if (userToDelete) {
-            try {
-                const response = await fetch(`/api/v1/users/${userToDelete.id}`, { method: 'DELETE' });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("API Error - delete user:", response.status, errorText);
-                    throw new Error(`Failed to delete user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
-                }
-                onUserChange();
-                toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.email}.`, `User ${userToDelete.email} has been deleted.`) });
-            } catch (error: any) {
-                console.error("Error deleting user:", error);
-                toast({ variant: 'destructive', title: t('خطأ في الحذف', 'Delete Error'), description: t('لم نتمكن من حذف المستخدم.', 'Could not delete the user.') + (error.message ? `: ${error.message}` : '') });
+        if (!userToDelete) return;
+        
+        try {
+            const response = await fetch(`/api/v1/users/${userToDelete.id}`, { method: 'DELETE' });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to delete user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
             }
+            onUserChange();
+            toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.email}.`, `User ${userToDelete.email} has been deleted.`) });
+        } catch (error: any) {
+            console.error("Error deleting user:", error);
+            toast({ variant: 'destructive', title: t('خطأ في الحذف', 'Delete Error'), description: t('لم نتمكن من حذف المستخدم.', 'Could not delete the user.') + (error.message ? `: ${error.message}` : '') });
+        } finally {
+            setConfirmDeleteOpen(false);
+            setUserToDelete(null);
         }
-        setConfirmDeleteOpen(false);
-        setUserToDelete(null);
     }, [userToDelete, onUserChange, t, toast]);
 
     const UserRow = React.memo(function UserRow({ user, language, currentUser, openEditDialog, openDeleteDialog, t }: {
@@ -303,21 +289,23 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
     const [showPassword, setShowPassword] = useState(false);
 
     React.useEffect(() => {
-        if (isOpen && user) {
-            setEmail(user.email);
-            setRole(user.role);
-            setPassword(''); // Clear password field when editing
-        } else if (isOpen && !user) {
-            setEmail('');
-            setPassword('');
-            setRole('employee');
+        if (isOpen) {
+            if (user) {
+                setEmail(user.email);
+                setRole(user.role);
+                setPassword(''); // Clear password field when editing
+            } else {
+                setEmail('');
+                setPassword('');
+                setRole('employee');
+            }
         }
     }, [isOpen, user]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const formData: Partial<User> = { email, role };
-        if (password) {
+        if (password || !user) { // Password is required for new user, or if being changed for existing one.
             formData.password = password;
         }
         onSave(formData);
@@ -348,6 +336,7 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
                                     onChange={(e) => setPassword(e.target.value)}
                                     required={!user} // Password is required only for new users
                                     placeholder={user ? t('اتركه فارغاً لعدم التغيير', 'Leave blank to keep unchanged') : ''}
+                                    autoComplete="new-password"
                                 />
                                 <Button
                                     type="button"
