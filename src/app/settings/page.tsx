@@ -111,7 +111,9 @@ function SettingsPage() {
         if (tables.length <= 0) return;
         setIsTableUpdating(true);
         try {
-            const lastTable = tables[tables.length - 1]; // Assuming tables are sorted by creation time or ID
+            // Find the table with the highest 'id'
+            const lastTable = tables.reduce((prev, current) => (prev.id > current.id) ? prev : current);
+            
             const response = await fetch(`/api/v1/tables/${lastTable.uuid}`, { method: 'DELETE' });
             await handleApiResponse(response, t('فشل حذف طاولة', 'Failed to delete table'));
             await fetchTables(); // Refetch tables data after deleting
