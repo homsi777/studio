@@ -1,4 +1,4 @@
-Alalamiya Group for Restaurant Management
+# Alalamiya Group for Restaurant Management
 هذا المستند يقدم نظرة شاملة على مشروع "المائدة"، وهو تطبيق ويب حديث مصمم لتسهيل إدارة المطاعم بذكاء وكفاءة. لمزيد من التفاصيل المعمقة، يرجى مراجعة `PROJECT_OVERVIEW.md` و `API_CONTRACT.md`.
 
 ---
