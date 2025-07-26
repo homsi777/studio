@@ -44,7 +44,7 @@ export const saveToCache = async <T>(tableName: 'tables' | 'orders' | 'menuItems
 
 export const addToSyncQueue = async (
     type: 'insert' | 'update' | 'delete', 
-    tableName: 'tables' | 'orders' | 'menu_items', 
+    tableName: 'tables' | 'orders' | 'menu_items' | 'expenses', 
     payload: any
 ) => {
   await db.pendingSyncOperations.add({ type, payload, tableName, timestamp: Date.now() });

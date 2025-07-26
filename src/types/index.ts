@@ -1,4 +1,3 @@
-
 // src/types/index.ts
 // هذه الأنواع تمثل البنية الموحدة لبياناتنا عبر النظام
 
@@ -69,11 +68,11 @@ export interface Order {
   timestamp: number; // Converted from created_at
   confirmationTimestamp?: number; // Converted from customer_confirmed_at
   created_at: string;
+  updated_at?: string;
   chef_approved_at?: string;
   cashier_approved_at?: string;
   customer_confirmed_at?: string;
   completed_at?: string;
-  updated_at?: string; // Add this for sync logic
 }
 
 
@@ -119,7 +118,7 @@ export type SyncOperationType = 'insert' | 'update' | 'delete';
 export interface PendingSyncOperation {
   id?: number; // مفتاح أساسي تلقائي الزيادة في IndexedDB (++id)
   type: SyncOperationType; // نوع العملية: 'insert', 'update', 'delete'
-  tableName: string; // اسم الجدول في Supabase و IndexedDB (مثلاً: 'orders', 'tables')
+  tableName: 'tables' | 'orders' | 'menu_items' | 'expenses'; // اسم الجدول في Supabase و IndexedDB
   payload: any; // حمولة البيانات: الكائن المراد إضافته/تعديله/حذفه
   timestamp: number; // وقت إضافة العملية إلى قائمة الانتظار (مهم للترتيب وحل التعارضات)
 }

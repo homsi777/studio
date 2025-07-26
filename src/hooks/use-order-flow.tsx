@@ -2,12 +2,11 @@
 "use client"
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { Order, Table, TableStatus, MenuItem } from '@/types';
+import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation } from '@/types';
 import { useToast } from './use-toast';
-import { BellRing } from 'lucide-react';
 import { useAuth } from './use-auth';
 import { supabase } from '@/lib/supabase';
-import { db, getCachedData, saveToCache, addToSyncQueue, getSyncQueue, clearSyncQueueItem, PendingSyncOperation } from '@/lib/indexeddb';
+import { db, getCachedData, saveToCache, addToSyncQueue, getSyncQueue, clearSyncQueueItem } from '@/lib/indexeddb';
 
 const SYNC_INTERVAL = 10000; // Try to sync every 10 seconds
 
@@ -23,7 +22,7 @@ interface OrderFlowContextType {
     approveOrderByChef: (orderId: string) => Promise<void>;
     approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
     confirmFinalOrder: (orderId: string) => Promise<void>;
-    confirmOrderReady: (orderId: string) => Promise<void>;
+    confirmOrderReady: (orderId:string) => Promise<void>;
     completeOrder: (orderId: string) => Promise<void>;
     cancelOrder: (orderId: string) => Promise<void>;
     requestBill: (orderId: string) => Promise<void>;
@@ -38,16 +37,17 @@ export const formatOrderFromDb = (dbOrder: any): Order => ({
     id: dbOrder.id,
     items: dbOrder.items || [],
     subtotal: dbOrder.subtotal || 0,
-    serviceCharge: dbOrder.service_charge || 0,
+    service_charge: dbOrder.service_charge || 0,
     tax: dbOrder.tax || 0,
-    finalTotal: dbOrder.final_total || 0,
-    tableId: dbOrder.table_id,
-    tableUuid: dbOrder.table_uuid,
-    sessionId: dbOrder.session_id,
+    final_total: dbOrder.final_total || 0,
+    table_id: dbOrder.table_id,
+    table_uuid: dbOrder.table_uuid,
+    session_id: dbOrder.session_id,
     status: dbOrder.status,
     timestamp: new Date(dbOrder.created_at).getTime(),
     confirmationTimestamp: dbOrder.customer_confirmed_at ? new Date(dbOrder.customer_confirmed_at).getTime() : undefined,
     created_at: dbOrder.created_at,
+    updated_at: dbOrder.updated_at,
     chef_approved_at: dbOrder.chef_approved_at,
     cashier_approved_at: dbOrder.cashier_approved_at,
     customer_confirmed_at: dbOrder.customer_confirmed_at,
@@ -69,10 +69,12 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     const { isAuthenticated } = useAuth();
     
     useEffect(() => {
-        setIsOnline(typeof window !== 'undefined' ? navigator.onLine : true);
+        if (typeof window !== 'undefined') {
+            setIsOnline(navigator.onLine);
+        }
     }, []);
 
-     const syncPendingOperations = useCallback(async () => {
+    const syncPendingOperations = useCallback(async () => {
         if (!navigator.onLine || isSyncing) {
             console.log('Not syncing: Offline or already syncing.');
             return;
@@ -90,17 +92,15 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         let operationsSyncedCount = 0;
         for (const op of pendingOperations) {
             try {
-                let response: Response;
                 const url = `/api/v1/${op.tableName}${op.type === 'insert' ? '' : `/${op.payload.id}`}`;
-                const method = op.type === 'insert' ? 'POST' : op.type === 'update' ? 'PUT' : op.type === 'delete' ? 'DELETE' : '';
+                const method = op.type === 'insert' ? 'POST' : op.type === 'update' ? 'PUT' : 'DELETE';
 
-                if (!method || !op.id) {
-                    console.warn(`Unknown or invalid operation. Skipping.`, op);
-                    await clearSyncQueueItem(op.id!);
+                if (!op.id) {
+                    console.warn(`Skipping invalid operation.`, op);
                     continue;
                 }
                 
-                response = await fetch(url, {
+                const response = await fetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     body: (method === 'POST' || method === 'PUT') ? JSON.stringify(op.payload) : undefined,
@@ -200,7 +200,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
 
         for (const order of activeOrders) {
-            if (tableMap.has(order.tableId)) {
+            if (tableMap.has(order.table_id)) {
                 let status: TableStatus = 'occupied';
                 if (order.status === 'pending_chef_approval') status = 'new_order';
                 if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
@@ -210,15 +210,15 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 if (order.status === 'paying') status = 'paying';
                 if (order.status === 'needs_attention') status = 'needs_attention';
                 
-                const existingTable = tableMap.get(order.tableId)!;
+                const existingTable = tableMap.get(order.table_id)!;
                 const tableData: Table = {
-                ...existingTable,
-                status: status,
-                order: order,
-                seatingDuration: '10 min', 
-                chefConfirmationTimestamp: order.confirmationTimestamp
+                  ...existingTable,
+                  status: status,
+                  order: order,
+                  seatingDuration: '10 min', 
+                  chefConfirmationTimestamp: order.confirmationTimestamp
                 };
-                tableMap.set(order.tableId, tableData);
+                tableMap.set(order.table_id, tableData);
             }
         }
         return Array.from(tableMap.values()).sort((a,b) => a.id - b.id);
@@ -230,7 +230,27 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         if (!isAuthenticated) {
             setLoading(false);
             return;
-        };
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('[App] Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.error('[App] Service Worker registration failed:', error);
+                    });
+            });
+             navigator.serviceWorker.addEventListener('message', (event) => {
+              if (event.data && event.data.type === 'SYNC_REQUEST') {
+                console.log('[App] Received SYNC_REQUEST from Service Worker.');
+                syncPendingOperations();
+              }
+            });
+        } else {
+             console.warn('[App] Service Worker not supported by this browser.');
+        }
 
         const handleOnline = () => {
             setIsOnline(true);
@@ -272,6 +292,19 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     }, [isAuthenticated, fetchAllData, syncPendingOperations]);
     
     // --- WRITE OPERATIONS ---
+
+    const requestBackgroundSync = () => {
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.sync.register('sync-pending-operations')
+                    .then(() => console.log('Background sync registered.'))
+                    .catch(err => console.error('Background sync registration failed:', err));
+            });
+        } else {
+             // Fallback for browsers that don't support Background Sync
+            if(navigator.onLine) syncPendingOperations();
+        }
+    }
     
     const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp'>) => {
         const tempId = `temp-order-${Date.now()}`;
@@ -280,7 +313,6 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             status: 'pending_chef_approval',
             timestamp: Date.now(),
             ...orderData,
-            // Mock other fields until synced
             service_charge: 0, tax: 0, final_total: orderData.subtotal,
             created_at: new Date().toISOString(),
         };
@@ -291,8 +323,8 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         await addToSyncQueue('insert', 'orders', { ...orderData, status: 'pending_chef_approval' });
         
         toast({ title: "تم إرسال الطلب", description: "سيتم مزامنة الطلب مع الخادم." });
-        if(isOnline) await syncPendingOperations();
-    }, [isOnline, syncPendingOperations, toast]);
+        requestBackgroundSync();
+    }, [toast]);
 
     const updateOrderStatus = async (orderId: string, updates: Partial<Order>) => {
         const order = orders.find(o => o.id === orderId);
@@ -303,8 +335,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         await db.orders.put(updatedOrder);
 
         await addToSyncQueue('update', 'orders', { id: orderId, ...updates });
-        if(isOnline) await syncPendingOperations();
-
+        requestBackgroundSync();
         return true;
     }
 
