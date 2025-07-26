@@ -30,14 +30,12 @@ export default function LoginPage() {
     const { toast } = useToast();
     const { settings } = useRestaurantSettings();
 
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState(''); // Can be email or username
     const [password, setPassword] = useState('');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        // The useAuth hook will now handle showing toasts for errors and redirection on success.
-        // This component just needs to call the login function.
-        await login(email, password);
+        await login(identifier, password);
     };
 
     return (
@@ -53,22 +51,22 @@ export default function LoginPage() {
             <Card className="w-full max-w-sm" dir={dir}>
                 <CardHeader className="text-center">
                     <IconLogo className="w-16 h-16 mx-auto text-primary mb-4" />
-                    <CardTitle className="font-headline text-2xl">{t('تسجيل دخول المدير', 'Manager Login')}</CardTitle>
+                    <CardTitle className="font-headline text-2xl">{t('تسجيل دخول الموظفين', 'Staff Login')}</CardTitle>
                     <CardDescription>{t('الرجاء إدخال بياناتك للوصول إلى لوحة التحكم.', 'Please enter your credentials to access the dashboard.')}</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="email">{t('البريد الإلكتروني', 'Email')}</Label>
+                            <Label htmlFor="identifier">{t('البريد الإلكتروني أو اسم المستخدم', 'Email or Username')}</Label>
                             <Input
-                                id="email"
-                                type="email"
+                                id="identifier"
+                                type="text"
                                 placeholder="admin@alalamiya.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={identifier}
+                                onChange={(e) => setIdentifier(e.target.value)}
                                 required
                                 disabled={isLoading}
-                                autoComplete="email"
+                                autoComplete="username"
                             />
                         </div>
                         <div className="space-y-2">

@@ -19,7 +19,7 @@ import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/s
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email: string, pass: string) => Promise<boolean>;
+  login: (identifier: string, pass: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -29,8 +29,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const mapSupabaseUserToAppUser = (supabaseUser: SupabaseUser): User => {
     return {
         id: supabaseUser.id,
-        email: supabaseUser.email,
-        username: supabaseUser.email,
+        email: supabaseUser.email || '',
+        username: supabaseUser.user_metadata.username || supabaseUser.email, // Fallback to email
         role: supabaseUser.user_metadata.role || 'employee',
     };
 };
@@ -78,11 +78,14 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
     };
   }, [handleAuthStateChange]);
 
-  const login = async (email: string, pass: string): Promise<boolean> => {
+  const login = async (identifier: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
     try {
+      // For simplicity, we assume the identifier is the email.
+      // Supabase does not directly support username login in the same function.
+      // A more complex implementation would require a pre-check to resolve username to email.
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
+        email: identifier,
         password: pass,
       });
 
