@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -27,7 +26,7 @@ export function DashboardClient() {
   const { language } = useLanguage();
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const { tables, orders, loading, isOnline } = useOrderFlow();
+  const { tables, loading, isOnline } = useOrderFlow();
 
 
   const handleSelectTable = (table: Table) => {
@@ -40,6 +39,12 @@ export function DashboardClient() {
     setSelectedTable(null);
   };
   
+  const sortedTables = useMemo(() => {
+    return [...tables].sort((a, b) => {
+        return (statusPriority[a.status] || 99) - (statusPriority[b.status] || 99) || a.id - b.id;
+    });
+  }, [tables]);
+
   if (loading) {
     return (
         <div className="flex flex-col justify-center items-center h-full min-h-[calc(100vh-200px)]">
@@ -59,7 +64,7 @@ export function DashboardClient() {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
         <AnimatePresence>
-          {tables.map((table, i) => (
+          {sortedTables.map((table, i) => (
             <motion.div
               key={table.uuid}
               layout
