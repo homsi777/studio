@@ -8,35 +8,38 @@
 
 هذه هي الصفحات التي يتفاعل معها المستخدمون مباشرة.
 
-| المسار (Path)         | الملف المصدر (`src/app/...`) | الغرض الأساسي                              | الدور الرئيسي للمستخدم        |
-| --------------------- | -------------------------- | ------------------------------------------ | -------------------------- |
-| `/`                   | `page.tsx`                 | **لوحة التحكم الرئيسية:** عرض حي لحالة الطاولات. | المدير (Manager)           |
-| `/login`              | `login/page.tsx`           | صفحة تسجيل دخول الموظفين والمدراء.          | جميع الموظفين (All Staff)  |
-| `/chef`               | `chef/page.tsx`            | **واجهة الشيف:** نظام كانبان لإدارة الطلبات.  | الشيف (Chef)              |
-| `/pos`                | `pos/page.tsx`             | **نقطة البيع السريعة:** لتسجيل الطلبات الخارجية. | المحاسب/المدير (Cashier)   |
-| `/customer-tables`    | `customer-tables/page.tsx` | عرض الطاولات لفتح قوائم الزبائن.           | المدير/النادل (Staff)      |
-| `/menu-management`    | `menu-management/page.tsx` | **إدارة القائمة:** إضافة وتعديل وحذف الأصناف. | المدير (Manager)           |
-| `/expenses`           | `expenses/page.tsx`        | **إدارة المصاريف:** تسجيل وعرض النفقات.     | المدير/المحاسب (Manager)   |
-| `/reports`            | `reports/page.tsx`         | **التقارير التحليلية:** عرض الرسوم البيانية. | المدير (Manager)           |
-| `/settings`           | `settings/page.tsx`        | **الإعدادات:** إدارة المستخدمين، الطاولات، ... | المدير (Manager)           |
-| `/menu/[uuid]`        | `menu/[uuid]/page.tsx`     | **قائمة الزبون الرقمية:** يتفاعل معها الزبون. | الزبون (Customer)          |
+| المسار (Path)         | الملف المصدر (`src/app/...`) | الغرض الأساسي                              | الدور الرئيسي للمستخدم        | الحالة (Status) |
+| :--- | :--- | :--- | :--- | :--- |
+| `/`                   | `page.tsx`                 | **لوحة التحكم الرئيسية:** عرض حي لحالة الطاولات. | المدير (Manager)           | **مكتمل ✅** |
+| `/login`              | `login/page.tsx`           | صفحة تسجيل دخول الموظفين والمدراء.          | جميع الموظفين (All Staff)  | **مكتمل ✅** |
+| `/chef`               | `chef/page.tsx`            | **واجهة الشيف:** نظام كانبان لإدارة الطلبات.  | الشيف (Chef)              | **مكتمل ✅** |
+| `/pos`                | `pos/page.tsx`             | **نقطة البيع السريعة:** لتسجيل الطلبات الخارجية. | المحاسب/المدير (Cashier)   | **قيد التطوير ⏳** |
+| `/customer-tables`    | `customer-tables/page.tsx` | عرض الطاولات لفتح قوائم الزبائن.           | المدير/النادل (Staff)      | **قيد التطوير ⏳** |
+| `/menu-management`    | `menu-management/page.tsx` | **إدارة القائمة:** إضافة وتعديل وحذف الأصناف. | المدير (Manager)           | **قيد التطوير ⏳** |
+| `/expenses`           | `expenses/page.tsx`        | **إدارة المصاريف:** تسجيل وعرض النفقات.     | المدير/المحاسب (Manager)   | **قيد التطوير ⏳** |
+| `/reports`            | `reports/page.tsx`         | **التقارير التحليلية:** عرض الرسوم البيانية. | المدير (Manager)           | **قيد التطوير ⏳** |
+| `/settings`           | `settings/page.tsx`        | **الإعدادات:** إدارة المستخدمين، الطاولات، ... | المدير (Manager)           | **مكتمل ✅** |
+| `/menu/[uuid]`        | `menu/[uuid]/page.tsx`     | **قائمة الزبون الرقمية:** يتفاعل معها الزبون. | الزبون (Customer)          | **مكتمل ✅** |
 
 ---
 
 ## 2. مسارات الواجهة الخلفية (API Routes)
 
-هذه هي نقاط النهاية (Endpoints) التي تتعامل مع البيانات وتتفاعل مع قاعدة البيانات (Supabase).
+هذه هي نقاط النهاية (Endpoints) التي تتعامل مع البيانات وتتفاعل مع قاعدة البيانات (Supabase)، وهي ضرورية لعملية المزامنة.
 
-| المسار (Path)                     | الملف المصدر (`src/app/api/v1/...`) | الوظائف المدعومة (HTTP Methods)               |
-| --------------------------------- | ----------------------------------- | --------------------------------------------- |شش
-| `/api/v1/expenses`                | `expenses/route.ts`                 | `GET` (جلب الكل), `POST` (إنشاء جديد)         |
-| `/api/v1/expenses/[id]`           | `expenses/[id]/route.ts`            | `PUT` (تعديل), `DELETE` (حذف)                 |
-| `/api/v1/menu-items`              | `menu-items/route.ts`               | `GET` (جلب الكل), `POST` (إنشاء جديد)         |
-| `/api/v1/menu-items/[id]`         | `menu-items/[id]/route.ts`          | `PUT` (تعديل), `DELETE` (حذف)                 |
-| `/api/v1/orders`                  | `orders/route.ts`                   | `GET` (جلب الكل), `POST` (إنشاء جديد)         |
-| `/api/v1/tables`                  | `tables/route.ts`                   | `GET` (جلب الكل), `POST` (إضافة), `DELETE` (حذف) |
-| `/api/v1/users`                   | `users/route.ts`                    | `GET` (جلب الكل), `POST` (إنشاء جديد)         |
-| `/api/v1/users/[id]`              | `users/[id]/route.ts`               | `PUT` (تعديل), `DELETE` (حذف)                 |
+| المسار (Path)                     | الملف المصدر (`src/app/api/v1/...`) | الوظائف المدعومة (HTTP Methods)               | الحالة (Status) |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/expenses`                | `expenses/route.ts`                 | `GET` (جلب الكل), `POST` (إنشاء جديد)         | **موجودة ✅** |
+| `/api/v1/expenses/[id]`           | `expenses/[id]/route.ts`            | `PUT` (تعديل), `DELETE` (حذف)                 | **موجودة ✅** |
+| `/api/v1/menu-items`              | `menu-items/route.ts`               | `GET` (جلب الكل), `POST` (إنشاء جديد)         | **موجودة ✅** |
+| `/api/v1/menu-items/[id]`         | `menu-items/[id]/route.ts`          | `PUT` (تعديل), `DELETE` (حذف)                 | **موجودة ✅** |
+| `/api/v1/orders`                  | `orders/route.ts`                   | `GET` (جلب الكل), `POST` (إنشاء جديد)         | **موجودة ✅** |
+| `/api/v1/orders/[id]/...`         | `orders/[id]/.../route.ts`          | `PUT` (تحديثات الحالة المختلفة)                | **موجودة ✅** |
+| `/api/v1/tables`                  | `tables/route.ts`                   | `GET` (جلب الكل), `POST` (إضافة), `DELETE` (حذف) | **موجودة ✅** |
+| `/api/v1/tables/[id]`             | `tables/[uuid]/route.ts`            | `DELETE` (حذف بالـ UUID)                        | **موجودة ✅** |
+| `/api/v1/tables/set-count`        | `tables/set-count/route.ts`         | `POST` (تحديد عدد الطاولات)                    | **موجودة ✅** |
+| `/api/v1/users`                   | `users/route.ts`                    | `GET` (جلب الكل), `POST` (إنشاء جديد)         | **موجودة ✅** |
+| `/api/v1/users/[id]`              | `users/[id]/route.ts`               | `PUT` (تعديل), `DELETE` (حذف)                 | **موجودة ✅** |
 
 ---
 
