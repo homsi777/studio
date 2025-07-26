@@ -14,6 +14,7 @@ import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
 import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
+import type { RestaurantSettings } from '@/hooks/use-restaurant-settings'; // أضف هذا السطر
 import type { User } from '@/types';
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -83,13 +84,29 @@ function SettingsPage() {
     }, [fetchUsers, fetchTables]); // الاعتماديات هي الدوال نفسها، وهي مستقرة بسبب useCallback
 
     // تحديث الإعدادات المحلية عند تغيير حقول الإدخال
-    const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { id, value } = e.target;
-        setSettings(prev => ({
-            ...prev,
-            [id]: value
-        }));
-    }
+
+    //const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const { id, value } = e.target;
+            setSettings((prev: RestaurantSettings) => ({ // <--- هنا التعديل
+                ...prev,
+                [id]: value
+            }));
+        }
+
+
+        //const { id, value } = e.target;
+
+        //setSettings(prev => ({
+
+     //   ...prev,
+
+           // [id]: value
+
+       // }));
+
+   // }
+
 
     // إضافة طاولة جديدة
     const handleAddTable = async () => {
@@ -132,7 +149,7 @@ function SettingsPage() {
             const now = new Date();
             // تحديث الإعدادات المحفوظة مباشرة، مما سيؤدي إلى تحديث `settings` تلقائياً
             // ولا داعي لتحديث حالة `exchangeRate` و `lastUpdated` منفصلة هنا.
-            setSettings(prev => ({
+            setSettings((prev: RestaurantSettings) => ({
                 ...prev,
                 currencyExchangeRate: rate,
                 lastExchangeRateUpdate: now.toISOString()
