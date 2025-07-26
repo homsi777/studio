@@ -20,22 +20,20 @@ import { LanguageToggle } from '@/components/language-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 
 export default function LoginPage() {
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-    const { login, isLoading } = useAuth();
-    const { toast } = useToast();
+    const { login, isLoading, error } = useAuth();
     const { settings } = useRestaurantSettings();
 
-    const [identifier, setIdentifier] = useState(''); // Can be email or username
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        await login(identifier, password);
+        await login(email, password);
     };
 
     return (
@@ -51,22 +49,28 @@ export default function LoginPage() {
             <Card className="w-full max-w-sm" dir={dir}>
                 <CardHeader className="text-center">
                     <IconLogo className="w-16 h-16 mx-auto text-primary mb-4" />
-                    <CardTitle className="font-headline text-2xl">{t('تسجيل دخول الموظفين', 'Staff Login')}</CardTitle>
-                    <CardDescription>{t('الرجاء إدخال بياناتك للوصول إلى لوحة التحكم.', 'Please enter your credentials to access the dashboard.')}</CardDescription>
+                    <CardTitle className="font-headline text-2xl">{t('تسجيل الدخول', 'Staff Login')}</CardTitle>
+                    <CardDescription>{t('أدخل بياناتك للوصول إلى لوحة التحكم.', 'Enter your credentials to access the dashboard.')}</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
                         <div className="space-y-2">
-                            <Label htmlFor="identifier">{t('البريد الإلكتروني أو اسم المستخدم', 'Email or Username')}</Label>
+                            <Label htmlFor="email">{t('البريد الإلكتروني', 'Email')}</Label>
                             <Input
-                                id="identifier"
-                                type="text"
+                                id="email"
+                                type="email"
                                 placeholder="admin@alalamiya.com"
-                                value={identifier}
-                                onChange={(e) => setIdentifier(e.target.value)}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 required
                                 disabled={isLoading}
-                                autoComplete="username"
+                                autoComplete="email"
                             />
                         </div>
                         <div className="space-y-2">

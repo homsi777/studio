@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, {
@@ -10,112 +9,112 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
-import {useRouter} from 'next/navigation';
-import type {User} from '@/types';
-import {useToast} from './use-toast';
+import { useRouter } from 'next/navigation';
+import type { User, UserRole } from '@/types';
+import { useToast } from './use-toast';
 import { supabase } from '@/lib/supabase';
 import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (identifier: string, pass: string) => Promise<boolean>;
+  login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const mapSupabaseUserToAppUser = (supabaseUser: SupabaseUser): User => {
-    return {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        username: supabaseUser.user_metadata.username || supabaseUser.email, // Fallback to email
-        role: supabaseUser.user_metadata.role || 'employee',
-    };
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email || '',
+    username: supabaseUser.user_metadata.username || supabaseUser.email,
+    role: supabaseUser.user_metadata.role || 'employee',
+  };
 };
 
-export const AuthProvider = ({children}: {children: ReactNode}) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const {toast} = useToast();
+  const { toast } = useToast();
 
-  const handleAuthStateChange = useCallback(async (_event: AuthChangeEvent, session: Session | null) => {
-    try {
-      if (session?.user) {
-        const appUser = mapSupabaseUserToAppUser(session.user);
-        setUser(appUser);
-        sessionStorage.setItem('user', JSON.stringify(appUser));
-      } else {
-        setUser(null);
-        sessionStorage.removeItem('user');
-      }
-    } catch (error) {
-      console.error('Could not access sessionStorage or parse session:', error);
+  const handleAuthStateChange = useCallback(async (event: AuthChangeEvent, session: Session | null) => {
+    setIsLoading(true);
+    if (session?.user) {
+      const appUser = mapSupabaseUserToAppUser(session.user);
+      setUser(appUser);
+      // For simplicity, we manage session persistence via Supabase's cookie handling
+    } else {
       setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const sessionUser = sessionStorage.getItem('user');
-      if (sessionUser) {
-        setUser(JSON.parse(sessionUser));
-      }
-    } catch (error) {
-       console.error("Could not read from sessionStorage:", error);
     }
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
+    const checkInitialSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            const appUser = mapSupabaseUserToAppUser(session.user);
+            setUser(appUser);
+        }
+        setIsLoading(false);
+    };
+    checkInitialSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
     return () => {
       subscription?.unsubscribe();
     };
   }, [handleAuthStateChange]);
 
-  const login = async (identifier: string, pass: string): Promise<boolean> => {
+  const login = async (email: string, pass: string): Promise<void> => {
     setIsLoading(true);
+    setError(null);
     try {
-      // For simplicity, we assume the identifier is the email.
-      // Supabase does not directly support username login in the same function.
-      // A more complex implementation would require a pre-check to resolve username to email.
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: identifier,
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
         password: pass,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (signInError) throw signInError;
       
       if (data.user) {
         const appUser = mapSupabaseUserToAppUser(data.user);
         setUser(appUser);
-        sessionStorage.setItem('user', JSON.stringify(appUser));
-        router.push('/');
-        return true;
-      }
-      
-      return false;
+        
+        // Redirect based on role
+        const t = document.documentElement.lang === 'ar' ? (ar:string, en:string)=>ar : (ar:string, en:string)=>en;
+        toast({ title: t('تم تسجيل الدخول', 'Login Successful'), description: t(`مرحباً بعودتك، ${appUser.username}`, `Welcome back, ${appUser.username}`) });
 
-    } catch (error: any) {
-      console.error('Login process failed:', error);
-      const t = (ar: string, en: string) => document.documentElement.lang === 'ar' ? ar : en;
-      const description = error.message.includes('Invalid login credentials')
+        switch (appUser.role) {
+            case 'manager':
+                router.push('/');
+                break;
+            case 'chef':
+                router.push('/chef');
+                break;
+            case 'employee': // Assuming 'employee' might be a cashier or have POS access
+                router.push('/pos');
+                break;
+            default:
+                router.push('/'); // Default redirect
+        }
+      } else {
+        throw new Error("Login did not return a user session.");
+      }
+
+    } catch (err: any) {
+      console.error('Login process failed:', err);
+      const t = document.documentElement.lang === 'ar' ? (ar:string, en:string)=>ar : (ar:string, en:string)=>en;
+      const description = err.message.includes('Invalid login credentials')
         ? t('البيانات التي أدخلتها غير صحيحة. يرجى المحاولة مرة أخرى.', 'The credentials you entered are incorrect. Please try again.')
         : t('حدث خطأ غير متوقع. يرجى التحقق من اتصالك بالإنترنت.', 'An unexpected error occurred. Please check your internet connection.');
-
-      toast({
-        variant: 'destructive',
-        title: t('فشل تسجيل الدخول', 'Login Failed'),
-        description: description,
-      });
-      return false;
+      
+      setError(description);
     } finally {
       setIsLoading(false);
     }
@@ -124,11 +123,6 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    try {
-        sessionStorage.removeItem('user');
-    } catch(e) {
-        console.error("Could not remove 'user' from sessionStorage", e);
-    }
     router.push('/login');
   };
   
@@ -136,7 +130,7 @@ export const AuthProvider = ({children}: {children: ReactNode}) => {
 
   return (
     <AuthContext.Provider
-      value={{isAuthenticated, user, login, logout, isLoading}}
+      value={{ isAuthenticated, user, login, logout, isLoading, error }}
     >
       {children}
     </AuthContext.Provider>

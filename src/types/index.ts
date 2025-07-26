@@ -28,12 +28,12 @@ export type Order = {
   id: string; // UUID
   items: MenuItem[]; // Stored as JSONB
   subtotal: number;
-  serviceCharge: number;
+  service_charge: number;
   tax: number;
-  finalTotal: number;
-  tableId: number;
-  tableUuid: string; // UUID
-  sessionId: string; // UUID, Foreign key to CustomerSession
+  final_total: number;
+  table_id: number;
+  table_uuid: string; // UUID
+  session_id: string; // UUID, Foreign key to CustomerSession
   status: OrderStatus;
   timestamp: number; // Converted from created_at
   confirmationTimestamp?: number; // Converted from customer_confirmed_at
@@ -74,7 +74,7 @@ export type Expense = {
     last_updated?: string;
 };
 
-export type UserRole = 'manager' | 'employee';
+export type UserRole = 'manager' | 'chef' | 'employee';
 
 export type User = {
     id: string; // UUID from auth.users
