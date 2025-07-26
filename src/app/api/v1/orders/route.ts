@@ -6,16 +6,17 @@ export async function POST(request: NextRequest) {
   try {
     const orderData = await request.json();
 
-    if (!orderData.tableUuid || !orderData.items || !orderData.items.length || !orderData.sessionId) {
+    // The client now sends tableId and tableUuid correctly.
+    if (!orderData.table_uuid || !orderData.items || !orderData.items.length || !orderData.session_id) {
       return NextResponse.json({ message: 'Bad Request: Missing required fields.' }, { status: 400 });
     }
     
     const subtotal = orderData.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
 
     const newOrder = {
-      table_id: orderData.tableId,
-      table_uuid: orderData.tableUuid,
-      session_id: orderData.sessionId,
+      table_id: orderData.table_id, // Keep the numeric ID for reference if needed
+      table_uuid: orderData.table_uuid,
+      session_id: orderData.session_id,
       items: orderData.items,
       status: 'pending_chef_approval',
       subtotal: subtotal,

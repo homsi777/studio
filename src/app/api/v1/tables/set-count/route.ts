@@ -26,9 +26,10 @@ export async function POST(request: NextRequest) {
     if (desiredCount > currentCount) {
       // Add new tables
       const newTablesCount = desiredCount - currentCount;
-      const newTables = Array.from({ length: newTablesCount }, () => ({
+      const newTables = Array.from({ length: newTablesCount }, (_, i) => ({
         uuid: uuidv4(),
-        is_active: true,
+        table_number: currentCount + i + 1, // Assign table numbers sequentially
+        status: 'available',
       }));
       
       const { error: insertError } = await supabaseAdmin.from('tables').insert(newTables);
@@ -38,12 +39,12 @@ export async function POST(request: NextRequest) {
       // Remove tables
       const tablesToRemoveCount = currentCount - desiredCount;
       const tablesToRemove = currentTables.slice(-tablesToRemoveCount); // Get the last N tables
-      const idsToRemove = tablesToRemove.map(t => t.id);
+      const uuidsToRemove = tablesToRemove.map(t => t.uuid);
 
       const { error: deleteError } = await supabaseAdmin
         .from('tables')
         .delete()
-        .in('id', idsToRemove);
+        .in('uuid', uuidsToRemove);
       
       if (deleteError) throw deleteError;
     }

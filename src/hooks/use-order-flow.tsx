@@ -150,7 +150,9 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         let operationsSyncedCount = 0;
         for (const op of pendingOperations) {
             try {
-                const url = `/api/v1/${op.tableName}${op.type === 'insert' ? '' : `/${op.payload.id}`}`;
+                // Use uuid for tables, and id for other entities
+                const identifier = op.tableName === 'tables' ? op.payload.uuid : op.payload.id;
+                const url = `/api/v1/${op.tableName}${op.type === 'insert' ? '' : `/${identifier}`}`;
                 const method = op.type === 'insert' ? 'POST' : op.type === 'update' ? 'PUT' : 'DELETE';
 
                 if (!op.id) {
@@ -197,16 +199,16 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
 
     // Derived state for tables with their current orders/status
     const tablesWithStatus = useMemo(() => {
-        const tableMap = new Map<number, Table>();
+        const tableMap = new Map<string, Table>();
 
         for (const dbTable of tables) {
-            tableMap.set(dbTable.id, { ...dbTable, status: 'available', order: null });
+            tableMap.set(dbTable.uuid, { ...dbTable, status: 'available', order: null });
         }
 
         const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
 
         for (const order of activeOrders) {
-            if (tableMap.has(order.table_id)) {
+            if (tableMap.has(order.table_uuid)) {
                 let status: TableStatus = 'occupied';
                 if (order.status === 'pending_chef_approval') status = 'new_order';
                 if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
@@ -216,7 +218,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 if (order.status === 'paying') status = 'paying';
                 if (order.status === 'needs_attention') status = 'needs_attention';
                 
-                const existingTable = tableMap.get(order.table_id)!;
+                const existingTable = tableMap.get(order.table_uuid)!;
                 const tableData: Table = {
                   ...existingTable,
                   status: status,
@@ -224,7 +226,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                   seatingDuration: '10 min', 
                   chefConfirmationTimestamp: order.confirmationTimestamp
                 };
-                tableMap.set(order.table_id, tableData);
+                tableMap.set(order.table_uuid, tableData);
             }
         }
         return Array.from(tableMap.values()).sort((a,b) => a.id - b.id);
@@ -300,7 +302,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                     const newStatus = payload.new.status as OrderStatus;
                     let description = `حالة الطلب للطاولة رقم ${payload.new.table_id} تغيرت إلى: `;
                     switch (newStatus) {
-                        case 'in_progress': description += 'قيد التحضير.'; break;
+                        case 'confirmed': description += 'قيد التحضير.'; break;
                         case 'ready': description += 'جاهز للتسليم!'; break;
                         case 'completed': description += 'مكتمل.'; break;
                         case 'cancelled': description += 'ملغى.'; break;
@@ -323,7 +325,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
             if (syncTimeoutRef.current) clearInterval(syncTimeoutRef.current);
         };
-    }, [isAuthenticated, fetchAllData, syncPendingOperations, handleServiceWorkerMessage]);
+    }, [isAuthenticated, fetchAllData, syncPendingOperations, handleServiceWorkerMessage, toast]);
     
     // --- WRITE OPERATIONS ---
 

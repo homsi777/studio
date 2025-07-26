@@ -14,13 +14,9 @@ class MaidaDatabase extends Dexie {
     super('maidaAppDb'); // اسم قاعدة بيانات IndexedDB الخاصة بك
 
     // قم بتعريف مخطط قاعدة البيانات هنا
-    // الإصدار 1 من قاعدة البيانات
-    this.version(2).stores({
-      // اسم_الجدول: 'المفتاح_الأساسي, [فهرس1], [فهرس2], ...'
-      // استخدم '++id' للمفاتيح الأساسية ذات الترقيم التلقائي
-      // استخدم 'id' للمفاتيح الأساسية التي يتم توفيرها يدوياً (مثل UUIDs)
-      tables: 'id, status',
-      orders: '&id, table_id, status, created_at',
+    this.version(1).stores({
+      tables: '&uuid, id, status',
+      orders: '&id, table_uuid, status, created_at',
       menuItems: '&id, name, category, is_available',
       pendingSyncOperations: '++id, type, tableName, timestamp',
     });
@@ -35,7 +31,6 @@ export const db = new MaidaDatabase();
 
 export const getCachedData = async <T>(tableName: 'tables' | 'orders' | 'menuItems'): Promise<T[]> => {
   try {
-    // الوصول ديناميكياً إلى الجدول باستخدام تدوين الأقواس
     const table = db.table(tableName);
     if (!table) {
       console.warn(`[IndexedDB] Table ${tableName} not found in IndexedDB schema.`);
@@ -59,7 +54,7 @@ export const saveToCache = async <T>(tableName: 'tables' | 'orders' | 'menuItems
     }
     await db.transaction('rw', table, async () => {
       await table.clear(); // مسح البيانات الموجودة
-      await table.bulkAdd(data as any[]); // إضافة البيانات الجديدة
+      await table.bulkPut(data as any[]); // إضافة البيانات الجديدة
     });
     console.log(`[IndexedDB] Saved ${data.length} items to IndexedDB table: ${tableName}`);
   } catch (error: any) {

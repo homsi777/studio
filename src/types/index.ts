@@ -13,13 +13,16 @@ export type TableStatus =
   | 'ready';
 
 export interface Table {
-  id: number;
-  uuid: string;
+  id: number; // The auto-incrementing serial key from Postgres
+  uuid: string; // The universally unique identifier
+  table_number: number;
   status: TableStatus; // This is a client-side derived status
   order: Order | null;
   seatingDuration?: string;
   chefConfirmationTimestamp?: number;
   is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export type OrderStatus =
