@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
     try {
-        const { id } = params;
+        const { id } = context.params;
         const updatedData = await request.json();
         
         const { data, error } = await supabaseAdmin
@@ -23,14 +23,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
         return NextResponse.json(data, { status: 200 });
     } catch (error) {
-        console.error(`Failed to update menu item with ID ${params.id}:`, error);
+        console.error(`Failed to update menu item with ID ${context.params.id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
     try {
-        const { id } = params;
+        const { id } = context.params;
         const { error } = await supabaseAdmin
             .from('menu_items')
             .delete()
@@ -43,7 +43,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
         return new NextResponse(null, { status: 204 });
     } catch (error) {
-        console.error(`Failed to delete menu item with ID ${params.id}:`, error);
+        console.error(`Failed to delete menu item with ID ${context.params.id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

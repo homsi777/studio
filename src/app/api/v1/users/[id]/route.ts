@@ -6,10 +6,10 @@ import type {User} from '@/types';
 
 export async function PUT(
   request: NextRequest,
-  {params}: {params: {id: string}}
+  context: {params: {id: string}}
 ) {
   try {
-    const {id} = params;
+    const {id} = context.params;
     const updatedData = (await request.json()) as Partial<Omit<User, 'id'>>;
 
     const dataToUpdate: { email?: string; password?: string, user_metadata?: object } = {};
@@ -38,17 +38,17 @@ export async function PUT(
 
     return NextResponse.json(responseData, {status: 200});
   } catch (error) {
-    console.error(`Failed to update user with ID ${params.id}:`, error);
+    console.error(`Failed to update user with ID ${context.params.id}:`, error);
     return NextResponse.json({message: 'Internal Server Error'}, {status: 500});
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  {params}: {params: {id: string}}
+  context: {params: {id: string}}
 ) {
   try {
-    const {id} = params;
+    const {id} = context.params;
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
 
@@ -56,7 +56,7 @@ export async function DELETE(
 
     return new NextResponse(null, {status: 204});
   } catch (error) {
-    console.error(`Failed to delete user with ID ${params.id}:`, error);
+    console.error(`Failed to delete user with ID ${context.params.id}:`, error);
     return NextResponse.json({message: 'Internal Server Error'}, {status: 500});
   }
 }
