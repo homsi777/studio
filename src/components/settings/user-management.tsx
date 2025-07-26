@@ -1,18 +1,17 @@
-
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react'; // إضافة useCallback
 import { type User, type UserRole } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui/table';
 import {
     Dialog,
@@ -44,10 +43,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -74,38 +73,42 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-    const openAddDialog = () => {
+    const openAddDialog = useCallback(() => { // استخدام useCallback
         setEditingUser(null);
         setFormOpen(true);
-    };
+    }, []);
 
-    const openEditDialog = (user: User) => {
+    const openEditDialog = useCallback((user: User) => { // استخدام useCallback
         setEditingUser(user);
         setFormOpen(true);
-    };
+    }, []);
 
-    const openDeleteDialog = (user: User) => {
+    const openDeleteDialog = useCallback((user: User) => { // استخدام useCallback
         setUserToDelete(user);
         setConfirmDeleteOpen(true);
-    };
+    }, []);
 
-    const handleSaveUser = async (formData: Partial<User>) => {
+    const handleSaveUser = useCallback(async (formData: Partial<User>) => { // استخدام useCallback
         if (editingUser) {
-             try {
+            try {
                 const response = await fetch(`/api/v1/users/${editingUser.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData),
                 });
-                if (!response.ok) throw new Error(`Failed to update user. Status: ${response.status}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("API Error - update user:", response.status, errorText);
+                    throw new Error(`Failed to update user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
+                }
                 onUserChange(); // Refetch to get updated data
                 toast({ title: t('تم التحديث بنجاح', 'Update Successful'), description: t(`تم تحديث بيانات المستخدم ${formData.email}.`, `User ${formData.email} has been updated.`) });
-            } catch (error) {
-                console.error(error);
+            } catch (error: any) {
+                console.error("Error updating user:", error);
                 toast({
                     variant: 'destructive',
                     title: t('خطأ في التحديث', 'Update Error'),
-                    description: t('لم نتمكن من تحديث المستخدم.', 'Could not update the user.'),
+                    description: t('لم نتمكن من تحديث المستخدم.', 'Could not update the user.') + (error.message ? `: ${error.message}` : ''),
                 });
             }
         } else {
@@ -116,41 +119,96 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
                     body: JSON.stringify(formData),
                 });
                 if (response.status === 409) {
-                     toast({ variant: "destructive", title: t("خطأ", "Error"), description: t("البريد الإلكتروني موجود بالفعل.", "Email already exists.") });
-                     return;
+                    toast({ variant: "destructive", title: t("خطأ", "Error"), description: t("البريد الإلكتروني موجود بالفعل.", "Email already exists.") });
+                    return;
                 }
-                if (!response.ok) throw new Error('Failed to save user');
-                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("API Error - save new user:", response.status, errorText);
+                    throw new Error(`Failed to save user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
+                }
+
                 onUserChange(); // Refetch to get the new user with its ID
                 toast({ title: t('تمت الإضافة بنجاح', 'Added Successfully'), description: t(`تمت إضافة المستخدم الجديد ${formData.email}.`, `New user ${formData.email} has been added.`) });
 
-            } catch (error) {
-                 console.error(error);
-                 toast({
+            } catch (error: any) {
+                console.error("Error saving new user:", error);
+                toast({
                     variant: "destructive",
                     title: t("خطأ في الحفظ", "Save Error"),
-                    description: t("لم نتمكن من حفظ المستخدم الجديد.", "Could not save the new user."),
+                    description: t("لم نتمكن من حفظ المستخدم الجديد.", "Could not save the new user.") + (error.message ? `: ${error.message}` : ''),
                 });
             }
         }
         setFormOpen(false);
-    };
-    
-    const handleDeleteUser = async () => {
+    }, [editingUser, onUserChange, t, toast]); // إضافة التبعيات
+
+    const handleDeleteUser = useCallback(async () => { // استخدام useCallback
         if (userToDelete) {
-             try {
+            try {
                 const response = await fetch(`/api/v1/users/${userToDelete.id}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('Failed to delete user');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("API Error - delete user:", response.status, errorText);
+                    throw new Error(`Failed to delete user. Status: ${response.status} - ${errorText.substring(0, 150)}...`);
+                }
                 onUserChange();
                 toast({ title: t('تم الحذف', 'Deleted'), description: t(`تم حذف المستخدم ${userToDelete.email}.`, `User ${userToDelete.email} has been deleted.`) });
-             } catch (error) {
-                 console.error(error);
-                 toast({ variant: 'destructive', title: t('خطأ في الحذف', 'Delete Error'), description: t('لم نتمكن من حذف المستخدم.', 'Could not delete the user.') });
-             }
+            } catch (error: any) {
+                console.error("Error deleting user:", error);
+                toast({ variant: 'destructive', title: t('خطأ في الحذف', 'Delete Error'), description: t('لم نتمكن من حذف المستخدم.', 'Could not delete the user.') + (error.message ? `: ${error.message}` : '') });
+            }
         }
         setConfirmDeleteOpen(false);
         setUserToDelete(null);
-    }
+    }, [userToDelete, onUserChange, t, toast]); // إضافة التبعيات
+
+    // مكون فرعي لصف المستخدم، يستخدم React.memo لتحسين الأداء
+    const UserRow = React.memo(function UserRow({ user, language, currentUser, openEditDialog, openDeleteDialog, t }: {
+        user: User;
+        language: string;
+        currentUser: User | null;
+        openEditDialog: (user: User) => void;
+        openDeleteDialog: (user: User) => void;
+        t: (ar: string, en: string) => string;
+    }) {
+        const roleText = roleMap[user.role] ? roleMap[user.role][language] : user.role;
+        const roleClassName = roleMap[user.role]?.className || '';
+
+        return (
+            <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.email}</TableCell>
+                <TableCell>
+                    <Badge className={roleClassName}>{roleText}</Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">{t('فتح القائمة', 'Open menu')}</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
+                            <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                {t('تعديل', 'Edit')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => openDeleteDialog(user)}
+                                className="text-red-500 focus:text-red-500"
+                                disabled={user.id === currentUser?.id}
+                            >
+                                <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                                {t('حذف', 'Delete')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
+            </TableRow>
+        );
+    });
+
 
     return (
         <Card>
@@ -165,11 +223,11 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
                 </Button>
             </CardHeader>
             <CardContent>
-                 {isLoading ? (
+                {isLoading ? (
                     <div className="flex justify-center items-center h-40">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
-                 ) : (
+                ) : (
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
@@ -181,36 +239,15 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
                             </TableHeader>
                             <TableBody>
                                 {users.map((user) => (
-                                    <TableRow key={user.id}>
-                                        <TableCell className="font-medium">{user.email}</TableCell>
-                                        <TableCell>
-                                            <Badge className={roleMap[user.role]?.className || ''}>{roleMap[user.role] ? roleMap[user.role][language] : user.role}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <span className="sr-only">{t('فتح القائمة', 'Open menu')}</span>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align={language === 'ar' ? 'start' : 'end'}>
-                                                    <DropdownMenuItem onClick={() => openEditDialog(user)}>
-                                                        <FilePenLine className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('تعديل', 'Edit')}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem 
-                                                        onClick={() => openDeleteDialog(user)} 
-                                                        className="text-red-500 focus:text-red-500"
-                                                        disabled={user.id === currentUser?.id}
-                                                    >
-                                                        <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                                                        {t('حذف', 'Delete')}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
+                                    <UserRow
+                                        key={user.id}
+                                        user={user}
+                                        language={language}
+                                        currentUser={currentUser}
+                                        openEditDialog={openEditDialog}
+                                        openDeleteDialog={openDeleteDialog}
+                                        t={t}
+                                    />
                                 ))}
                             </TableBody>
                         </Table>
@@ -231,7 +268,7 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
                     <AlertDialogHeader>
                         <AlertDialogTitle>{t('هل أنت متأكد تماماً؟', 'Are you absolutely sure?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                           {t('هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف المستخدم بشكل دائم', 'This action cannot be undone. This will permanently delete the user')} "{userToDelete?.email}".
+                            {t('هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف المستخدم بشكل دائم', 'This action cannot be undone. This will permanently delete the user')} "{userToDelete?.email}".
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -286,7 +323,7 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
     };
 
     return (
-         <Dialog open={isOpen} onOpenChange={onOpenChange} dir={dir}>
+        <Dialog open={isOpen} onOpenChange={onOpenChange} dir={dir}>
             <DialogContent className="sm:max-w-md">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
@@ -303,11 +340,11 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
                         <div className="space-y-2">
                             <Label htmlFor="password">{t('كلمة المرور', 'Password')}</Label>
                             <div className="relative">
-                                <Input 
-                                    id="password" 
+                                <Input
+                                    id="password"
                                     type={showPassword ? 'text' : 'password'}
-                                    value={password} 
-                                    onChange={(e) => setPassword(e.target.value)} 
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     required={!user} // Password is required only for new users
                                     placeholder={user ? t('اتركه فارغاً لعدم التغيير', 'Leave blank to keep unchanged') : ''}
                                 />
