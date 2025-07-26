@@ -61,7 +61,7 @@ export function DashboardClient() {
         <AnimatePresence>
           {tables.map((table, i) => (
             <motion.div
-              key={table.id}
+              key={table.uuid}
               layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
