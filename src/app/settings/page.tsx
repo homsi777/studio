@@ -14,9 +14,9 @@ import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
 import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
-import type { RestaurantSettings } from '@/hooks/use-restaurant-settings'; // أضف هذا السطر
 import type { User } from '@/types';
 import { Skeleton } from "@/components/ui/skeleton";
+import type { RestaurantSettings } from '@/hooks/use-restaurant-settings';
 
 // Helper function to handle API responses and throw errors with details
 async function handleApiResponse(response: Response, errorMessage: string): Promise<any> {
@@ -25,6 +25,7 @@ async function handleApiResponse(response: Response, errorMessage: string): Prom
         console.error("API Response Error:", response.status, errorDetail);
         throw new Error(`${errorMessage} (${response.status}): ${errorDetail.substring(0, 150)}${errorDetail.length > 150 ? '...' : ''}`);
     }
+    if (response.status === 204) return null; // Handle no content response
     return response.json();
 }
 
@@ -33,24 +34,23 @@ function SettingsPage() {
     const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
     const { toast } = useToast();
 
-    // استخدم هوك الإعدادات لجلب وحفظ إعدادات المطعم
+    // Use settings hook to fetch and save restaurant settings
     const { settings, setSettings, saveSettings } = useRestaurantSettings();
 
-    // حالة للمستخدمين والطاولات
+    // State for users and tables
     const [users, setUsers] = useState<User[]>([]);
     const [tables, setTables] = useState<{ id: number; uuid: string }[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [isLoadingTables, setIsLoadingTables] = useState(true);
     const [isTableUpdating, setIsTableUpdating] = useState(false);
-    const [isLoadingRate, setIsLoadingRate] = useState(false); // تم نقلها هنا لتكون قريبة من استخدامها
+    const [isLoadingRate, setIsLoadingRate] = useState(false);
 
-    // جلب المستخدمين
+    // Fetch users
     const fetchUsers = useCallback(async () => {
         setIsLoadingUsers(true);
         try {
             const usersRes = await fetch('/api/v1/users');
             const usersData = await handleApiResponse(usersRes, t('لم نتمكن من جلب قائمة المستخدمين.', 'Could not fetch the user list.'));
-            console.log("Users fetched successfully:", usersData);
             setUsers(usersData);
         } catch (err: any) {
             console.error("Error in fetchUsers:", err);
@@ -60,13 +60,12 @@ function SettingsPage() {
         }
     }, [t, toast]);
 
-    // جلب الطاولات
+    // Fetch tables
     const fetchTables = useCallback(async () => {
         setIsLoadingTables(true);
         try {
             const tablesRes = await fetch('/api/v1/tables');
             const tablesData = await handleApiResponse(tablesRes, t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count'));
-            console.log("Tables fetched successfully:", tablesData);
             setTables(tablesData);
         } catch (err: any) {
             console.error("Error in fetchTables:", err);
@@ -76,45 +75,28 @@ function SettingsPage() {
         }
     }, [t, toast]);
 
-    // جلب البيانات عند تحميل المكون
-    // سيعمل هذا مرة واحدة عند تحميل المكون
+    // Fetch data on component mount
     useEffect(() => {
         fetchUsers();
         fetchTables();
-    }, [fetchUsers, fetchTables]); // الاعتماديات هي الدوال نفسها، وهي مستقرة بسبب useCallback
+    }, [fetchUsers, fetchTables]);
 
-    // تحديث الإعدادات المحلية عند تغيير حقول الإدخال
+    // Update local settings on input change
+    const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value } = e.target;
+        setSettings((prev: RestaurantSettings) => ({
+            ...prev,
+            [id]: value
+        }));
+    }
 
-    //const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { id, value } = e.target;
-            setSettings((prev: RestaurantSettings) => ({ // <--- هنا التعديل
-                ...prev,
-                [id]: value
-            }));
-        }
-
-
-        //const { id, value } = e.target;
-
-        //setSettings(prev => ({
-
-     //   ...prev,
-
-           // [id]: value
-
-       // }));
-
-   // }
-
-
-    // إضافة طاولة جديدة
+    // Add a new table
     const handleAddTable = async () => {
         setIsTableUpdating(true);
         try {
             const response = await fetch('/api/v1/tables', { method: 'POST' });
             await handleApiResponse(response, t('فشل إضافة طاولة', 'Failed to add table'));
-            await fetchTables(); // إعادة جلب بيانات الطاولات بعد الإضافة
+            await fetchTables(); // Refetch tables data after adding
             toast({ title: t('تمت الإضافة', 'Table Added'), description: t('تمت إضافة طاولة جديدة بنجاح.', 'A new table has been added successfully.') });
         } catch (error: any) {
             console.error("Error adding table:", error);
@@ -124,14 +106,14 @@ function SettingsPage() {
         }
     };
 
-    // حذف آخر طاولة
+    // Delete the last table
     const handleDeleteLastTable = async () => {
         if (tables.length <= 0) return;
         setIsTableUpdating(true);
         try {
             const response = await fetch('/api/v1/tables', { method: 'DELETE' });
             await handleApiResponse(response, t('فشل حذف طاولة', 'Failed to delete table'));
-            await fetchTables(); // إعادة جلب بيانات الطاولات بعد الحذف
+            await fetchTables(); // Refetch tables data after deleting
             toast({ title: t('تم الحذف', 'Table Deleted'), description: t('تم حذف آخر طاولة بنجاح.', 'The last table has been deleted successfully.') });
         } catch (error: any) {
             console.error("Error deleting table:", error);
@@ -141,15 +123,13 @@ function SettingsPage() {
         }
     }
 
-    // جلب سعر الصرف
+    // Fetch exchange rate
     const handleFetchRate = async () => {
         setIsLoadingRate(true);
         try {
             const rate = await fetchExchangeRate();
             const now = new Date();
-            // تحديث الإعدادات المحفوظة مباشرة، مما سيؤدي إلى تحديث `settings` تلقائياً
-            // ولا داعي لتحديث حالة `exchangeRate` و `lastUpdated` منفصلة هنا.
-            setSettings((prev: RestaurantSettings) => ({
+            setSettings(prev => ({
                 ...prev,
                 currencyExchangeRate: rate,
                 lastExchangeRateUpdate: now.toISOString()
@@ -170,7 +150,7 @@ function SettingsPage() {
         }
     };
 
-    // حفظ جميع إعدادات المطعم (مثل الاسم، العنوان، الهاتف، الإيميل)
+    // Save all restaurant settings
     const handleSaveRestaurantSettings = async () => {
         saveSettings();
         toast({
@@ -299,14 +279,14 @@ function SettingsPage() {
                                 <div className="flex items-end gap-4">
                                     <div className="flex-1 space-y-2">
                                         <Label htmlFor="usd-rate">{t('السعر الحالي (ل.س لكل 1$)', 'Current Rate (SYP per 1 USD)')}</Label>
-                                        <Input id="usd-rate" type="number" value={settings.currencyExchangeRate ?? ""} readOnly disabled /> {/* قراءة مباشرة من settings */}
+                                        <Input id="usd-rate" type="number" value={settings.currencyExchangeRate ?? ""} readOnly disabled />
                                     </div>
                                     <Button onClick={handleFetchRate} disabled={isLoadingRate} variant="outline" size="icon">
                                         {isLoadingRate ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                                         <span className="sr-only">Refresh</span>
                                     </Button>
                                 </div>
-                                {settings.lastExchangeRateUpdate && ( // قراءة مباشرة من settings
+                                {settings.lastExchangeRateUpdate && (
                                     <p className="text-xs text-muted-foreground">
                                         {t("آخر تحديث:", "Last updated:")} {new Date(settings.lastExchangeRateUpdate).toLocaleString(language === 'ar' ? 'ar-SY' : 'en-US')}
                                     </p>
