@@ -10,20 +10,18 @@ import { QrCodeGenerator } from "@/components/settings/qr-code-generator";
 import { UserManagement } from "@/components/settings/user-management";
 import { useLanguage } from "@/hooks/use-language";
 import { AuthGuard } from "@/components/auth-guard";
-import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow"; // تأكد من أن هذا المسار صحيح
+import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
 import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useRestaurantSettings } from "@/hooks/use-restaurant-settings"; // تأكد من أن هذا المسار صحيح
-import type { User } from '@/types'; // تأكد من أن هذا المسار صحيح وأن User type معرف بشكل سليم
+import { useRestaurantSettings } from "@/hooks/use-restaurant-settings";
+import type { User } from '@/types';
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper function to handle API responses and throw errors with details
-// تم تعريفها خارج المكون لتجنب إعادة الإنشاء في كل Render
 async function handleApiResponse(response: Response, errorMessage: string): Promise<any> {
     if (!response.ok) {
         const errorDetail = await response.text();
         console.error("API Response Error:", response.status, errorDetail);
-        // Include status and a snippet of the errorDetail for the toast message
         throw new Error(`${errorMessage} (${response.status}): ${errorDetail.substring(0, 150)}${errorDetail.length > 150 ? '...' : ''}`);
     }
     return response.json();
@@ -37,17 +35,13 @@ function SettingsPage() {
     // استخدم هوك الإعدادات لجلب وحفظ إعدادات المطعم
     const { settings, setSettings, saveSettings } = useRestaurantSettings();
 
-    // حالة لسعر الصرف
-    const [exchangeRate, setExchangeRate] = useState<number | null>(settings.currencyExchangeRate || null);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(settings.lastExchangeRateUpdate ? new Date(settings.lastExchangeRateUpdate) : null);
-    const [isLoadingRate, setIsLoadingRate] = useState(false);
-
     // حالة للمستخدمين والطاولات
     const [users, setUsers] = useState<User[]>([]);
     const [tables, setTables] = useState<{ id: number; uuid: string }[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [isLoadingTables, setIsLoadingTables] = useState(true);
     const [isTableUpdating, setIsTableUpdating] = useState(false);
+    const [isLoadingRate, setIsLoadingRate] = useState(false); // تم نقلها هنا لتكون قريبة من استخدامها
 
     // جلب المستخدمين
     const fetchUsers = useCallback(async () => {
@@ -82,20 +76,11 @@ function SettingsPage() {
     }, [t, toast]);
 
     // جلب البيانات عند تحميل المكون
+    // سيعمل هذا مرة واحدة عند تحميل المكون
     useEffect(() => {
         fetchUsers();
         fetchTables();
-    }, [fetchUsers, fetchTables]);
-
-    // مزامنة حالة سعر الصرف الأولية مع الإعدادات المحفوظة
-    useEffect(() => {
-        if (settings.currencyExchangeRate) {
-            setExchangeRate(settings.currencyExchangeRate);
-        }
-        if (settings.lastExchangeRateUpdate) {
-            setLastUpdated(new Date(settings.lastExchangeRateUpdate));
-        }
-    }, [settings.currencyExchangeRate, settings.lastExchangeRateUpdate]);
+    }, [fetchUsers, fetchTables]); // الاعتماديات هي الدوال نفسها، وهي مستقرة بسبب useCallback
 
     // تحديث الإعدادات المحلية عند تغيير حقول الإدخال
     const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +109,7 @@ function SettingsPage() {
 
     // حذف آخر طاولة
     const handleDeleteLastTable = async () => {
-        if (tables.length <= 0) return; // لا تحاول الحذف إذا لم تكن هناك طاولات
+        if (tables.length <= 0) return;
         setIsTableUpdating(true);
         try {
             const response = await fetch('/api/v1/tables', { method: 'DELETE' });
@@ -144,14 +129,13 @@ function SettingsPage() {
         setIsLoadingRate(true);
         try {
             const rate = await fetchExchangeRate();
-            setExchangeRate(rate);
             const now = new Date();
-            setLastUpdated(now);
-            // تحديث الإعدادات المحفوظة أيضاً
+            // تحديث الإعدادات المحفوظة مباشرة، مما سيؤدي إلى تحديث `settings` تلقائياً
+            // ولا داعي لتحديث حالة `exchangeRate` و `lastUpdated` منفصلة هنا.
             setSettings(prev => ({
                 ...prev,
                 currencyExchangeRate: rate,
-                lastExchangeRateUpdate: now.toISOString() // حفظ التاريخ كـ ISO string
+                lastExchangeRateUpdate: now.toISOString()
             }));
             toast({
                 title: t("تم التحديث بنجاح", "Update Successful"),
@@ -171,10 +155,7 @@ function SettingsPage() {
 
     // حفظ جميع إعدادات المطعم (مثل الاسم، العنوان، الهاتف، الإيميل)
     const handleSaveRestaurantSettings = async () => {
-        // إذا كان لديك API لحفظ هذه الإعدادات، يجب أن تستدعيها هنا
-        // حالياً، hook 'useRestaurantSettings' يقوم بحفظها في localStorage
-        // لذا هنا فقط نعرض رسالة النجاح
-        saveSettings(); // استدعاء دالة الحفظ من الهوك
+        saveSettings();
         toast({
             title: t("تم الحفظ", "Settings Saved"),
             description: t("تم حفظ التغييرات بنجاح.", "Your changes have been saved successfully."),
@@ -224,7 +205,7 @@ function SettingsPage() {
                         <UserManagement
                             users={users}
                             isLoading={isLoadingUsers}
-                            onUserChange={fetchUsers} // تمرير دالة الجلب كـ callback
+                            onUserChange={fetchUsers}
                         />
 
                         {/* Printers Settings */}
@@ -301,16 +282,16 @@ function SettingsPage() {
                                 <div className="flex items-end gap-4">
                                     <div className="flex-1 space-y-2">
                                         <Label htmlFor="usd-rate">{t('السعر الحالي (ل.س لكل 1$)', 'Current Rate (SYP per 1 USD)')}</Label>
-                                        <Input id="usd-rate" type="number" value={exchangeRate ?? ""} readOnly disabled />
+                                        <Input id="usd-rate" type="number" value={settings.currencyExchangeRate ?? ""} readOnly disabled /> {/* قراءة مباشرة من settings */}
                                     </div>
                                     <Button onClick={handleFetchRate} disabled={isLoadingRate} variant="outline" size="icon">
                                         {isLoadingRate ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                                         <span className="sr-only">Refresh</span>
                                     </Button>
                                 </div>
-                                {lastUpdated && (
+                                {settings.lastExchangeRateUpdate && ( // قراءة مباشرة من settings
                                     <p className="text-xs text-muted-foreground">
-                                        {t("آخر تحديث:", "Last updated:")} {lastUpdated.toLocaleString(language === 'ar' ? 'ar-SY' : 'en-US')}
+                                        {t("آخر تحديث:", "Last updated:")} {new Date(settings.lastExchangeRateUpdate).toLocaleString(language === 'ar' ? 'ar-SY' : 'en-US')}
                                     </p>
                                 )}
                             </CardContent>
