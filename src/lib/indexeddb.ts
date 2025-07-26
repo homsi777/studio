@@ -19,8 +19,8 @@ class MaidaDatabase extends Dexie {
 
   constructor() {
     super('maidaAppDb'); // اسم قاعدة البيانات
-    this.version(1).stores({
-      tables: '&id, status', // &id is primary key and is a string (uuid)
+    this.version(2).stores({
+      tables: 'id, status', // &id is primary key and is a string (uuid)
       orders: '&id, status, created_at',
       menuItems: '&id, name, category, is_available',
       pendingSyncOperations: '++id, type, tableName, timestamp',
