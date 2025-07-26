@@ -1,27 +1,19 @@
 
-import Dexie, { type Table as DexieTable } from 'dexie';
-import type { Table, Order, MenuItem } from '@/types';
-
-export interface PendingSyncOperation {
-  id?: number;
-  type: 'insert' | 'update' | 'delete';
-  tableName: 'tables' | 'orders' | 'menu_items' | string;
-  payload: any;
-  timestamp: number;
-}
+import Dexie from 'dexie';
+import type { Table, Order, MenuItem, PendingSyncOperation } from '@/types';
 
 // تعريف قاعدة بيانات IndexedDB
 class MaidaDatabase extends Dexie {
-  tables!: DexieTable<Table, string>;
-  orders!: DexieTable<Order, string>;
-  menuItems!: DexieTable<MenuItem, string>;
-  pendingSyncOperations!: DexieTable<PendingSyncOperation, number>;
+  tables!: Dexie.Table<Table, number>; // Primary key is 'id' (number)
+  orders!: Dexie.Table<Order, string>; // Primary key is 'id' (string)
+  menuItems!: Dexie.Table<MenuItem, string>; // Primary key is 'id' (string)
+  pendingSyncOperations!: Dexie.Table<PendingSyncOperation, number>;
 
   constructor() {
     super('maidaAppDb'); // اسم قاعدة البيانات
     this.version(2).stores({
-      tables: '&id, status', // &id is primary key and is a string (uuid)
-      orders: '&id, status, created_at',
+      tables: '++id, status', 
+      orders: '&id, table_id, status, created_at',
       menuItems: '&id, name, category, is_available',
       pendingSyncOperations: '++id, type, tableName, timestamp',
     });

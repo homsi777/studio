@@ -1,12 +1,40 @@
 
+// src/types/index.ts
+// هذه الأنواع تمثل البنية الموحدة لبياناتنا عبر النظام
 
-export type TableStatus = "available" | "occupied" | "new_order" | "confirmed" | "needs_attention" | "paying" | "pending_cashier_approval" | "awaiting_final_confirmation" | "ready";
+export type TableStatus =
+  | 'available'
+  | 'occupied'
+  | 'new_order'
+  | 'confirmed'
+  | 'needs_attention'
+  | 'paying'
+  | 'pending_cashier_approval'
+  | 'awaiting_final_confirmation'
+  | 'ready';
 
-export type OrderStatus = 'pending_chef_approval' | 'pending_cashier_approval' | 'pending_final_confirmation' | 'confirmed' | 'ready' | 'completed' | 'cancelled' | 'paying' | 'needs_attention';
+export interface Table {
+  id: number;
+  uuid: string;
+  status: TableStatus; // This is a client-side derived status
+  order: Order | null;
+  seatingDuration?: string;
+  chefConfirmationTimestamp?: number;
+  is_active?: boolean;
+}
 
-export type MenuItemCategory = 'main' | 'appetizer' | 'drink' | 'dessert';
+export type OrderStatus =
+  | 'pending_chef_approval'
+  | 'pending_cashier_approval'
+  | 'pending_final_confirmation'
+  | 'confirmed'
+  | 'ready'
+  | 'completed'
+  | 'cancelled'
+  | 'paying'
+  | 'needs_attention';
 
-export type MenuItem = {
+export interface MenuItem {
   id: string; // UUID
   name: string;
   name_en?: string;
@@ -22,9 +50,12 @@ export type MenuItem = {
   image_hint?: string;
   created_at?: string;
   updated_at?: string;
-};
+}
 
-export type Order = {
+export type MenuItemCategory = 'main' | 'appetizer' | 'drink' | 'dessert';
+
+
+export interface Order {
   id: string; // UUID
   items: MenuItem[]; // Stored as JSONB
   subtotal: number;
@@ -42,23 +73,14 @@ export type Order = {
   cashier_approved_at?: string;
   customer_confirmed_at?: string;
   completed_at?: string;
-};
-
-export type Table = {
-  id: number;
-  uuid: string; // UUID
-  status: TableStatus; // This is a client-side derived status
-  order: Order | null;
-  seatingDuration?: string;
-  chefConfirmationTimestamp?: number;
-  is_active?: boolean;
-};
+  updated_at?: string; // Add this for sync logic
+}
 
 
 export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies' | 'maintenance' | 'other';
 export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer';
 
-export type Expense = {
+export interface Expense {
     id: string; // UUID
     description: string;
     description_en?: string;
@@ -72,20 +94,32 @@ export type Expense = {
     user_id?: string; // UUID, Foreign key to auth.users
     created_at?: string;
     last_updated?: string;
-};
+}
 
 export type UserRole = 'manager' | 'chef' | 'employee';
 
-export type User = {
+export interface User {
     id: string; // UUID from auth.users
     username: string;
     email: string;
     role: UserRole;
     password?: string; // Only for creating/updating, not stored
-};
+}
 
-export type CustomerSession = {
+export interface CustomerSession {
     id: string; // UUID
     table_uuid: string; // UUID, Foreign key to tables
     created_at: string;
+}
+
+
+// النوع الخاص بعمليات المزامنة المعلقة في IndexedDB
+export type SyncOperationType = 'insert' | 'update' | 'delete';
+
+export interface PendingSyncOperation {
+  id?: number; // مفتاح أساسي تلقائي الزيادة في IndexedDB (++id)
+  type: SyncOperationType; // نوع العملية: 'insert', 'update', 'delete'
+  tableName: string; // اسم الجدول في Supabase و IndexedDB (مثلاً: 'orders', 'tables')
+  payload: any; // حمولة البيانات: الكائن المراد إضافته/تعديله/حذفه
+  timestamp: number; // وقت إضافة العملية إلى قائمة الانتظار (مهم للترتيب وحل التعارضات)
 }
