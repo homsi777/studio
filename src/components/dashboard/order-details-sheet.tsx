@@ -48,7 +48,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
 
   useEffect(() => {
     if (table?.order) {
-        setServiceCharge(table.order.serviceCharge || 0);
+        setServiceCharge(table.order.service_charge || 0);
         setTax(table.order.tax || 0);
     }
   }, [table?.order])
@@ -175,7 +175,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
                          <>
                          <div className="flex justify-between items-center">
                             <span>{t('رسوم الخدمة', 'Service Charge')}</span>
-                            <span className="font-medium">{formatCurrency(order.serviceCharge)}</span>
+                            <span className="font-medium">{formatCurrency(order.service_charge)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span>{t('ضريبة', 'Tax')}</span>
@@ -188,7 +188,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
                     <Separator className="!my-4" />
                     <div className="flex justify-between items-center font-bold text-xl">
                         <span>{t('الإجمالي النهائي', 'Final Total')}</span>
-                        <span>{formatCurrency(isCashierApprovalStep ? finalTotal : order.finalTotal)}</span>
+                        <span>{formatCurrency(isCashierApprovalStep ? finalTotal : order.final_total)}</span>
                     </div>
                 </div>
 

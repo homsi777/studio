@@ -45,7 +45,7 @@ function CustomerTablesPage() {
     const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
 
     for (const order of activeOrders) {
-      if (tableMap.has(order.tableId)) {
+      if (tableMap.has(order.table_id)) {
         let status: Table['status'] = 'occupied';
         if (order.status === 'pending_chef_approval') status = 'new_order';
         if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
@@ -54,7 +54,7 @@ function CustomerTablesPage() {
         if (order.status === 'paying') status = 'paying';
         if (order.status === 'needs_attention') status = 'needs_attention';
 
-        const existingTable = tableMap.get(order.tableId)!;
+        const existingTable = tableMap.get(order.table_id)!;
         const tableData: Table = {
           ...existingTable,
           status: status,
@@ -62,7 +62,7 @@ function CustomerTablesPage() {
           seatingDuration: '10 min', // Mock data
           chefConfirmationTimestamp: order.confirmationTimestamp
         };
-        tableMap.set(order.tableId, tableData);
+        tableMap.set(order.table_id, tableData);
       }
     }
 

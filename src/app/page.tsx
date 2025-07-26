@@ -1,39 +1,14 @@
 
 import { AuthGuard } from '@/components/auth-guard';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { Order, Table } from '@/types';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
 
-async function getInitialDashboardData() {
-  try {
-    const tablesPromise = supabaseAdmin.from('tables').select('*').order('id');
-    const ordersPromise = supabaseAdmin.from('orders').select('*').not('status', 'in', '("completed", "cancelled")');
-    
-    const [tablesRes, ordersRes] = await Promise.all([tablesPromise, ordersPromise]);
-
-    if (tablesRes.error) throw tablesRes.error;
-    if (ordersRes.error) throw ordersRes.error;
-
-    return {
-      initialTables: tablesRes.data,
-      initialOrders: ordersRes.data
-    };
-  } catch (error) {
-    console.error("Error fetching initial dashboard data:", error);
-    return {
-      initialTables: [],
-      initialOrders: []
-    }
-  }
-}
-
-
-async function DashboardPage() {
-  const { initialTables, initialOrders } = await getInitialDashboardData();
-
+function DashboardPage() {
+  // The DashboardClient will now be responsible for fetching and managing all data on the client-side.
+  // This ensures that we have a single source of truth from the useOrderFlow hook,
+  // which handles real-time updates, preventing any state inconsistencies.
   return (
     <main className="flex-1 p-4 sm:p-6">
-       <DashboardClient initialDbTables={initialTables as Table[]} initialOrders={initialOrders as any[]} />
+       <DashboardClient />
     </main>
   );
 }

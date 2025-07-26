@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 // --- CONTEXT TYPE ---
 interface OrderFlowContextType {
     orders: Order[];
-    submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => Promise<void>;
+    submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp'>) => Promise<void>;
     approveOrderByChef: (orderId: string) => Promise<void>;
     approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
     confirmFinalOrder: (orderId: string) => Promise<void>;
@@ -29,14 +29,14 @@ const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefin
 // --- HELPER FUNCTION ---
 export const formatOrderFromDb = (dbOrder: any): Order => ({
     id: dbOrder.id,
-    items: dbOrder.items,
-    subtotal: dbOrder.subtotal,
-    service_charge: dbOrder.service_charge,
-    tax: dbOrder.tax,
-    final_total: dbOrder.final_total,
-    table_id: dbOrder.table_id,
-    table_uuid: dbOrder.table_uuid,
-    session_id: dbOrder.session_id,
+    items: dbOrder.items || [],
+    subtotal: dbOrder.subtotal || 0,
+    serviceCharge: dbOrder.service_charge || 0,
+    tax: dbOrder.tax || 0,
+    finalTotal: dbOrder.final_total || 0,
+    tableId: dbOrder.table_id,
+    tableUuid: dbOrder.table_uuid,
+    sessionId: dbOrder.session_id,
     status: dbOrder.status,
     timestamp: new Date(dbOrder.created_at).getTime(),
     confirmationTimestamp: dbOrder.customer_confirmed_at ? new Date(dbOrder.customer_confirmed_at).getTime() : undefined,
@@ -110,7 +110,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     }, [isAuthenticated]);
 
 
-    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => {
+    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp'>) => {
         try {
             const response = await fetch('/api/v1/orders', {
                 method: 'POST',

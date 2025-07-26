@@ -54,6 +54,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 const roleMap: Record<UserRole, { ar: string, en: string, className: string }> = {
     manager: { ar: 'مدير', en: 'Manager', className: 'bg-primary/20 text-primary-foreground' },
+    chef: { ar: 'شيف', en: 'Chef', className: 'bg-blue-500/20 text-blue-700 dark:text-blue-400' },
     employee: { ar: 'موظف', en: 'Employee', className: 'bg-secondary text-secondary-foreground' },
 };
 
@@ -152,7 +153,7 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
 
     const UserRow = React.memo(function UserRow({ user, language, currentUser, openEditDialog, openDeleteDialog, t }: {
         user: User;
-        language: string;
+        language: 'ar' | 'en';
         currentUser: User | null;
         openEditDialog: (user: User) => void;
         openDeleteDialog: (user: User) => void;
@@ -163,7 +164,8 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
 
         return (
             <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.email}</TableCell>
+                <TableCell className="font-medium">{user.username}</TableCell>
+                <TableCell className="text-muted-foreground">{user.email}</TableCell>
                 <TableCell>
                     <Badge className={roleClassName}>{roleText}</Badge>
                 </TableCell>
@@ -219,6 +221,7 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>{t('اسم المستخدم', 'Username')}</TableHead>
                                     <TableHead>{t('البريد الإلكتروني', 'Email')}</TableHead>
                                     <TableHead>{t('الدور', 'Role')}</TableHead>
                                     <TableHead><span className="sr-only">{t('الإجراءات', 'Actions')}</span></TableHead>
@@ -255,7 +258,7 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
                     <AlertDialogHeader>
                         <AlertDialogTitle>{t('هل أنت متأكد تماماً؟', 'Are you absolutely sure?')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {t('هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف المستخدم بشكل دائم', 'This action cannot be undone. This will permanently delete the user')} "{userToDelete?.email}".
+                            {t('هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف المستخدم بشكل دائم', 'This action cannot be undone. This will permanently delete the user')} "{userToDelete?.username}".
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -283,6 +286,7 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
     const { language, dir } = useLanguage();
     const t = useCallback((ar: string, en: string) => (language === 'ar' ? ar : en), [language]);
 
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<UserRole>('employee');
@@ -291,10 +295,12 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
     React.useEffect(() => {
         if (isOpen) {
             if (user) {
+                setUsername(user.username);
                 setEmail(user.email);
                 setRole(user.role);
                 setPassword(''); // Clear password field when editing
             } else {
+                setUsername('');
                 setEmail('');
                 setPassword('');
                 setRole('employee');
@@ -304,7 +310,7 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const formData: Partial<User> = { email, role };
+        const formData: Partial<User> = { username, email, role };
         if (password || !user) { // Password is required for new user, or if being changed for existing one.
             formData.password = password;
         }
@@ -323,6 +329,10 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
+                            <Label htmlFor="username">{t('اسم المستخدم', 'Username')}</Label>
+                            <Input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                        </div>
+                         <div className="space-y-2">
                             <Label htmlFor="email">{t('البريد الإلكتروني', 'Email')}</Label>
                             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
@@ -357,6 +367,7 @@ function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogPr
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="employee">{t('موظف', 'Employee')}</SelectItem>
+                                    <SelectItem value="chef">{t('شيف', 'Chef')}</SelectItem>
                                     <SelectItem value="manager">{t('مدير', 'Manager')}</SelectItem>
                                 </SelectContent>
                             </Select>

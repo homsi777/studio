@@ -70,7 +70,7 @@ export default function MenuPage() {
 
     useEffect(() => {
         if (!sessionId) return;
-        const activeOrder = orders.find(o => o.tableUuid === tableUuid && o.sessionId === sessionId && o.status !== 'completed' && o.status !== 'cancelled');
+        const activeOrder = orders.find(o => o.table_uuid === tableUuid && o.session_id === sessionId && o.status !== 'completed' && o.status !== 'cancelled');
         setCurrentOrder(activeOrder || null);
     }, [orders, tableUuid, sessionId]);
 
@@ -116,9 +116,9 @@ export default function MenuPage() {
 
         setIsSubmitting(true);
         const newOrder: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'> = {
-            tableId: parseInt(displayTableNumber),
-            tableUuid: tableUuid,
-            sessionId: sessionId,
+            table_id: parseInt(displayTableNumber),
+            table_uuid: tableUuid,
+            session_id: sessionId,
             items: cart.map(({ quantity, ...item }) => ({ ...item, quantity: quantity || 0 })),
             subtotal: subtotal,
         }
@@ -205,7 +205,7 @@ export default function MenuPage() {
                             </div>
                              <div className="flex justify-between">
                                 <span className="text-muted-foreground">{t('رسوم الخدمة', 'Service Charge')}</span>
-                                <span className="font-medium">{formatCurrency(currentOrder.serviceCharge)}</span>
+                                <span className="font-medium">{formatCurrency(currentOrder.service_charge)}</span>
                             </div>
                              <div className="flex justify-between">
                                 <span className="text-muted-foreground">{t('ضريبة', 'Tax')}</span>
@@ -214,7 +214,7 @@ export default function MenuPage() {
                             <Separator />
                              <div className="flex justify-between text-xl font-bold">
                                 <span>{t('الإجمالي النهائي', 'Final Total')}</span>
-                                <span>{formatCurrency(currentOrder.finalTotal)}</span>
+                                <span>{formatCurrency(currentOrder.final_total)}</span>
                             </div>
                         </div>
 
@@ -405,5 +405,3 @@ export default function MenuPage() {
         </div>
     );
 }
-
-    

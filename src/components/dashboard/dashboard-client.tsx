@@ -6,7 +6,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { type Table, type TableStatus, type Order as OrderType } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
 import { OrderDetailsSheet } from '@/components/dashboard/order-details-sheet';
-import { useOrderFlow, formatOrderFromDb } from '@/hooks/use-order-flow';
+import { useOrderFlow } from '@/hooks/use-order-flow';
+import { supabase } from '@/lib/supabase';
 
 const statusPriority: Record<TableStatus, number> = {
     needs_attention: 1,
@@ -20,23 +21,39 @@ const statusPriority: Record<TableStatus, number> = {
     available: 9,
 };
 
-interface DashboardClientProps {
-    initialDbTables: Table[];
-    initialOrders: any[];
-}
-
-export function DashboardClient({ initialDbTables, initialOrders: rawInitialOrders }: DashboardClientProps) {
+export function DashboardClient() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const { orders: realTimeOrders } = useOrderFlow();
-  
-  const initialLiveOrders = useMemo(() => rawInitialOrders.map(formatOrderFromDb), [rawInitialOrders]);
-  
-  const orders = useMemo(() => {
-    const allOrders = [...realTimeOrders, ...initialLiveOrders];
-    const uniqueOrders = Array.from(new Map(allOrders.map(o => [o.id, o])).values());
-    return uniqueOrders;
-  }, [realTimeOrders, initialLiveOrders]);
+  const { orders, fetchOrders } = useOrderFlow();
+  const [dbTables, setDbTables] = useState<Table[]>([]);
 
+  useEffect(() => {
+    fetchOrders();
+    
+    const fetchInitialTables = async () => {
+        const { data, error } = await supabase.from('tables').select('*').order('id');
+        if (error) {
+            console.error("Error fetching initial tables:", error);
+        } else {
+            setDbTables(data);
+        }
+    };
+    fetchInitialTables();
+
+    const tablesChannel = supabase
+      .channel('realtime-tables-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, 
+        (payload) => {
+            console.log('Tables change detected, refetching:', payload);
+            fetchInitialTables();
+        }
+      ).subscribe();
+      
+      return () => {
+          supabase.removeChannel(tablesChannel);
+      }
+
+  }, [fetchOrders]);
+  
 
   const handleSelectTable = (table: Table) => {
     if(table.status !== 'available') {
@@ -51,12 +68,10 @@ export function DashboardClient({ initialDbTables, initialOrders: rawInitialOrde
   const tablesData = useMemo(() => {
     const tableMap = new Map<number, Table>();
     
-    // Initialize all tables from the database as available
-    for (const dbTable of initialDbTables) {
+    for (const dbTable of dbTables) {
         tableMap.set(dbTable.id, { ...dbTable, status: 'available', order: null });
     }
 
-    // Populate with active orders
     const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
 
     for (const order of activeOrders) {
@@ -75,7 +90,6 @@ export function DashboardClient({ initialDbTables, initialOrders: rawInitialOrde
           ...existingTable,
           status: status,
           order: order,
-          // Mock data, consider calculating this based on order start time
           seatingDuration: '10 min', 
           chefConfirmationTimestamp: order.confirmationTimestamp
         };
@@ -89,11 +103,10 @@ export function DashboardClient({ initialDbTables, initialOrders: rawInitialOrde
         if (priorityA !== priorityB) {
             return priorityA - priorityB;
         }
-        // If priorities are the same, sort by table ID
         return a.id - b.id;
     });
 
-  }, [initialDbTables, orders]);
+  }, [dbTables, orders]);
 
   return (
     <>
