@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react'; // إضافة useCallback
+import React, { useState, useCallback } from 'react';
 import { type User, type UserRole } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,29 +66,29 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
     const { language } = useLanguage();
     const { toast } = useToast();
     const { user: currentUser } = useAuth();
-    const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
+    const t = useCallback((ar: string, en: string) => (language === 'ar' ? ar : en), [language]);
 
     const [isFormOpen, setFormOpen] = useState(false);
     const [isConfirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-    const openAddDialog = useCallback(() => { // استخدام useCallback
+    const openAddDialog = useCallback(() => {
         setEditingUser(null);
         setFormOpen(true);
     }, []);
 
-    const openEditDialog = useCallback((user: User) => { // استخدام useCallback
+    const openEditDialog = useCallback((user: User) => {
         setEditingUser(user);
         setFormOpen(true);
     }, []);
 
-    const openDeleteDialog = useCallback((user: User) => { // استخدام useCallback
+    const openDeleteDialog = useCallback((user: User) => {
         setUserToDelete(user);
         setConfirmDeleteOpen(true);
     }, []);
 
-    const handleSaveUser = useCallback(async (formData: Partial<User>) => { // استخدام useCallback
+    const handleSaveUser = useCallback(async (formData: Partial<User>) => {
         if (editingUser) {
             try {
                 const response = await fetch(`/api/v1/users/${editingUser.id}`, {
@@ -141,9 +141,9 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
             }
         }
         setFormOpen(false);
-    }, [editingUser, onUserChange, t, toast]); // إضافة التبعيات
+    }, [editingUser, onUserChange, t, toast]);
 
-    const handleDeleteUser = useCallback(async () => { // استخدام useCallback
+    const handleDeleteUser = useCallback(async () => {
         if (userToDelete) {
             try {
                 const response = await fetch(`/api/v1/users/${userToDelete.id}`, { method: 'DELETE' });
@@ -161,9 +161,8 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
         }
         setConfirmDeleteOpen(false);
         setUserToDelete(null);
-    }, [userToDelete, onUserChange, t, toast]); // إضافة التبعيات
+    }, [userToDelete, onUserChange, t, toast]);
 
-    // مكون فرعي لصف المستخدم، يستخدم React.memo لتحسين الأداء
     const UserRow = React.memo(function UserRow({ user, language, currentUser, openEditDialog, openDeleteDialog, t }: {
         user: User;
         language: string;
@@ -172,7 +171,7 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
         openDeleteDialog: (user: User) => void;
         t: (ar: string, en: string) => string;
     }) {
-        const roleText = roleMap[user.role] ? roleMap[user.role][language] : user.role;
+        const roleText = roleMap[user.role] ? t(roleMap[user.role].ar, roleMap[user.role].en) : user.role;
         const roleClassName = roleMap[user.role]?.className || '';
 
         return (
@@ -208,6 +207,7 @@ export function UserManagement({ users, isLoading, onUserChange }: UserManagemen
             </TableRow>
         );
     });
+    UserRow.displayName = 'UserRow';
 
 
     return (
