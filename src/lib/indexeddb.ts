@@ -15,7 +15,7 @@ class MaidaDatabase extends Dexie {
 
     // قم بتعريف مخطط قاعدة البيانات هنا
     this.version(1).stores({
-      tables: '&uuid, id, status',
+      tables: '&uuid, id, status', // &uuid is the primary key. 'id' and 'status' are indexed.
       orders: '&id, table_uuid, status, created_at',
       menuItems: '&id, name, category, is_available',
       pendingSyncOperations: '++id, type, tableName, timestamp',
