@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useCallback } from 'react';
@@ -294,7 +295,7 @@ interface UserFormDialogProps {
 
 function UserFormDialog({ isOpen, onOpenChange, user, onSave }: UserFormDialogProps) {
     const { language, dir } = useLanguage();
-    const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
+    const t = useCallback((ar: string, en: string) => (language === 'ar' ? ar : en), [language]);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
