@@ -12,7 +12,7 @@ import { UserManagement } from "@/components/settings/user-management";
 import { useLanguage } from "@/hooks/use-language";
 import { AuthGuard } from "@/components/auth-guard";
 import { fetchExchangeRate } from "@/ai/flows/exchange-rate-flow";
-import { Loader2, RefreshCw, Plus, Minus } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRestaurantSettings, type RestaurantSettings } from '@/hooks/use-restaurant-settings';
 import type { User, Table } from '@/types';
@@ -40,6 +40,7 @@ function SettingsPage() {
     // State for users and tables
     const [users, setUsers] = useState<User[]>([]);
     const [tables, setTables] = useState<Table[]>([]);
+    const [desiredTableCount, setDesiredTableCount] = useState<number | string>("");
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [isLoadingTables, setIsLoadingTables] = useState(true);
     const [isTableUpdating, setIsTableUpdating] = useState(false);
@@ -67,6 +68,7 @@ function SettingsPage() {
             const tablesRes = await fetch('/api/v1/tables');
             const tablesData = await handleApiResponse(tablesRes, t('لم نتمكن من جلب عدد الطاولات', 'Could not fetch table count'));
             setTables(tablesData);
+            setDesiredTableCount(tablesData.length);
         } catch (err: any) {
             console.error("Error in fetchTables:", err);
             toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: err.message });
@@ -90,42 +92,31 @@ function SettingsPage() {
         }));
     }
 
-    // Add a new table
-    const handleAddTable = async () => {
+    const handleSetTableCount = async () => {
+        const count = Number(desiredTableCount);
+        if (isNaN(count) || count < 0 || count > 200) {
+             toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('الرجاء إدخال رقم صالح بين 0 و 200.', 'Please enter a valid number between 0 and 200.') });
+             return;
+        }
+
         setIsTableUpdating(true);
         try {
-            const response = await fetch('/api/v1/tables', { method: 'POST' });
-            await handleApiResponse(response, t('فشل إضافة طاولة', 'Failed to add table'));
-            await fetchTables(); // Refetch tables data after adding
-            toast({ title: t('تمت الإضافة', 'Table Added'), description: t('تمت إضافة طاولة جديدة بنجاح.', 'A new table has been added successfully.') });
+            const response = await fetch('/api/v1/tables/set-count', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ count }),
+            });
+            await handleApiResponse(response, t('فشل تحديث عدد الطاولات', 'Failed to update table count'));
+            await fetchTables(); // Refetch to get the latest state
+            toast({ title: t('تم تحديث الطاولات', 'Tables Updated'), description: t(`تم تحديد عدد الطاولات بنجاح إلى ${count}.`, `Table count successfully set to ${count}.`) });
         } catch (error: any) {
-            console.error("Error adding table:", error);
-            toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: error.message });
+             console.error("Error setting table count:", error);
+             toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: error.message });
         } finally {
             setIsTableUpdating(false);
         }
     };
-
-    // Delete the last table
-    const handleDeleteLastTable = async () => {
-        if (tables.length <= 0) return;
-        setIsTableUpdating(true);
-        try {
-            // Find the table with the highest 'id'
-            const lastTable = tables.reduce((prev, current) => (prev.id > current.id) ? prev : current);
-            
-            const response = await fetch(`/api/v1/tables/${lastTable.uuid}`, { method: 'DELETE' });
-            await handleApiResponse(response, t('فشل حذف طاولة', 'Failed to delete table'));
-            await fetchTables(); // Refetch tables data after deleting
-            toast({ title: t('تم الحذف', 'Table Deleted'), description: t('تم حذف آخر طاولة بنجاح.', 'The last table has been deleted successfully.') });
-        } catch (error: any) {
-            console.error("Error deleting table:", error);
-            toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: error.message });
-        } finally {
-            setIsTableUpdating(false);
-        }
-    }
-
+    
     // Fetch exchange rate and then save
     const handleFetchRate = async () => {
         setIsLoadingRate(true);
@@ -256,20 +247,21 @@ function SettingsPage() {
                                 <CardDescription>{t('تحديد العدد الإجمالي للطاولات في المطعم.', 'Set the total number of tables in the restaurant.')}</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                <Label htmlFor="numberOfTables">{t('العدد الحالي للطاولات', 'Current Number of Tables')}</Label>
+                                <Label htmlFor="numberOfTables">{t('العدد المطلوب للطاولات', 'Desired Number of Tables')}</Label>
                                 {isLoadingTables ? (
-                                    <Skeleton className="h-10 w-full" />
+                                    <Skeleton className="h-20 w-full" />
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <Button size="icon" variant="outline" onClick={handleDeleteLastTable} disabled={tables.length <= 0 || isTableUpdating}>
-                                            <Minus className="h-4 w-4" />
-                                        </Button>
-                                        <div className="relative flex-1">
-                                            <Input id="numberOfTables" type="number" value={tables.length} readOnly className="text-center font-bold" />
-                                            {isTableUpdating && <div className="absolute inset-0 flex items-center justify-center bg-background/80"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
-                                        </div>
-                                        <Button size="icon" variant="outline" onClick={handleAddTable} disabled={isTableUpdating}>
-                                            <Plus className="h-4 w-4" />
+                                    <div className="space-y-2">
+                                        <Input 
+                                            id="numberOfTables" 
+                                            type="number" 
+                                            value={desiredTableCount} 
+                                            onChange={(e) => setDesiredTableCount(e.target.value)}
+                                            className="text-center font-bold"
+                                            placeholder={t('أدخل العدد هنا', 'Enter count here')}
+                                        />
+                                        <Button onClick={handleSetTableCount} disabled={isTableUpdating} className="w-full">
+                                            {isTableUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : t('تحديث عدد الطاولات', 'Update Table Count')}
                                         </Button>
                                     </div>
                                 )}
