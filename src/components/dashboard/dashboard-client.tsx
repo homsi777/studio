@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { type Table, type TableStatus, type Order as OrderType } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
