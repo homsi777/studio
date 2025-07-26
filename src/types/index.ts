@@ -120,5 +120,5 @@ export interface PendingSyncOperation {
   type: SyncOperationType; // نوع العملية: 'insert', 'update', 'delete'
   tableName: 'tables' | 'orders' | 'menu_items' | 'expenses'; // اسم الجدول في Supabase و IndexedDB
   payload: any; // حمولة البيانات: الكائن المراد إضافته/تعديله/حذفه
-  timestamp: number; // وقت إضافة العملية إلى قائمة الانتظار (مهم للترتيب وحل التعارضات)
+  timestamp: string; // وقت إضافة العملية إلى قائمة الانتظار (مهم للترتيب وحل التعارضات)
 }

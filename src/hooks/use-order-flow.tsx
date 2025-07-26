@@ -2,7 +2,7 @@
 "use client"
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation } from '@/types';
+import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation, OrderStatus } from '@/types';
 import { useToast } from './use-toast';
 import { useAuth } from './use-auth';
 import { supabase } from '@/lib/supabase';
@@ -74,6 +74,64 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
+    const fetchAllData = useCallback(async (forceOnline = false) => {
+        const online = forceOnline || (typeof window !== 'undefined' && navigator.onLine);
+        setIsOnline(online);
+        setLoading(true);
+
+        if (online) {
+            console.log('Online: Fetching from Supabase...');
+            try {
+                const [tablesRes, ordersRes, menuItemsRes] = await Promise.all([
+                    supabase.from('tables').select('*'),
+                    supabase.from('orders').select('*'),
+                    supabase.from('menu_items').select('*'),
+                ]);
+
+                if (tablesRes.error) throw tablesRes.error;
+                if (ordersRes.error) throw ordersRes.error;
+                if (menuItemsRes.error) throw menuItemsRes.error;
+
+                const formattedOrders = ordersRes.data.map(formatOrderFromDb);
+                
+                setTables(tablesRes.data as Table[]);
+                setOrders(formattedOrders);
+                setMenuItems(menuItemsRes.data as MenuItem[]);
+
+                await saveToCache('tables', tablesRes.data);
+                await saveToCache('orders', formattedOrders);
+                await saveToCache('menuItems', menuItemsRes.data);
+                
+                console.log('Data fetched from Supabase and cached.');
+                await syncPendingOperations();
+
+            } catch (error: any) {
+                console.error('Error fetching data from Supabase:', error.message);
+                toast({ title: 'خطأ', description: `فشل جلب البيانات: ${error.message}`, variant: 'destructive' });
+                const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
+                    getCachedData<Table>('tables'),
+                    getCachedData<Order>('orders'),
+                    getCachedData<MenuItem>('menuItems'),
+                ]);
+                setTables(cachedTables);
+                setOrders(cachedOrders);
+                setMenuItems(cachedMenuItems);
+            }
+        } else {
+            console.log('Offline: Fetching from IndexedDB cache...');
+            const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
+                getCachedData<Table>('tables'),
+                getCachedData<Order>('orders'),
+                getCachedData<MenuItem>('menuItems'),
+            ]);
+            setTables(cachedTables);
+            setOrders(cachedOrders);
+            setMenuItems(cachedMenuItems);
+            toast({ title: 'تنبيه', description: 'أنت غير متصل بالإنترنت. البيانات المعروضة قد تكون غير محدثة.', variant: "default" });
+        }
+        setLoading(false);
+    }, [toast]);
+    
     const syncPendingOperations = useCallback(async () => {
         if (!navigator.onLine || isSyncing) {
             console.log('Not syncing: Offline or already syncing.');
@@ -128,67 +186,15 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: 'نجاح المزامنة', description: `تم مزامنة ${operationsSyncedCount} تغيير بنجاح!` });
             await fetchAllData(true);
         }
-    }, [isSyncing, toast]);
+    }, [isSyncing, toast, fetchAllData]);
 
-
-    const fetchAllData = useCallback(async (forceOnline = false) => {
-        const online = forceOnline || (typeof window !== 'undefined' && navigator.onLine);
-        setIsOnline(online);
-        setLoading(true);
-
-        if (online) {
-            console.log('Online: Fetching from Supabase...');
-            try {
-                const [tablesRes, ordersRes, menuItemsRes] = await Promise.all([
-                    supabase.from('tables').select('*'),
-                    supabase.from('orders').select('*'),
-                    supabase.from('menu_items').select('*'),
-                ]);
-
-                if (tablesRes.error) throw tablesRes.error;
-                if (ordersRes.error) throw ordersRes.error;
-                if (menuItemsRes.error) throw menuItemsRes.error;
-
-                const formattedOrders = ordersRes.data.map(formatOrderFromDb);
-                
-                setTables(tablesRes.data);
-                setOrders(formattedOrders);
-                setMenuItems(menuItemsRes.data);
-
-                await saveToCache('tables', tablesRes.data);
-                await saveToCache('orders', formattedOrders);
-                await saveToCache('menuItems', menuItemsRes.data);
-                
-                console.log('Data fetched from Supabase and cached.');
-                await syncPendingOperations();
-
-            } catch (error: any) {
-                console.error('Error fetching data from Supabase:', error.message);
-                toast({ title: 'خطأ', description: `فشل جلب البيانات: ${error.message}`, variant: 'destructive' });
-                const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
-                    getCachedData<Table>('tables'),
-                    getCachedData<Order>('orders'),
-                    getCachedData<MenuItem>('menuItems'),
-                ]);
-                setTables(cachedTables);
-                setOrders(cachedOrders);
-                setMenuItems(cachedMenuItems);
-            }
-        } else {
-            console.log('Offline: Fetching from IndexedDB cache...');
-            const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
-                getCachedData<Table>('tables'),
-                getCachedData<Order>('orders'),
-                getCachedData<MenuItem>('menuItems'),
-            ]);
-            setTables(cachedTables);
-            setOrders(cachedOrders);
-            setMenuItems(cachedMenuItems);
-            toast({ title: 'تنبيه', description: 'أنت غير متصل بالإنترنت. البيانات المعروضة قد تكون غير محدثة.', variant: "default" });
+    const handleServiceWorkerMessage = useCallback((event: MessageEvent) => {
+        if (event.data && event.data.type === 'SYNC_REQUEST') {
+          console.log('[App] Received SYNC_REQUEST from Service Worker. Initiating sync.');
+          syncPendingOperations();
         }
-        setLoading(false);
-    }, [toast, syncPendingOperations]);
-    
+    }, [syncPendingOperations]);
+
     // Derived state for tables with their current orders/status
     const tablesWithStatus = useMemo(() => {
         const tableMap = new Map<number, Table>();
@@ -232,6 +238,8 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
+        fetchAllData();
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
@@ -242,12 +250,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                         console.error('[App] Service Worker registration failed:', error);
                     });
             });
-             navigator.serviceWorker.addEventListener('message', (event) => {
-              if (event.data && event.data.type === 'SYNC_REQUEST') {
-                console.log('[App] Received SYNC_REQUEST from Service Worker.');
-                syncPendingOperations();
-              }
-            });
+             navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
         } else {
              console.warn('[App] Service Worker not supported by this browser.');
         }
@@ -256,40 +259,71 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             setIsOnline(true);
             toast({ title: "متصل بالإنترنت", description: "تمت استعادة الاتصال. جاري المزامنة..." });
             fetchAllData(true);
+            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.sync.register('sync-pending-operations')
+                        .then(() => console.log('Background sync registered on network reconnect.'))
+                        .catch(err => console.error('Background sync registration failed:', err));
+                });
+            }
         };
         const handleOffline = () => setIsOnline(false);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
-        fetchAllData();
+        const tablesChannel = supabase
+            .channel('public:tables')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, (payload) => {
+                console.log('Realtime change in tables:', payload);
+                if (payload.eventType === 'UPDATE' && payload.old.status !== payload.new.status) {
+                    toast({
+                        title: 'تحديث حالة الطاولة',
+                        description: `الطاولة رقم ${payload.new.id} أصبحت: ${payload.new.status}`,
+                    });
+                }
+                fetchAllData(true);
+            })
+            .subscribe();
 
-        const ordersChannel = supabase.channel('realtime-orders-flow')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, 
-          (payload) => {
-              console.log('Order change received:', payload);
-              fetchAllData(true);
-          })
-          .subscribe();
-        
-        const tablesChannel = supabase.channel('realtime-tables-flow')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' },
-          (payload) => {
-              console.log('Table change received:', payload);
-              fetchAllData(true);
-          })
-          .subscribe();
+        const ordersChannel = supabase
+            .channel('public:orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                console.log('Realtime change in orders:', payload);
+                 if (payload.eventType === 'INSERT') {
+                    toast({
+                        title: 'طلب جديد وصل!',
+                        description: `طلب جديد للطاولة رقم ${payload.new.table_id}.`,
+                        variant: 'default',
+                    });
+                }
+                if (payload.eventType === 'UPDATE' && payload.old.status !== payload.new.status) {
+                    const newStatus = payload.new.status as OrderStatus;
+                    let description = `حالة الطلب للطاولة رقم ${payload.new.table_id} تغيرت إلى: `;
+                    switch (newStatus) {
+                        case 'in_progress': description += 'قيد التحضير.'; break;
+                        case 'ready': description += 'جاهز للتسليم!'; break;
+                        case 'completed': description += 'مكتمل.'; break;
+                        case 'cancelled': description += 'ملغى.'; break;
+                        default: description += newStatus;
+                    }
+                    toast({ title: 'تحديث حالة الطلب', description });
+                }
+                fetchAllData(true);
+            })
+            .subscribe();
         
         if (syncTimeoutRef.current) clearInterval(syncTimeoutRef.current);
         syncTimeoutRef.current = setInterval(syncPendingOperations, SYNC_INTERVAL);
 
         return () => {
-            supabase.removeChannel(ordersChannel);
             supabase.removeChannel(tablesChannel);
+            supabase.removeChannel(ordersChannel);
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
             if (syncTimeoutRef.current) clearInterval(syncTimeoutRef.current);
         };
-    }, [isAuthenticated, fetchAllData, syncPendingOperations]);
+    }, [isAuthenticated, fetchAllData, syncPendingOperations, handleServiceWorkerMessage]);
     
     // --- WRITE OPERATIONS ---
 
@@ -301,7 +335,6 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                     .catch(err => console.error('Background sync registration failed:', err));
             });
         } else {
-             // Fallback for browsers that don't support Background Sync
             if(navigator.onLine) syncPendingOperations();
         }
     }
@@ -320,11 +353,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         setOrders(prev => [...prev, newOrder]);
         await db.orders.put(newOrder);
 
-        await addToSyncQueue('insert', 'orders', { ...orderData, status: 'pending_chef_approval' });
+        await addToSyncQueue('insert', 'orders', { ...orderData, status: 'pending_chef_approval' }, new Date().toISOString());
         
         toast({ title: "تم إرسال الطلب", description: "سيتم مزامنة الطلب مع الخادم." });
         requestBackgroundSync();
-    }, [toast]);
+    }, [toast, syncPendingOperations]);
 
     const updateOrderStatus = async (orderId: string, updates: Partial<Order>) => {
         const order = orders.find(o => o.id === orderId);
@@ -334,7 +367,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
         await db.orders.put(updatedOrder);
 
-        await addToSyncQueue('update', 'orders', { id: orderId, ...updates });
+        await addToSyncQueue('update', 'orders', { id: orderId, ...updates }, new Date().toISOString());
         requestBackgroundSync();
         return true;
     }

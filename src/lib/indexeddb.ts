@@ -43,13 +43,15 @@ export const saveToCache = async <T>(tableName: 'tables' | 'orders' | 'menuItems
 };
 
 export const addToSyncQueue = async (
-    type: 'insert' | 'update' | 'delete', 
-    tableName: 'tables' | 'orders' | 'menu_items' | 'expenses', 
-    payload: any
+    type: PendingSyncOperation['type'],
+    tableName: PendingSyncOperation['tableName'],
+    payload: PendingSyncOperation['payload'],
+    timestamp: string = new Date().toISOString()
 ) => {
-  await db.pendingSyncOperations.add({ type, payload, tableName, timestamp: Date.now() });
-  console.log(`Operation added to sync queue: ${type} on ${tableName}`);
+  await db.pendingSyncOperations.add({ type, payload, tableName, timestamp });
+  console.log(`Operation added to sync queue: ${type} on ${tableName} at ${timestamp}`);
 };
+
 
 export const getSyncQueue = async (): Promise<PendingSyncOperation[]> => {
   return await db.pendingSyncOperations.orderBy('timestamp').toArray();
