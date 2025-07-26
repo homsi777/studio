@@ -31,8 +31,9 @@ export async function POST(request: NextRequest) {
   try {
     const newExpenseData = await request.json();
 
+    // Basic validation for essential fields
     if (!newExpenseData.description || !newExpenseData.amount || !newExpenseData.date || !newExpenseData.category) {
-      return NextResponse.json({ message: 'Bad Request: Missing required fields.' }, { status: 400 });
+      return NextResponse.json({ message: 'Bad Request: Missing required fields (description, amount, date, category).' }, { status: 400 });
     }
     
     const { data, error } = await supabaseAdmin
@@ -41,11 +42,15 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+        console.error('Supabase insert error for expense:', error);
+        // Provide a more specific error message if available
+        return NextResponse.json({ message: 'Failed to create expense in Supabase.', details: error.message }, { status: 500 });
+    }
     
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    console.error('Failed to create expense in Supabase:', error);
+    console.error('Failed to create expense:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
