@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { type Table } from "@/types";
 import {
   Sheet,
@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Hash, Check, Pencil, CheckCircle } from "lucide-react";
+import { Hash, Check, Pencil, CheckCircle, XCircle } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { useOrderFlow } from "@/hooks/use-order-flow";
 import { Input } from "../ui/input";
@@ -40,7 +40,7 @@ const statusMap: Record<string, { ar: string, en: string, className: string }> =
 
 export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsSheetProps) {
   const { language } = useLanguage();
-  const { approveOrderByCashier, completeOrder } = useOrderFlow();
+  const { approveOrderByCashier, completeOrder, cancelOrder } = useOrderFlow();
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
   const [serviceCharge, setServiceCharge] = useState(0);
@@ -61,7 +61,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
   const order = table.order;
 
   const isCashierApprovalStep = table.status === 'pending_cashier_approval';
-  const isCompletableStep = table.status === 'confirmed' || table.status === 'ready';
+  const isCompletableStep = table.status === 'ready';
 
   const subtotal = order?.subtotal || 0;
   const finalTotal = subtotal + serviceCharge + tax;
@@ -83,6 +83,14 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
           onOpenChange(false);
       }
   }
+  
+  const handleCancelOrder = () => {
+    if (order?.id) {
+        cancelOrder(order.id);
+        onOpenChange(false);
+    }
+  }
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -194,15 +202,25 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
         </div>
         <SheetFooter className="mt-auto no-print">
             {isCashierApprovalStep ? (
-                <Button onClick={handleCashierApproval} size="lg" className="w-full">
-                    <Check className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
-                    {t('إرسال الفاتورة النهائية للزبون', 'Send Final Invoice to Customer')}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <Button onClick={handleCashierApproval} size="lg" className="w-full flex-grow">
+                        <Check className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
+                        {t('إرسال الفاتورة النهائية للزبون', 'Send Final Invoice')}
+                    </Button>
+                     <Button onClick={handleCancelOrder} size="lg" variant="destructive" className="w-full sm:w-auto">
+                        <XCircle className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
+                    </Button>
+                </div>
             ) : isCompletableStep ? (
-                <Button onClick={handleCompleteOrder} size="lg" className="w-full" variant="default">
-                    <CheckCircle className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
-                    {t('إتمام الطلب وتسجيل الدفع', 'Complete Order & Payment')}
-                </Button>
+                 <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <Button onClick={handleCompleteOrder} size="lg" className="w-full flex-grow" variant="default">
+                        <CheckCircle className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
+                        {t('إتمام وتسجيل الدفع', 'Complete & Pay')}
+                    </Button>
+                     <Button onClick={handleCancelOrder} size="lg" variant="destructive" className="w-full sm:w-auto">
+                        <XCircle className="w-5 h-5 ltr:mr-2 rtl:ml-2"/>
+                    </Button>
+                </div>
             ) : (
               <div className="flex flex-col sm:flex-row gap-2 w-full">
                 <Button variant="secondary" className="flex-1" disabled>

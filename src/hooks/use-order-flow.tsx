@@ -18,6 +18,7 @@ interface OrderFlowContextType {
     confirmFinalOrder: (orderId: string) => Promise<void>;
     confirmOrderReady: (orderId: string) => Promise<void>;
     completeOrder: (orderId: string) => Promise<void>;
+    cancelOrder: (orderId: string) => Promise<void>;
     requestBill: (orderId: string) => Promise<void>;
     requestAttention: (orderId: string) => Promise<void>;
     fetchOrders: () => Promise<void>;
@@ -26,7 +27,7 @@ interface OrderFlowContextType {
 const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefined);
 
 // --- HELPER FUNCTION ---
-const formatOrder = (dbOrder: any): Order => ({
+export const formatOrderFromDb = (dbOrder: any): Order => ({
     id: dbOrder.id,
     items: dbOrder.items,
     subtotal: dbOrder.subtotal,
@@ -66,7 +67,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
 
             if (error) throw error;
 
-            const formattedOrders = data.map(formatOrder);
+            const formattedOrders = data.map(formatOrderFromDb);
             setOrders(formattedOrders);
         } catch (error) {
             console.error("Error fetching orders:", error);
@@ -82,17 +83,18 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        fetchOrders(); // Initial fetch
+        // Don't fetch here, let the initial server load handle it
+        // fetchOrders(); 
 
         const channel = supabase.channel('realtime-orders')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
                 console.log('New order received:', payload.new);
-                const newOrder = formatOrder(payload.new);
-                setOrders(currentOrders => [newOrder, ...currentOrders]);
+                const newOrder = formatOrderFromDb(payload.new);
+                setOrders(currentOrders => [newOrder, ...currentOrders.filter(o => o.id !== newOrder.id)]);
           })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
               console.log('Order update received:', payload.new);
-              const updatedOrder = formatOrder(payload.new);
+              const updatedOrder = formatOrderFromDb(payload.new);
               setOrders(currentOrders => currentOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
           })
           .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'orders' }, (payload) => {
@@ -105,7 +107,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [isAuthenticated, fetchOrders]);
+    }, [isAuthenticated]);
 
 
     const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'>) => {
@@ -192,6 +194,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         const success = await updateOrderStatus(orderId, { status: 'completed', completed_at: new Date().toISOString() });
         if(success) toast({ title: 'تم إتمام الطلب', description: `تم إغلاق الطلب ${orderId.substring(0,5)}... بنجاح.` });
     }
+    
+    const cancelOrder = async (orderId: string) => {
+        const success = await updateOrderStatus(orderId, { status: 'cancelled' });
+        if(success) toast({ title: 'تم إلغاء الطلب', description: `تم إلغاء الطلب ${orderId.substring(0,5)}... بنجاح.`, variant: 'destructive' });
+    }
 
     const requestBill = async (orderId: string) => {
         await updateOrderStatus(orderId, { status: 'paying' });
@@ -211,6 +218,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             confirmFinalOrder,
             confirmOrderReady,
             completeOrder,
+            cancelOrder,
             requestBill,
             requestAttention,
         }}>
