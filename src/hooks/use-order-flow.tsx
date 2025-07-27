@@ -127,6 +127,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                         method = 'PUT';
                         body = data.updates; // Assuming data contains { id, updates }
                         break;
+                    case 'addTable':
+                         endpoint = '/api/v1/tables';
+                         method = 'POST';
+                         break;
+                    case 'deleteTable':
+                         endpoint = `/api/v1/tables/${data.uuid}`;
+                         method = 'DELETE';
+                         break;
                     // Other cases for different operations...
                     default:
                         console.warn(`Unknown sync operation type: ${operation}`);
@@ -142,7 +150,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 if (!response.ok) {
                     const errorText = await response.text();
                     // Handle duplicate key error specifically for addExpense
-                    if ((operation === 'addExpense' || operation === 'insert_order') && response.status === 500 && errorText.includes('23505')) {
+                    if (response.status === 409 || (response.status === 500 && errorText.includes('23505'))) {
                         console.warn(`Operation ${op.id} (${operation}) failed due to duplicate key. Assuming it was already synced. Clearing from queue.`);
                         await clearSyncQueueItem(op.id);
                         operationsSyncedCount++; // Count it as "synced" since the data is on the server
@@ -252,7 +260,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     
         for (const order of activeOrders) {
             if (tableMap.has(order.table_uuid)) {
-                let status: TableStatus = 'occupied';
+                let status: TableStatus | string = 'occupied';
                 if (order.status === 'pending_chef_approval') status = 'new_order';
                 if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
                 if (order.status === 'awaiting_final_confirmation') status = 'awaiting_final_confirmation';
@@ -341,7 +349,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             customer_confirmed_at: null,
             completed_at: null,
             ...orderData,
-            table_id: parseInt(orderData.table_id as any, 10), // Ensure it is a number
+            table_id: orderData.table_id, // This is a number now
         };
 
         setOrders(prev => [...prev, newOrder]);
@@ -457,9 +465,9 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     // --- Table Operations ---
     const addTable = async () => {
         const tempUuid = uuidv4();
-        const maxDisplayNumber = tables.reduce((max, t) => Math.max(parseInt(t.display_number || '0')), 0);
+        const maxDisplayNumber = tables.reduce((max, t) => Math.max(parseInt(t.display_number || '0'), 0), 0);
         
-        const newTableData = {
+        const newTableData: Partial<Table> = {
           uuid: tempUuid,
           display_number: (maxDisplayNumber + 1).toString(),
           capacity: 4, // Default capacity
@@ -469,16 +477,17 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         const newTableForLocal: Table = {
           ...newTableData,
+          uuid: tempUuid,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           current_order_id: null,
-          assigned_user_id: null
+          assigned_user_id: null,
         };
 
         setTables(prev => [...prev, newTableForLocal]);
         await db.tables.put(newTableForLocal);
         
-        await addToSyncQueue('tables', newTableData);
+        await addToSyncQueue('addTable', newTableData);
         requestBackgroundSync();
     };
 
@@ -488,7 +497,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         setTables(prev => prev.filter(t => t.uuid !== uuid));
         await db.tables.delete(uuid); // Dexie delete uses primary key
-        await addToSyncQueue('tables', { uuid: uuid });
+        await addToSyncQueue('deleteTable', { uuid: uuid });
         requestBackgroundSync();
     };
 
