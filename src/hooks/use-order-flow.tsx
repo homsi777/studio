@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation, OrderStatus } from '@/types';
+import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation, OrderStatus, Expense } from '@/types';
 import { useToast } from './use-toast';
 import { useAuth } from './use-auth';
 import { supabase } from '@/lib/supabase';
@@ -89,62 +89,69 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             console.log('Not syncing: Offline or already syncing.');
             return;
         }
-
+    
         setIsSyncing(true);
         const pendingOperations = await getSyncQueue();
+    
         if (pendingOperations.length === 0) {
             setIsSyncing(false);
             return;
         }
-        
+    
         console.log(`Attempting to sync ${pendingOperations.length} pending operations.`);
-
+    
         let operationsSyncedCount = 0;
         for (const op of pendingOperations) {
             try {
-                // Ensure op.id exists to avoid errors with clearSyncQueueItem
-                if (op.id === undefined) {
+                if (!op.id) {
                     console.warn("Skipping operation without an ID:", op);
                     continue;
                 }
-
-                const identifier = op.data.uuid || op.data.id;
-                
-                // Construct the URL carefully. For inserts, there's no identifier.
-                const url = op.operation === 'insert' 
-                    ? `/api/v1/${op.tableName}` 
-                    : `/api/v1/${op.tableName}/${identifier}`;
-
-                const method = op.operation === 'insert' ? 'POST' : op.operation === 'update' ? 'PUT' : 'DELETE';
-                
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: (method === 'POST' || method === 'PUT') ? JSON.stringify(op.data) : undefined,
-                });
-
-                if (!response.ok) {
-                    const result = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
-                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+    
+                let response;
+                switch (op.operation) {
+                    case 'addExpense':
+                        response = await fetch('/api/v1/expenses', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(op.data),
+                        });
+                        break;
+                    case 'orders': // Assumes 'orders' is the table name for order operations
+                        const orderId = op.data.id;
+                        response = await fetch(`/api/v1/orders/${orderId}`, {
+                            method: op.data.method || 'PUT', // Assuming PUT for updates, adjust if needed
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(op.data),
+                        });
+                        break;
+                    // Add other cases for different operations (menu_items, tables, etc.)
+                    default:
+                        console.warn(`Unknown sync operation type: ${op.operation}`);
+                        continue; // Skip unknown operations
                 }
-
+    
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to sync'}`);
+                }
+    
                 await clearSyncQueueItem(op.id);
                 operationsSyncedCount++;
-                console.log(`Operation synced successfully: ${op.operation} on ${op.tableName}`);
-
+                console.log(`Operation synced successfully: ${op.operation}`);
+    
             } catch (error: any) {
-                console.error(`Failed to sync operation ${op.id} (${op.operation} on ${op.tableName}):`, error.message);
+                console.error(`Failed to sync operation ${op.id} (${op.operation}):`, error.message);
                 toast({ title: 'خطأ في المزامنة', description: `فشل مزامنة عملية. سيتم المحاولة لاحقاً.`, variant: 'destructive'});
-                break; 
+                break; // Stop syncing on first error to maintain order
             }
         }
-
+    
         setIsSyncing(false);
-
+    
         if (operationsSyncedCount > 0) {
             toast({ title: 'نجاح المزامنة', description: `تم مزامنة ${operationsSyncedCount} تغيير بنجاح!` });
-            // Refetch all data after a successful sync to ensure UI consistency
-            // await fetchAllData(true);
+            await fetchAllData(true); // Refetch all data after a successful sync
         }
     }, [isSyncing, toast]);
 
@@ -158,15 +165,17 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         if (online) {
             console.log('Online: Fetching from Supabase...');
             try {
-                const [tablesRes, ordersRes, menuItemsRes] = await Promise.all([
+                const [tablesRes, ordersRes, menuItemsRes, expensesRes] = await Promise.all([
                     supabase.from('tables').select('*'),
                     supabase.from('orders').select('*'),
                     supabase.from('menu_items').select('*'),
+                    supabase.from('expenses').select('*')
                 ]);
 
                 if (tablesRes.error) throw tablesRes.error;
                 if (ordersRes.error) throw ordersRes.error;
                 if (menuItemsRes.error) throw menuItemsRes.error;
+                if (expensesRes.error) throw expensesRes.error;
 
                 const formattedOrders = ordersRes.data.map(formatOrderFromDb);
                 
@@ -177,6 +186,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 await saveToCache('tables', tablesRes.data);
                 await saveToCache('orders', formattedOrders);
                 await saveToCache('menuItems', menuItemsRes.data);
+                await saveToCache('expenses', expensesRes.data as Expense[]);
                 
                 console.log('Data fetched from Supabase and cached.');
                 await syncPendingOperations();
@@ -184,10 +194,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             } catch (error: any) {
                 console.error('Error fetching data from Supabase:', error.message);
                 toast({ title: 'خطأ', description: `فشل جلب البيانات: ${error.message}`, variant: 'destructive' });
-                const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
+                const [cachedTables, cachedOrders, cachedMenuItems, cachedExpenses] = await Promise.all([
                     getFromCache<Table>('tables'),
                     getFromCache<Order>('orders'),
                     getFromCache<MenuItem>('menuItems'),
+                    getFromCache<Expense>('expenses')
                 ]);
                 setTables(cachedTables);
                 setOrders(cachedOrders);
@@ -195,10 +206,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             }
         } else {
             console.log('Offline: Fetching from IndexedDB cache...');
-            const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
+            const [cachedTables, cachedOrders, cachedMenuItems, cachedExpenses] = await Promise.all([
                 getFromCache<Table>('tables'),
                 getFromCache<Order>('orders'),
                 getFromCache<MenuItem>('menuItems'),
+                 getFromCache<Expense>('expenses')
             ]);
             setTables(cachedTables);
             setOrders(cachedOrders);
@@ -437,7 +449,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     // --- Table Operations ---
     const addTable = async () => {
         const tempUuid = uuidv4();
-        const maxTableNumber = tables.reduce((max, t) => Math.max(max, t.table_number || 0), 0);
+        const maxTableNumber = tables.reduce((max, t) => Math.max(t.table_number || 0), 0);
         
         const newTableData = {
           uuid: tempUuid,

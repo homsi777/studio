@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Expense } from '../../types'; // تأكد من المسار الصحيح
-import { getFromCache, putToCache, addToSyncQueue } from '../../lib/indexeddb'; // استيراد دوال IndexedDB
+import { getFromCache, putToCache, addToSyncQueue, saveToCache } from '../../lib/indexeddb'; // استيراد دوال IndexedDB
 
 // افتراض وجود مكون DatePicker إذا كنت تستخدمه
 // import { DatePicker } from '@/components/ui/date-picker';
@@ -47,8 +47,7 @@ export default function ExpensesPage() {
       }
       const data = await response.json();
       setExpenses(data.expenses);
-      await putToCache('expenses', data.expenses); // حفظ في الكاش
-
+      await saveToCache('expenses', data.expenses); // <--- تم التعديل هنا: استخدام saveToCache
     } catch (err: any) {
       console.error('Error fetching expenses:', err);
       setError(err.message || 'فشل جلب المصاريف.');
