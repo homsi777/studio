@@ -53,7 +53,7 @@ const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
 
 function MenuManagementPage() {
     const { language, dir } = useLanguage();
-    const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, loading: orderFlowLoading } = useOrderFlow();
+    const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, loading: orderFlowLoading, fetchAllData } = useOrderFlow();
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -106,7 +106,7 @@ function MenuManagementPage() {
         }
     };
     
-    const handleSave = async (formData: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => {
+    const handleSave = async (formData: Omit<MenuItem, 'id' | 'created_at' | 'updated_at' | 'quantity'>) => {
         try {
             if (editingItem) {
                 await updateMenuItem(editingItem.id, formData);
@@ -119,6 +119,7 @@ function MenuManagementPage() {
                 : t("تمت الإضافة بنجاح", "Item Added");
 
             toast({ title: successMessage });
+            await fetchAllData(true); // Force refetch after save/update
 
         } catch (error) {
             console.error(error);
@@ -279,20 +280,20 @@ interface MenuItemFormDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     item: MenuItem | null;
-    onSave: (formData: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => void;
+    onSave: (formData: Omit<MenuItem, 'id' | 'created_at' | 'updated_at' | 'quantity'>) => void;
 }
 
 const menuItemSchema = z.object({
   name: z.string().min(1, { message: "الاسم بالعربية مطلوب." }),
-  name_en: z.string().optional(),
-  description: z.string().optional(),
-  description_en: z.string().optional(),
+  name_en: z.string().optional().transform(v => v || null),
+  description: z.string().optional().transform(v => v || null),
+  description_en: z.string().optional().transform(v => v || null),
   price: z.coerce.number().positive({ message: "السعر يجب أن يكون رقماً موجباً." }),
   category: z.enum(['main', 'appetizer', 'drink', 'dessert'], { errorMap: () => ({ message: "الرجاء اختيار تصنيف." }) }),
-  offer: z.string().optional(),
-  offer_en: z.string().optional(),
-  image: z.string().optional(),
-  image_hint: z.string().optional(),
+  offer: z.string().optional().transform(v => v || null),
+  offer_en: z.string().optional().transform(v => v || null),
+  image: z.string().optional().transform(v => v || null),
+  image_hint: z.string().optional().transform(v => v || null),
   is_available: z.boolean().default(true),
 });
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
