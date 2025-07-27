@@ -1,56 +1,81 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+// src/app/api/v1/expenses/route.ts
+// هذا الملف سيتعامل مع POST (إضافة مصروف) و GET (جلب المصاريف)
 
-export async function GET(request: NextRequest) {
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { Expense } from '../../../../types'; // تأكد من المسار الصحيح
+
+// تهيئة Supabase Admin Client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+// POST: إضافة مصروف جديد
+export async function POST(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const expenseData: Partial<Expense> = await request.json();
 
-    let query = supabaseAdmin.from('expenses').select('*');
-
-    if (startDate) {
-        query = query.gte('date', startDate.split('T')[0]);
-    }
-    if (endDate) {
-        query = query.lte('date', endDate.split('T')[0]);
+    // التحقق الأساسي من البيانات المطلوبة
+    if (!expenseData.description || expenseData.amount === undefined || expenseData.amount === null || !expenseData.date || !expenseData.category) {
+      return NextResponse.json({ message: 'Missing required expense data (description, amount, date, category).' }, { status: 400 });
     }
 
-    const { data, error } = await query.order('date', { ascending: false });
+    // توليد UUID إذا لم يتم توفيره من الواجهة الأمامية
+    const uuid = expenseData.id || crypto.randomUUID();
 
-    if (error) throw error;
+    const { data, error } = await supabaseAdmin
+      .from('expenses')
+      .insert({
+        id: uuid,
+        description: expenseData.description,
+        description_en: expenseData.description_en || null,
+        amount: expenseData.amount,
+        date: expenseData.date, // يجب أن يكون بتنسيق ISO 8601 أو Date string
+        category: expenseData.category,
+        payment_method: expenseData.payment_method || null,
+        supplier: expenseData.supplier || null,
+        invoice_number: expenseData.invoice_number || null,
+        notes: expenseData.notes || null,
+        user_id: expenseData.user_id || null, // يمكن أن يكون مرتبطاً بالمستخدم الذي أضاف المصروف
+        created_at: new Date().toISOString(),
+        last_updated: new Date().toISOString(),
+      })
+      .select(); // استخدم select() لإرجاع البيانات المضافة
 
-    return NextResponse.json(data);
+    if (error) {
+      console.error('Supabase insert error (expenses):', error);
+      return NextResponse.json({ message: 'Failed to save expense.', error: error.message }, { status: 500 });
+    }
+
+    console.log('Expense added successfully:', data[0]);
+    return NextResponse.json({ message: 'Expense added successfully.', expense: data[0] }, { status: 201 });
+
   } catch (error) {
-    console.error('Failed to fetch expenses from Supabase:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    console.error('Error in POST /api/v1/expenses:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return NextResponse.json({ message: 'Internal Server Error', error: errorMessage }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+// GET: جلب جميع المصاريف
+export async function GET(request: Request) {
   try {
-    const newExpenseData = await request.json();
-
-    // Basic validation for essential fields
-    if (!newExpenseData.description || !newExpenseData.amount || !newExpenseData.date || !newExpenseData.category) {
-      return NextResponse.json({ message: 'Bad Request: Missing required fields (description, amount, date, category).' }, { status: 400 });
-    }
-    
     const { data, error } = await supabaseAdmin
       .from('expenses')
-      .insert(newExpenseData)
-      .select()
-      .single();
+      .select('*')
+      .order('date', { ascending: false }); // ترتيب حسب التاريخ الأحدث أولاً
 
     if (error) {
-        console.error('Supabase insert error for expense:', error);
-        // Provide a more specific error message if available
-        return NextResponse.json({ message: 'Failed to create expense in Supabase.', details: error.message }, { status: 500 });
+      console.error('Supabase select error (expenses):', error);
+      return NextResponse.json({ message: 'Failed to fetch expenses.', error: error.message }, { status: 500 });
     }
-    
-    return NextResponse.json(data, { status: 201 });
+
+    return NextResponse.json({ expenses: data }, { status: 200 });
+
   } catch (error) {
-    console.error('Failed to create expense:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    console.error('Error in GET /api/v1/expenses:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return NextResponse.json({ message: 'Internal Server Error', error: errorMessage }, { status: 500 });
   }
 }
