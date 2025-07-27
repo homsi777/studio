@@ -132,8 +132,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 }
     
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to sync'}`);
+                    const errorBody = await response.json();
+                    // Handle duplicate key error specifically
+                    if (response.status === 500 && errorBody.code === '23505') {
+                        console.warn(`Operation ${op.id} (${op.operation}) failed due to duplicate key. Assuming it was already synced. Clearing from queue.`);
+                        await clearSyncQueueItem(op.id);
+                        continue; // Move to the next operation
+                    }
+                    throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorBody) || 'Failed to sync'}`);
                 }
     
                 await clearSyncQueueItem(op.id);
@@ -179,11 +185,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
 
                 const formattedOrders = ordersRes.data.map(formatOrderFromDb);
                 
-                setTables(tablesRes.data as Table[]);
+                setTables(tablesRes.data as unknown as Table[]);
                 setOrders(formattedOrders);
                 setMenuItems(menuItemsRes.data as MenuItem[]);
 
-                await saveToCache('tables', tablesRes.data);
+                await saveToCache('tables', tablesRes.data as unknown as TableType[]);
                 await saveToCache('orders', formattedOrders);
                 await saveToCache('menuItems', menuItemsRes.data);
                 await saveToCache('expenses', expensesRes.data as Expense[]);
@@ -242,7 +248,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 let status: TableStatus = 'occupied';
                 if (order.status === 'pending_chef_approval') status = 'new_order';
                 if (order.status === 'pending_cashier_approval') status = 'pending_cashier_approval';
-                if (order.status === 'pending_final_confirmation') status = 'awaiting_final_confirmation';
+                if (order.status === 'awaiting_final_confirmation') status = 'awaiting_final_confirmation';
                 if (order.status === 'confirmed') status = 'confirmed';
                 if (order.status === 'ready') status = 'ready';
                 if (order.status === 'paying') status = 'paying';
@@ -522,3 +528,5 @@ export const useOrderFlow = () => {
     }
     return context;
 };
+
+    
