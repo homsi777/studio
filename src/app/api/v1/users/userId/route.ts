@@ -14,7 +14,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 // PUT: تعديل ملف تعريف مستخدم موجود
 export async function PUT(request: Request, { params }: { params: { userId: string } }) {
   try {
-    const userId = params.userId;
+    const { userId } = params;
     const updatedData: Partial<UserProfile> = await request.json();
 
     if (!userId) {
@@ -50,7 +50,7 @@ export async function PUT(request: Request, { params }: { params: { userId: stri
 // هذا المسار سيقوم بتغيير is_active إلى false بدلاً من الحذف الفعلي
 export async function DELETE(request: Request, { params }: { params: { userId: string } }) {
   try {
-    const userId = params.userId;
+    const { userId } = params;
 
     if (!userId) {
       return NextResponse.json({ message: 'User ID is required.' }, { status: 400 });
@@ -63,7 +63,7 @@ export async function DELETE(request: Request, { params }: { params: { userId: s
       .eq('user_id', userId)
       .select();
 
-    if (error) {ش
+    if (error) {
       console.error('Supabase deactivate error (user_profiles):', error);
       return NextResponse.json({ message: 'Failed to deactivate user profile.', error: error.message }, { status: 500 });
     }

@@ -1,66 +1,49 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { Order } from '@/types';
 
-export async function POST(request: NextRequest) {
-  try {
-    const orderData = await request.json();
-
-    // The client now sends tableId and tableUuid correctly.
-    if (!orderData.table_uuid || !orderData.items || !orderData.items.length || !orderData.session_id) {
-      return NextResponse.json({ message: 'Bad Request: Missing required fields.' }, { status: 400 });
-    }
-    
-    const subtotal = orderData.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
-
-    const newOrder = {
-      table_id: orderData.table_id, // Keep the numeric ID for reference if needed
-      table_uuid: orderData.table_uuid,
-      session_id: orderData.session_id,
-      items: orderData.items,
-      status: 'pending_chef_approval',
-      subtotal: subtotal,
-      service_charge: 0,
-      tax: 0,
-      final_total: subtotal, // Initial final_total is the same as subtotal
-    };
-    
-    const { data, error } = await supabaseAdmin
-      .from('orders')
-      .insert(newOrder)
-      .select()
-      .single();
-
-    if (error) {
-        console.error("Supabase order insert error:", error);
-        throw error;
-    };
-
-    return NextResponse.json(data, { status: 201 });
-  } catch (error) {
-    console.error('Failed to create order in Supabase:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-export async function GET(request: NextRequest) {
+export async function DELETE(request: NextRequest, context: { params: { uuid: string } }) {
     try {
-        const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status');
+        const { uuid } = context.params;
 
-        let query = supabaseAdmin.from('orders').select('*');
-        
-        if (status) {
-            query = query.eq('status', status);
+        if (!uuid) {
+            return NextResponse.json({ message: 'Table UUID is required' }, { status: 400 });
+        }
+
+        // Optional: Check if the table has active orders before deleting
+        // This logic might be better placed in a service layer if complexity grows.
+        const { data: activeOrders, error: orderError } = await supabaseAdmin
+            .from('orders')
+            .select('id')
+            .eq('table_uuid', uuid)
+            .in('status', ['pending_chef_approval', 'pending_cashier_approval', 'awaiting_final_confirmation', 'confirmed', 'ready', 'paying', 'needs_attention']);
+
+        if (orderError) {
+            console.error('Error checking for active orders:', orderError);
+            return NextResponse.json({ message: 'Error checking for active orders.' }, { status: 500 });
+        }
+
+        if (activeOrders && activeOrders.length > 0) {
+            return NextResponse.json({ message: 'Cannot delete a table with active orders.' }, { status: 409 }); // 409 Conflict
+        }
+
+        // Proceed with deletion if no active orders are found
+        const { error: deleteError } = await supabaseAdmin
+            .from('tables')
+            .delete()
+            .eq('uuid', uuid);
+
+        if (deleteError) {
+            console.error('Supabase delete error:', deleteError);
+            if (deleteError.code === '22P02') { // Invalid UUID format
+                 return NextResponse.json({ message: 'Invalid UUID format.' }, { status: 400 });
+            }
+            return NextResponse.json({ message: 'Table not found or error deleting.' }, { status: 404 });
         }
         
-        const { data, error } = await query.order('created_at', { ascending: false });
+        return new NextResponse(null, { status: 204 }); // No Content
 
-        if (error) throw error;
-
-        return NextResponse.json(data);
     } catch (error) {
-        console.error('Failed to fetch orders:', error);
+        console.error(`Failed to delete table with UUID ${context.params.uuid}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
