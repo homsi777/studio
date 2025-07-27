@@ -77,28 +77,50 @@ export default function ExpensesPage() {
     setLoading(true);
     setError(null);
 
-    const dataToSave: Expense = {
+    // الكائن الذي سيتم إرساله إلى الـ API
+    const apiPayload: Partial<Expense> = {
       id: crypto.randomUUID(), // توليد UUID جديد
-      created_at: new Date().toISOString(), // يمكن لقاعدة البيانات تعيين هذا تلقائياً
-      last_updated: new Date().toISOString(), // يمكن لقاعدة البيانات تعيين هذا تلقائياً
-      ...newExpense as Expense, // تأكد من أن newExpense يطابق Expense
+      description: newExpense.description,
+      description_en: newExpense.description_en,
+      amount: newExpense.amount,
+      date: newExpense.date,
+      category: newExpense.category,
+      payment_method: newExpense.payment_method,
+      supplier: newExpense.supplier,
+      invoice_number: newExpense.invoice_number,
+      notes: newExpense.notes,
+      user_id: newExpense.user_id,
+      // لا نرسل created_at و last_updated إلى الـ API لأن قاعدة البيانات تتعامل معهما
     };
+
+    // الكائن الكامل الذي سيتم حفظه في IndexedDB محلياً
+    const localExpense: Expense = {
+      ...apiPayload as Expense, // استخدام apiPayload كأساس
+      created_at: new Date().toISOString(), // تعيين هنا لـ IndexedDB
+      last_updated: new Date().toISOString(), // تعيين هنا لـ IndexedDB
+      // التأكد من أن الحقول غير القابلة للـ null في Expense موجودة
+      description: apiPayload.description || '',
+      amount: apiPayload.amount || 0,
+      date: apiPayload.date || new Date().toISOString().split('T')[0],
+      category: apiPayload.category || 'other',
+    };
+
 
     try {
       // 1. حفظ في IndexedDB فورياً
-      await putToCache('expenses', dataToSave);
-      setExpenses(prev => [...prev, dataToSave]); // تحديث الواجهة فوراً
+      await putToCache('expenses', localExpense);
+      setExpenses(prev => [...prev, localExpense]); // تحديث الواجهة فوراً
 
       // 2. إضافة العملية إلى قائمة انتظار المزامنة
-      await addToSyncQueue('addExpense', dataToSave);
+      await addToSyncQueue('addExpense', apiPayload); // إضافة الـ payload الخاص بالـ API
 
       // 3. محاولة الإرسال إلى API (سيتم معالجتها بواسطة syncPendingOperations لاحقاً)
       // ولكن يمكننا محاولة الإرسال مباشرة هنا أيضاً لتحسين الاستجابة الفورية
-      console.log('Data being sent:', dataToSave); // <--- إضافة Logging هنا
+      console.log('Data being sent:', apiPayload); // <--- إضافة Logging هنا
       const response = await fetch('/api/v1/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSave),
+        body: JSON.stringify(apiPayload), // <--- استخدام apiPayload هنا
       });
 
       console.log('Response status:', response.status); // <--- إضافة Logging هنا
