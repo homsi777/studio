@@ -15,6 +15,7 @@ import { AuthGuard } from "@/components/auth-guard"
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings"
 import type { Order, Expense } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useOrderFlow } from '@/hooks/use-order-flow';
 
 interface ReportData {
   totalRevenue: number;
@@ -41,35 +42,48 @@ const initialReportData: ReportData = {
 function ReportsPage() {
     const { language } = useLanguage();
     const { settings } = useRestaurantSettings();
+    const { orders: allOrders, loading: orderFlowLoading } = useOrderFlow();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
 
     const [reportData, setReportData] = useState<ReportData>(initialReportData);
     const [isLoading, setIsLoading] = useState(true);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
 
     useEffect(() => {
-        const fetchAndProcessData = async () => {
-            setIsLoading(true);
+        const fetchExpenses = async () => {
             try {
-                // To get all completed orders, I will fetch without a specific status filter
-                // as the logic to filter by status=completed was not fully implemented in the API.
-                // The processing logic below will filter for completed orders.
-                const [ordersRes, expensesRes] = await Promise.all([
-                    fetch('/api/v1/orders'),
-                    fetch('/api/v1/expenses')
-                ]);
-
-                if (!ordersRes.ok || !expensesRes.ok) {
-                    throw new Error('Failed to fetch data');
+                const expensesRes = await fetch('/api/v1/expenses');
+                if (!expensesRes.ok) {
+                    throw new Error('Failed to fetch expenses');
                 }
+                const expenseData = await expensesRes.json();
+                setExpenses(expenseData.expenses || []);
+            } catch (error) {
+                console.error("Failed to fetch expenses for report:", error);
+                toast({
+                    variant: 'destructive',
+                    title: t('خطأ في التقارير', 'Report Error'),
+                    description: t('لم نتمكن من جلب بيانات المصاريف.', 'Could not fetch expense data for reports.'),
+                });
+            }
+        };
 
-                const allOrders: Order[] = await ordersRes.json();
-                const expenses: Expense[] = await expensesRes.json();
-                
+        fetchExpenses();
+    }, [t, toast]);
+
+
+    useEffect(() => {
+        if (orderFlowLoading) {
+            setIsLoading(true);
+            return;
+        }
+
+        const processData = () => {
+            try {
                 const orders = allOrders.filter(o => o.status === 'completed');
 
-                // Process data
-                const totalRevenue = orders.reduce((sum, order) => sum + order.finalTotal, 0);
+                const totalRevenue = orders.reduce((sum, order) => sum + (order.final_total || 0), 0);
                 const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
                 const netProfit = totalRevenue - totalExpenses;
                 const orderCount = orders.length;
@@ -78,25 +92,54 @@ function ReportsPage() {
                 const topItems: Record<string, {name: string, name_en: string, count: number}> = {};
                 orders.forEach(order => {
                     order.items.forEach(item => {
-                        if (!topItems[item.id]) {
-                            topItems[item.id] = { name: item.name, name_en: item.name_en || '', count: 0 };
+                        const itemId = item.id || item.menu_item_id;
+                        if (!topItems[itemId]) {
+                            topItems[itemId] = { name: item.name, name_en: item.name_en || '', count: 0 };
                         }
-                        topItems[item.id].count += item.quantity;
+                        topItems[itemId].count += item.quantity;
                     });
                 });
                 
                 const topSellingItems = Object.values(topItems).sort((a, b) => b.count - a.count).slice(0, 5);
 
-                // For demo, we'll use static daily data as we don't have enough timestamps
-                const salesData = [
-                    { date: "Sat", date_ar: "السبت", sales: 400000, expenses: 150000 },
-                    { date: "Sun", date_ar: "الأحد", sales: 300000, expenses: 120000 },
-                    { date: "Mon", date_ar: "الإثنين", sales: 500000, expenses: 200000 },
-                    { date: "Tue", date_ar: "الثلاثاء", sales: 450000, expenses: 180000 },
-                    { date: "Wed", date_ar: "الأربعاء", sales: 600000, expenses: 250000 },
-                    { date: "Thu", date_ar: "الخميس", sales: 750000, expenses: 300000 },
-                    { date: "Fri", date_ar: "الجمعة", sales: 900000, expenses: 350000 },
-                ];
+                const salesByDay: ReportData['salesByDay'] = [];
+                const expensesByDay: { [key: string]: number } = {};
+
+                const dateToDay = (dateStr: string) => new Date(dateStr).toLocaleDateString('en-CA');
+
+                expenses.forEach(expense => {
+                    const day = dateToDay(expense.date);
+                    if (!expensesByDay[day]) expensesByDay[day] = 0;
+                    expensesByDay[day] += expense.amount;
+                });
+
+                const salesAndExpensesByDay: { [key: string]: { sales: number; expenses: number } } = {};
+                
+                orders.forEach(order => {
+                    if (order.completed_at) {
+                        const day = dateToDay(order.completed_at);
+                        if (!salesAndExpensesByDay[day]) salesAndExpensesByDay[day] = { sales: 0, expenses: 0 };
+                        salesAndExpensesByDay[day].sales += order.final_total || 0;
+                    }
+                });
+
+                Object.keys(expensesByDay).forEach(day => {
+                    if (!salesAndExpensesByDay[day]) salesAndExpensesByDay[day] = { sales: 0, expenses: 0 };
+                    salesAndExpensesByDay[day].expenses += expensesByDay[day];
+                });
+                
+                const sortedDays = Object.keys(salesAndExpensesByDay).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
+                
+                const finalSalesByDay = sortedDays.map(day => {
+                    const dateObj = new Date(day);
+                     const dayName = dateObj.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short' });
+                    return {
+                        date: dayName,
+                        date_ar: dayName,
+                        sales: salesAndExpensesByDay[day].sales,
+                        expenses: salesAndExpensesByDay[day].expenses
+                    }
+                });
                 
                 setReportData({
                     totalRevenue,
@@ -105,23 +148,23 @@ function ReportsPage() {
                     orderCount,
                     avgOrderValue,
                     topSellingItems,
-                    salesByDay: salesData,
+                    salesByDay: finalSalesByDay,
                 });
 
             } catch (error) {
-                console.error("Failed to generate report:", error);
-                toast({
+                console.error("Failed to process report data:", error);
+                 toast({
                     variant: 'destructive',
-                    title: t('خطأ في التقارير', 'Report Error'),
-                    description: t('لم نتمكن من جلب بيانات التقارير.', 'Could not fetch data for reports.'),
+                    title: t('خطأ في معالجة البيانات', 'Data Processing Error'),
+                    description: t('حدث خطأ أثناء تحليل بيانات التقارير.', 'An error occurred while analyzing report data.'),
                 });
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchAndProcessData();
-    }, [t, toast]);
+        processData();
+    }, [allOrders, expenses, orderFlowLoading, t, toast, language]);
 
 
     const chartConfig = {
@@ -139,7 +182,7 @@ function ReportsPage() {
         { title_ar: "إجمالي الإيرادات", title_en: "Total Revenue", value: reportData.totalRevenue, icon: <TrendingUp/>, color: "text-green-500" },
         { title_ar: "إجمالي المصاريف", title_en: "Total Expenses", value: reportData.totalExpenses, icon: <TrendingDown/>, color: "text-red-500" },
         { title_ar: "صافي الربح", title_en: "Net Profit", value: reportData.netProfit, icon: <Wallet/>, color: "text-primary" },
-        { title_ar: "عدد الطلبات", title_en: "Number of Orders", value: reportData.orderCount, icon: <ListOrdered/>, color: "text-blue-500", isCurrency: false },
+        { title_ar: "عدد الطلبات المكتملة", title_en: "Completed Orders", value: reportData.orderCount, icon: <ListOrdered/>, color: "text-blue-500", isCurrency: false },
     ];
 
     const handlePrint = () => {
@@ -209,45 +252,52 @@ function ReportsPage() {
                      <Card className="lg:col-span-3">
                         <CardHeader>
                             <CardTitle>{t("ملخص الأداء المالي", "Financial Performance Summary")}</CardTitle>
-                            <CardDescription className="report-print-hide">{t("مقارنة بين إجمالي المبيعات والمصاريف خلال آخر 7 أيام.", "Sales vs. expenses over the last 7 days.")}</CardDescription>
+                            <CardDescription className="report-print-hide">{t("مقارنة بين إجمالي المبيعات والمصاريف.", "Sales vs. expenses.")}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ChartContainer config={chartConfig} className="h-[350px] w-full">
-                                <BarChart data={reportData.salesByDay} accessibilityLayer>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis
-                                        dataKey={language === 'ar' ? "date_ar" : "date"}
-                                        tickLine={false}
-                                        tickMargin={10}
-                                        axisLine={false}
-                                    />
-                                     <YAxis
-                                        tickFormatter={(value) => `${Number(value) / 1000}k`}
-                                        axisLine={false}
-                                        tickLine={false}
-                                    />
-                                    <Tooltip 
-                                        cursor={false}
-                                        content={<ChartTooltipContent 
-                                            formatter={(value) => formatCurrency(value as number)}
-                                            labelClassName="font-bold text-lg"
-                                            indicator="dot"
-                                        />} 
-                                    />
-                                    <Legend contentStyle={{fontFamily: 'Alegreya'}} />
-                                    <Bar dataKey="sales" fill="var(--color-sales)" radius={[4, 4, 0, 0]} name={chartConfig.sales.label} />
-                                    <Bar dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]} name={chartConfig.expenses.label}/>
-                                </BarChart>
-                            </ChartContainer>
+                             {reportData.salesByDay.length > 0 ? (
+                                <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                                    <BarChart data={reportData.salesByDay} accessibilityLayer>
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis
+                                            dataKey={language === 'ar' ? "date_ar" : "date"}
+                                            tickLine={false}
+                                            tickMargin={10}
+                                            axisLine={false}
+                                        />
+                                         <YAxis
+                                            tickFormatter={(value) => `${Number(value) / 1000}k`}
+                                            axisLine={false}
+                                            tickLine={false}
+                                        />
+                                        <Tooltip 
+                                            cursor={false}
+                                            content={<ChartTooltipContent 
+                                                formatter={(value) => formatCurrency(value as number)}
+                                                labelClassName="font-bold text-lg"
+                                                indicator="dot"
+                                            />} 
+                                        />
+                                        <Legend contentStyle={{fontFamily: 'Alegreya'}} />
+                                        <Bar dataKey="sales" fill="var(--color-sales)" radius={[4, 4, 0, 0]} name={chartConfig.sales.label} />
+                                        <Bar dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]} name={chartConfig.expenses.label}/>
+                                    </BarChart>
+                                </ChartContainer>
+                             ) : (
+                                <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+                                    {t('لا توجد بيانات لعرض الرسم البياني.', 'No data available for the chart.')}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
                     <Card className="lg:col-span-1">
                         <CardHeader>
                             <CardTitle>{t("الأصناف الأكثر مبيعاً", "Top Selling Items")}</CardTitle>
-                            <CardDescription className="report-print-hide">{t("الأصناف الأكثر طلباً هذا الأسبوع.", "Most ordered items this week.")}</CardDescription>
+                            <CardDescription className="report-print-hide">{t("الأصناف الأكثر طلباً.", "Most ordered items.")}</CardDescription>
                         </CardHeader>
                         <CardContent>
+                           {reportData.topSellingItems.length > 0 ? (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -266,6 +316,11 @@ function ReportsPage() {
                                     ))}
                                 </TableBody>
                             </Table>
+                           ) : (
+                                <div className="flex items-center justify-center h-40 text-muted-foreground">
+                                    {t('لا توجد بيانات.', 'No data available.')}
+                                </div>
+                           )}
                         </CardContent>
                     </Card>
 
@@ -279,16 +334,12 @@ function ReportsPage() {
                                 <h4 className="font-bold mb-2">{t("تقرير حالة المطبخ", "Kitchen Status Report")}</h4>
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">{t("متوسط وقت التحضير", "Avg. Prep Time")}</span>
-                                        <span className="font-bold">{18} {t("دقيقة", "min")}</span>
+                                        <span className="text-muted-foreground">{t("متوسط قيمة الطلب", "Avg. Order Value")}</span>
+                                        <span className="font-bold">{formatCurrency(reportData.avgOrderValue)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">{t("ساعات الذروة", "Peak Hours")}</span>
-                                        <span className="font-bold">{t("8:00م - 10:00م", "8:00 PM - 10:00 PM")}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">{t("إجمالي الطلبات اليوم", "Total Orders Today")}</span>
-                                        <span className="font-bold">{85}</span>
+                                        <span className="font-bold">{t("غير محدد", "N/A")}</span>
                                     </div>
                                 </div>
                             </div>
@@ -297,11 +348,7 @@ function ReportsPage() {
                                  <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">{t("الزبائن الجدد", "New Customers")}</span>
-                                        <span className="font-bold">15</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">{t("متوسط قيمة الطلب", "Avg. Order Value")}</span>
-                                        <span className="font-bold">{formatCurrency(reportData.avgOrderValue)}</span>
+                                        <span className="font-bold">{t("غير محدد", "N/A")}</span>
                                     </div>
                                 </div>
                             </div>

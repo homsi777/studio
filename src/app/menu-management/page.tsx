@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { type MenuItem, type MenuItemCategory } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -64,29 +64,30 @@ function MenuManagementPage() {
 
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    useEffect(() => {
-        const fetchMenuItems = async () => {
-            try {
-                setIsLoading(true);
-                const response = await fetch('/api/v1/menu-items');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch menu items');
-                }
-                const data: MenuItem[] = await response.json();
-                setItems(data);
-            } catch (error) {
-                console.error(error);
-                toast({
-                    variant: "destructive",
-                    title: t("خطأ في جلب البيانات", "Fetch Error"),
-                    description: t("لم نتمكن من جلب قائمة الطعام من الخادم.", "Could not fetch the menu from the server."),
-                });
-            } finally {
-                setIsLoading(false);
+    const fetchMenuItems = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/v1/menu-items');
+            if (!response.ok) {
+                throw new Error('Failed to fetch menu items');
             }
-        };
-        fetchMenuItems();
+            const data: MenuItem[] = await response.json();
+            setItems(data);
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: t("خطأ في جلب البيانات", "Fetch Error"),
+                description: t("لم نتمكن من جلب قائمة الطعام من الخادم.", "Could not fetch the menu from the server."),
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }, [toast, t]);
+
+    useEffect(() => {
+        fetchMenuItems();
+    }, [fetchMenuItems]);
 
     const handleAddNew = () => {
         setEditingItem(null);
@@ -109,7 +110,7 @@ function MenuManagementPage() {
             const response = await fetch(`/api/v1/menu-items/${itemToDelete.id}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Failed to delete item');
             
-            setItems(prev => prev.filter(item => item.id !== itemToDelete.id));
+            await fetchMenuItems();
             toast({
                 title: t("تم الحذف بنجاح", "Item Deleted"),
                 description: t(`تم حذف صنف "${itemToDelete.name}".`, `The item "${t(itemToDelete.name, itemToDelete.name_en || '')}" has been deleted.`),
@@ -130,60 +131,44 @@ function MenuManagementPage() {
     const handleSave = async (formData: Omit<MenuItem, 'id' | 'quantity'>) => {
         const dataToSave: { [key: string]: any } = { ...formData };
         
-        // Clean the data: remove any empty/null/undefined optional fields before sending
         Object.keys(dataToSave).forEach(key => {
             if (dataToSave[key] === '' || dataToSave[key] === null || dataToSave[key] === undefined) {
                 delete dataToSave[key];
             }
         });
 
-        if (editingItem) {
-            try {
-                 const response = await fetch(`/api/v1/menu-items/${editingItem.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dataToSave),
-                });
-                if (!response.ok) throw new Error('Failed to update item');
-                const updatedItem = await response.json();
-                setItems(prev => prev.map(item => item.id === editingItem.id ? { ...item, ...updatedItem } : item));
-                toast({
-                    title: t("تم التحديث بنجاح", "Item Updated"),
-                });
-            } catch (error) {
-                console.error(error);
-                toast({
-                    variant: "destructive",
-                    title: t("خطأ في التحديث", "Update Error"),
-                    description: t("لم نتمكن من تحديث الصنف.", "Could not update the item."),
-                });
-            }
-        } else {
-            try {
-                 const response = await fetch('/api/v1/menu-items', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...dataToSave, is_available: true }),
-                });
+        const url = editingItem ? `/api/v1/menu-items/${editingItem.id}` : '/api/v1/menu-items';
+        const method = editingItem ? 'PUT' : 'POST';
 
-                if (!response.ok) {
-                    throw new Error('Failed to save item');
-                }
-                const newItem = await response.json();
-                setItems(prev => [newItem, ...prev]);
-                toast({
-                    title: t("تمت الإضافة بنجاح", "Item Added"),
-                    description: t(`تمت إضافة صنف "${dataToSave.name}" إلى القائمة.`, `"${dataToSave.name}" has been added to the menu.`),
-                });
-            } catch(error) {
-                 console.error(error);
-                 toast({
-                    variant: "destructive",
-                    title: t("خطأ في الحفظ", "Save Error"),
-                    description: t("لم نتمكن من حفظ الصنف الجديد.", "Could not save the new item."),
-                });
-            }
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataToSave),
+            });
+
+            if (!response.ok) throw new Error(`Failed to ${method === 'POST' ? 'save' : 'update'} item`);
+
+            await fetchMenuItems(); // Refetch after any successful save/update
+            const successMessage = editingItem 
+                ? t("تم التحديث بنجاح", "Item Updated") 
+                : t("تمت الإضافة بنجاح", "Item Added");
+
+            toast({ title: successMessage });
+
+        } catch (error) {
+            console.error(error);
+            const errorMessage = editingItem 
+                ? t("لم نتمكن من تحديث الصنف.", "Could not update the item.")
+                : t("لم نتمكن من حفظ الصنف الجديد.", "Could not save the new item.");
+            
+            toast({
+                variant: "destructive",
+                title: editingItem ? t("خطأ في التحديث", "Update Error") : t("خطأ في الحفظ", "Save Error"),
+                description: errorMessage,
+            });
         }
+        
         setDialogOpen(false);
     };
 
@@ -198,6 +183,7 @@ function MenuManagementPage() {
                 body: JSON.stringify({ is_available: isChecked }),
             });
             if (!response.ok) throw new Error('Failed to update availability');
+            await fetchMenuItems(); // Refetch on success
         } catch (error) {
             console.error(error);
             toast({
@@ -205,7 +191,7 @@ function MenuManagementPage() {
                 title: t('خطأ في التحديث', 'Update Error'),
                 description: t('لم نتمكن من تحديث حالة الصنف. يرجى إعادة المحاولة.', 'Could not update item status. Please try again.'),
             });
-            setItems(items);
+            setItems(items); // Revert optimistic update on error
         }
     }
     
@@ -213,7 +199,7 @@ function MenuManagementPage() {
         items.filter(item =>
             (activeCategory === 'all' || item.category === activeCategory) &&
             ((t(item.name, item.name_en || item.name).toLowerCase().includes(searchTerm.toLowerCase())))
-        ).sort((a,b) => (a.is_available === b.is_available) ? 0 : a.is_available ? -1 : 1), [items, searchTerm, activeCategory, language, t]);
+        ).sort((a,b) => (a.is_available === b.is_available) ? 0 : a.is_available ? -1 : 1), [items, searchTerm, activeCategory, t]);
 
 
     return (
@@ -373,7 +359,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                     description: item.description || '',
                     description_en: item.description_en || '',
                     price: item.price,
-                    category: item.category,
+                    category: item.category as any, // Cast to any to satisfy enum
                     offer: item.offer || '',
                     offer_en: item.offer_en || '',
                 });
