@@ -107,34 +107,45 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 }
     
                 let response;
-                switch (op.operation) {
+                // A more generic approach could be used here if operations map directly to API endpoints
+                const { operation, data } = op;
+                let endpoint = '';
+                let method = 'POST'; // Default method
+                let body = data;
+
+                switch(operation) {
                     case 'addExpense':
-                        response = await fetch('/api/v1/expenses', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(op.data),
-                        });
+                        endpoint = '/api/v1/expenses';
+                        method = 'POST';
                         break;
-                    case 'orders': // Assumes 'orders' is the table name for order operations
-                        const orderId = op.data.id;
-                        response = await fetch(`/api/v1/orders/${orderId}`, {
-                            method: op.data.method || 'PUT', // Assuming PUT for updates, adjust if needed
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(op.data),
-                        });
+                    case 'insert_order':
+                        endpoint = '/api/v1/orders';
+                        method = 'POST';
                         break;
-                    // Add other cases for different operations (menu_items, tables, etc.)
+                    case 'update_order':
+                        endpoint = `/api/v1/orders/${data.id}`;
+                        method = 'PUT';
+                        body = data.updates; // Assuming data contains { id, updates }
+                        break;
+                    // Other cases for different operations...
                     default:
-                        console.warn(`Unknown sync operation type: ${op.operation}`);
-                        continue; // Skip unknown operations
+                        console.warn(`Unknown sync operation type: ${operation}`);
+                        continue;
                 }
+                
+                response = await fetch(endpoint, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
     
                 if (!response.ok) {
                     const errorText = await response.text();
                     // Handle duplicate key error specifically for addExpense
-                    if (op.operation === 'addExpense' && response.status === 500 && errorText.includes('23505')) {
-                        console.warn(`Operation ${op.id} (addExpense) failed due to duplicate key. Assuming it was already synced. Clearing from queue.`);
+                    if ((operation === 'addExpense' || operation === 'insert_order') && response.status === 500 && errorText.includes('23505')) {
+                        console.warn(`Operation ${op.id} (${operation}) failed due to duplicate key. Assuming it was already synced. Clearing from queue.`);
                         await clearSyncQueueItem(op.id);
+                        operationsSyncedCount++; // Count it as "synced" since the data is on the server
                         continue; // Move to the next operation
                     }
                     throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to sync'}`);
@@ -352,11 +363,12 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             customer_confirmed_at: null,
             completed_at: null,
             ...orderData,
+            table_id: parseInt(orderData.table_id!.toString(), 10), // Ensure it is a number
         };
 
         setOrders(prev => [...prev, newOrder]);
         await db.orders.put(newOrder);
-        await addToSyncQueue('orders', 'insert', { ...newOrder, id:tempId });
+        await addToSyncQueue('insert_order', { ...newOrder, id:tempId });
         toast({ title: "تم إرسال الطلب", description: "سيتم مزامنة الطلب مع الخادم." });
         requestBackgroundSync();
     }, [toast]);
@@ -368,7 +380,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         const updatedOrder = { ...orders[orderIndex], ...updates };
         setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
         await db.orders.put(updatedOrder);
-        await addToSyncQueue('orders', 'update', { id: orderId, ...updates });
+        await addToSyncQueue('update_order', { id: orderId, updates });
         requestBackgroundSync();
         return true;
     }
@@ -436,7 +448,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         setMenuItems(prev => [...prev, newItem].sort((a,b) => a.name.localeCompare(b.name)));
         await db.menuItems.put(newItem);
-        await addToSyncQueue('menu_items', 'insert', { ...newItem });
+        await addToSyncQueue('menu_items', { ...newItem });
         
         toast({ title: "تمت الإضافة محلياً", description: `تمت إضافة ${itemData.name}، وسيتم مزامنته قريباً.` });
         requestBackgroundSync();
@@ -449,7 +461,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         const updatedItem = { ...menuItems[itemIndex], ...itemData, updated_at: new Date().toISOString() };
         setMenuItems(prev => prev.map(i => i.id === itemId ? updatedItem : i));
         await db.menuItems.put(updatedItem);
-        await addToSyncQueue('menu_items', 'update', { id: itemId, ...itemData });
+        await addToSyncQueue('menu_items', { id: itemId, ...itemData });
         
         toast({ title: "تم التحديث محلياً", description: `تم تحديث ${itemData.name || 'الصنف'}، وسيتم مزامنته قريباً.` });
         requestBackgroundSync();
@@ -458,7 +470,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     const deleteMenuItem = async (itemId: string) => {
         setMenuItems(prev => prev.filter(i => i.id !== itemId));
         await db.menuItems.delete(itemId);
-        await addToSyncQueue('menu_items', 'delete', { id: itemId });
+        await addToSyncQueue('menu_items', { id: itemId });
         
         toast({ title: "تم الحذف محلياً", description: `تم حذف الصنف، وسيتم مزامنته قريباً.`, variant: "destructive" });
         requestBackgroundSync();
@@ -486,7 +498,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         setTables(prev => [...prev, newTableForLocal]);
         await db.tables.put(newTableForLocal);
         
-        await addToSyncQueue('tables', 'insert', newTableData);
+        await addToSyncQueue('tables', newTableData);
         requestBackgroundSync();
     };
 
@@ -496,7 +508,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         setTables(prev => prev.filter(t => t.uuid !== uuid));
         await db.tables.delete(uuid); // Dexie delete uses primary key
-        await addToSyncQueue('tables', 'delete', { uuid: uuid });
+        await addToSyncQueue('tables', { uuid: uuid });
         requestBackgroundSync();
     };
 

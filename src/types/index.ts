@@ -24,11 +24,14 @@ export interface Table {
   is_active: boolean; // هل الطاولة نشطة
   display_number: string | null; // رقم الطاولة للعرض (نصي، يمكن أن يكون NULLABLE حسب المخطط)
   capacity: number | null; // سعة الطاولة (عدد الأشخاص، يمكن أن يكون NULLABLE حسب المخطط)
-  status: TableStatus | null; // حالة الطاولة باستخدام Enum (يمكن أن يكون NULLABLE حسب المخطط)
+  status: TableStatus | string | null; // حالة الطاولة (يمكن أن يكون string لاستيعاب الحالات الجديدة)
   current_order_id: string | null; // معرف الطلب الحالي المرتبط بالطاولة (Foreign Key to orders.id)
   assigned_user_id: string | null; // معرف المستخدم المسؤول عن الطاولة (REFERENCES auth.users(id))
-  // created_at و updated_at غير موجودة في مخطط جدول tables الذي قدمته، لذا لا يتم تضمينها هنا.
+  order?: Order | null; // الطلب المرتبط حالياً بالطاولة
+  seatingDuration?: string;
+  chefConfirmationTimestamp?: number;
 }
+
 
 // واجهة لتمثيل عنصر من قائمة الطعام
 export interface MenuItem {
@@ -46,28 +49,19 @@ export interface MenuItem {
   offer_en: string | null; // العرض بالإنجليزية
   image: string | null; // رابط الصورة (text)
   image_hint: string | null; // تلميح الصورة (text)
+  quantity?: number; // لتتبع الكمية في السلة
 }
 
 // واجهة لتمثيل عنصر داخل الطلب (عندما يكون جزءاً من orders.items JSONB)
-// هذا يعكس قرار استخدام JSONB وليس جدولاً منفصلاً لـ OrderItem
-export interface OrderItem {
+export interface OrderItem extends Omit<MenuItem, 'created_at' | 'updated_at' | 'is_available'> {
   menu_item_id: string; // معرف العنصر في قائمة الطعام
   quantity: number; // الكمية المطلوبة
-  price: number; // سعر الوحدة وقت الطلب
-  name: string; // اسم العنصر (للتخزين السريع، ليس في المخطط ولكن مفيد)
-  subtotal?: number; // الإجمالي (quantity * price) - ليس في المخطط ولكن مفيد
-  notes?: string | null; // ملاحظات خاصة بالصنف (اختياري)
 }
 
+
 // تعريف حالة الطلب كـ Enum
-export enum OrderStatus {
-  PENDING_CHEF_APPROVAL = 'pending_chef_approval',
-  IN_PROGRESS = 'in_progress',
-  READY = 'ready',
-  SERVED = 'served',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
-}
+export type OrderStatus = 'pending_chef_approval' | 'pending_cashier_approval' | 'awaiting_final_confirmation' | 'confirmed' | 'ready' | 'paying' | 'completed' | 'cancelled' | 'needs_attention' | string;
+
 
 // واجهة لتمثيل الطلب بناءً على جدول public.orders
 export interface Order {
@@ -75,7 +69,7 @@ export interface Order {
   created_at: string; // timestamp with time zone
   session_id: string; // معرف جلسة الزبون (REFERENCES customer_sessions(id))
   table_uuid: string; // معرف الطاولة المرتبطة بالطلب (REFERENCES tables(uuid))
-  table_id: string | null; // <--- تم التعديل هنا: أصبح string | null بدلاً من number
+  table_id: number; // رقم الطاولة للعرض (integer, NOT NULL)
   items: OrderItem[]; // مصفوفة من عناصر الطلب (تخزن كـ JSONB في DB)
   status: OrderStatus; // حالة الطلب (text)
   subtotal: number; // المجموع الفرعي (numeric)
@@ -126,4 +120,19 @@ export interface Expense {
   invoice_number: string | null; // رقم الفاتورة (text)
   notes: string | null; // ملاحظات (text)
   user_id: string | null; // معرف المستخدم الذي سجل المصروف (REFERENCES auth.users(id))
+}
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  role: UserRole;
+  password?: string;
+}
+
+export interface PendingSyncOperation {
+  id?: number;
+  operation: string;
+  data: any;
+  timestamp: number;
 }

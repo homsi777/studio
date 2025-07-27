@@ -93,7 +93,7 @@ export default function MenuPage() {
     };
 
     const handleSendOrder = async () => {
-        if (!sessionId || !tableUuid || !currentTable || cart.length === 0) {
+        if (!sessionId || !tableUuid || !currentTable?.display_number || cart.length === 0) {
             toast({
                 variant: 'destructive',
                 title: t('خطأ', 'Error'),
@@ -104,7 +104,7 @@ export default function MenuPage() {
 
         setIsSubmitting(true);
         const newOrder: Omit<Order, 'id' | 'status' | 'created_at' | 'service_charge' | 'tax' | 'final_total' | 'chef_approved_at' | 'cashier_approved_at' | 'customer_confirmed_at' | 'completed_at'> = {
-            table_id: currentTable.display_number,
+            table_id: parseInt(currentTable.display_number, 10),
             table_uuid: tableUuid,
             session_id: sessionId,
             items: cart.map(({ quantity, ...item }) => ({ ...item, quantity: quantity || 0 })),
