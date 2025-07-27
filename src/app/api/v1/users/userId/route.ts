@@ -12,9 +12,9 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 // PUT: تعديل ملف تعريف مستخدم موجود
-export async function PUT(request: Request, { params }: { params: { userId: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const updatedData: Partial<UserProfile> = await request.json();
 
     if (!userId) {
@@ -48,9 +48,9 @@ export async function PUT(request: Request, { params }: { params: { userId: stri
 
 // DELETE: تعطيل ملف تعريف مستخدم (حذف ناعم)
 // هذا المسار سيقوم بتغيير is_active إلى false بدلاً من الحذف الفعلي
-export async function DELETE(request: Request, { params }: { params: { userId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
 
     if (!userId) {
       return NextResponse.json({ message: 'User ID is required.' }, { status: 400 });

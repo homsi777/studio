@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Expense } from '@/types';
 
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
     try {
-        const { id } = context.params;
+        const { id } = await context.params;
         const updatedData = await request.json() as Partial<Omit<Expense, 'id'>>;
 
         if (!updatedData.description || !updatedData.amount || !updatedData.date || !updatedData.category) {
@@ -29,14 +29,15 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
         
         return NextResponse.json(data, { status: 200 });
     } catch (error) {
-        console.error(`Failed to update expense with ID ${context.params.id}:`, error);
+        const id = await context.params.id;
+        console.error(`Failed to update expense with ID ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
 
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
     try {
-        const { id } = context.params;
+        const { id } = await context.params;
         const { error } = await supabaseAdmin
             .from('expenses')
             .delete()
@@ -49,7 +50,8 @@ export async function DELETE(request: NextRequest, context: { params: { id: stri
 
         return new NextResponse(null, { status: 204 });
     } catch (error) {
-        console.error(`Failed to delete expense with ID ${context.params.id}:`, error);
+        const id = await context.params.id;
+        console.error(`Failed to delete expense with ID ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

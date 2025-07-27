@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-export async function DELETE(request: NextRequest, context: { params: { uuid: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ uuid: string }> }) {
     try {
-        const { uuid } = context.params;
+        const { uuid } = await context.params;
 
         if (!uuid) {
             return NextResponse.json({ message: 'Table UUID is required' }, { status: 400 });
@@ -43,7 +43,8 @@ export async function DELETE(request: NextRequest, context: { params: { uuid: st
         return new NextResponse(null, { status: 204 }); // No Content
 
     } catch (error) {
-        console.error(`Failed to delete table with UUID ${context.params.uuid}:`, error);
+        const { uuid } = await context.params;
+        console.error(`Failed to delete table with UUID ${uuid}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

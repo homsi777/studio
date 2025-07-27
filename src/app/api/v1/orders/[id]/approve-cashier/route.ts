@@ -2,9 +2,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { serviceCharge, tax, finalTotal } = await request.json();
 
     if (serviceCharge === undefined || tax === undefined || finalTotal === undefined) {
