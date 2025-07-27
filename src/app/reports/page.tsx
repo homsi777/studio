@@ -81,6 +81,7 @@ function ReportsPage() {
 
         const processData = () => {
             try {
+                // Ensure we only process REAL completed orders
                 const orders = allOrders.filter(o => o.status === 'completed');
 
                 const totalRevenue = orders.reduce((sum, order) => sum + (order.final_total || 0), 0);
@@ -91,12 +92,13 @@ function ReportsPage() {
 
                 const topItems: Record<string, {name: string, name_en: string, count: number}> = {};
                 orders.forEach(order => {
-                    order.items.forEach(item => {
+                    (order.items || []).forEach(item => {
                         const itemId = item.id || item.menu_item_id;
+                        if (!itemId) return;
                         if (!topItems[itemId]) {
                             topItems[itemId] = { name: item.name, name_en: item.name_en || '', count: 0 };
                         }
-                        topItems[itemId].count += item.quantity;
+                        topItems[itemId].count += item.quantity || 0;
                     });
                 });
                 
@@ -369,3 +371,5 @@ export default function GuardedReportsPage() {
         </AuthGuard>
     )
 }
+
+    

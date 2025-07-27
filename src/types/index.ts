@@ -1,3 +1,4 @@
+
 // src/types/index.ts
 
 // تعريف حالة الطاولة كـ Enum لضمان القيم المحددة
@@ -30,6 +31,8 @@ export interface Table {
   order?: Order | null; // الطلب المرتبط حالياً بالطاولة
   seatingDuration?: string;
   chefConfirmationTimestamp?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 
@@ -43,7 +46,7 @@ export interface MenuItem {
   description: string | null; // الوصف
   description_en: string | null; // الوصف بالإنجليزية
   price: number; // السعر (numeric)
-  category: string; // الفئة (text, IN ('main', 'appetizer', 'drink', 'dessert'))
+  category: MenuItemCategory; // الفئة (text, IN ('main', 'appetizer', 'drink', 'dessert'))
   is_available: boolean; // هل العنصر متاح
   offer: string | null; // العرض
   offer_en: string | null; // العرض بالإنجليزية
@@ -52,8 +55,11 @@ export interface MenuItem {
   quantity?: number; // لتتبع الكمية في السلة
 }
 
+export type MenuItemCategory = 'main' | 'appetizer' | 'drink' | 'dessert';
+
+
 // واجهة لتمثيل عنصر داخل الطلب (عندما يكون جزءاً من orders.items JSONB)
-export interface OrderItem extends Omit<MenuItem, 'created_at' | 'updated_at' | 'is_available'> {
+export interface OrderItem extends Omit<MenuItem, 'created_at' | 'updated_at' | 'is_available' | 'category'> {
   menu_item_id: string; // معرف العنصر في قائمة الطعام
   quantity: number; // الكمية المطلوبة
 }
@@ -136,3 +142,5 @@ export interface PendingSyncOperation {
   data: any;
   timestamp: number;
 }
+
+    

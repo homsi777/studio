@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useOrderFlow } from '@/hooks/use-order-flow';
 
 
 const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
@@ -52,7 +53,7 @@ const categoryMap: Record<MenuItemCategory, { ar: string, en: string }> = {
 
 function MenuManagementPage() {
     const { language, dir } = useLanguage();
-    const [items, setItems] = useState<MenuItem[]>([]);
+    const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, loading: orderFlowLoading } = useOrderFlow();
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -64,30 +65,10 @@ function MenuManagementPage() {
 
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    const fetchMenuItems = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            const response = await fetch('/api/v1/menu-items');
-            if (!response.ok) {
-                throw new Error('Failed to fetch menu items');
-            }
-            const data: MenuItem[] = await response.json();
-            setItems(data);
-        } catch (error) {
-            console.error(error);
-            toast({
-                variant: "destructive",
-                title: t("خطأ في جلب البيانات", "Fetch Error"),
-                description: t("لم نتمكن من جلب قائمة الطعام من الخادم.", "Could not fetch the menu from the server."),
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [toast, t]);
-
     useEffect(() => {
-        fetchMenuItems();
-    }, [fetchMenuItems]);
+        setIsLoading(orderFlowLoading);
+    }, [orderFlowLoading]);
+
 
     const handleAddNew = () => {
         setEditingItem(null);
@@ -107,10 +88,7 @@ function MenuManagementPage() {
     const handleDelete = async () => {
         if (!itemToDelete) return;
         try {
-            const response = await fetch(`/api/v1/menu-items/${itemToDelete.id}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Failed to delete item');
-            
-            await fetchMenuItems();
+            await deleteMenuItem(itemToDelete.id);
             toast({
                 title: t("تم الحذف بنجاح", "Item Deleted"),
                 description: t(`تم حذف صنف "${itemToDelete.name}".`, `The item "${t(itemToDelete.name, itemToDelete.name_en || '')}" has been deleted.`),
@@ -128,28 +106,14 @@ function MenuManagementPage() {
         }
     };
     
-    const handleSave = async (formData: Omit<MenuItem, 'id' | 'quantity'>) => {
-        const dataToSave: { [key: string]: any } = { ...formData };
-        
-        Object.keys(dataToSave).forEach(key => {
-            if (dataToSave[key] === '' || dataToSave[key] === null || dataToSave[key] === undefined) {
-                delete dataToSave[key];
-            }
-        });
-
-        const url = editingItem ? `/api/v1/menu-items/${editingItem.id}` : '/api/v1/menu-items';
-        const method = editingItem ? 'PUT' : 'POST';
-
+    const handleSave = async (formData: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => {
         try {
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dataToSave),
-            });
-
-            if (!response.ok) throw new Error(`Failed to ${method === 'POST' ? 'save' : 'update'} item`);
-
-            await fetchMenuItems(); // Refetch after any successful save/update
+            if (editingItem) {
+                await updateMenuItem(editingItem.id, formData);
+            } else {
+                await addMenuItem(formData);
+            }
+            
             const successMessage = editingItem 
                 ? t("تم التحديث بنجاح", "Item Updated") 
                 : t("تمت الإضافة بنجاح", "Item Added");
@@ -173,17 +137,8 @@ function MenuManagementPage() {
     };
 
     const handleToggleAvailability = async (item: MenuItem, isChecked: boolean) => {
-        const optimisticItems = items.map(i => i.id === item.id ? { ...i, is_available: isChecked } : i);
-        setItems(optimisticItems);
-
         try {
-            const response = await fetch(`/api/v1/menu-items/${item.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_available: isChecked }),
-            });
-            if (!response.ok) throw new Error('Failed to update availability');
-            await fetchMenuItems(); // Refetch on success
+            await updateMenuItem(item.id, { is_available: isChecked });
         } catch (error) {
             console.error(error);
             toast({
@@ -191,15 +146,14 @@ function MenuManagementPage() {
                 title: t('خطأ في التحديث', 'Update Error'),
                 description: t('لم نتمكن من تحديث حالة الصنف. يرجى إعادة المحاولة.', 'Could not update item status. Please try again.'),
             });
-            setItems(items); // Revert optimistic update on error
         }
     }
     
     const filteredItems = useMemo(() =>
-        items.filter(item =>
+        menuItems.filter(item =>
             (activeCategory === 'all' || item.category === activeCategory) &&
             ((t(item.name, item.name_en || item.name).toLowerCase().includes(searchTerm.toLowerCase())))
-        ).sort((a,b) => (a.is_available === b.is_available) ? 0 : a.is_available ? -1 : 1), [items, searchTerm, activeCategory, t]);
+        ).sort((a,b) => (a.is_available === b.is_available) ? 0 : a.is_available ? -1 : 1), [menuItems, searchTerm, activeCategory, t]);
 
 
     return (
@@ -325,18 +279,21 @@ interface MenuItemFormDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     item: MenuItem | null;
-    onSave: (formData: Omit<MenuItem, 'id' | 'quantity'>) => void;
+    onSave: (formData: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => void;
 }
 
 const menuItemSchema = z.object({
   name: z.string().min(1, { message: "الاسم بالعربية مطلوب." }),
-  name_en: z.string().min(1, { message: "الاسم بالإنجليزية مطلوب." }),
+  name_en: z.string().optional(),
   description: z.string().optional(),
   description_en: z.string().optional(),
   price: z.coerce.number().positive({ message: "السعر يجب أن يكون رقماً موجباً." }),
   category: z.enum(['main', 'appetizer', 'drink', 'dessert'], { errorMap: () => ({ message: "الرجاء اختيار تصنيف." }) }),
   offer: z.string().optional(),
   offer_en: z.string().optional(),
+  image: z.string().optional(),
+  image_hint: z.string().optional(),
+  is_available: z.boolean().default(true),
 });
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
 
@@ -345,9 +302,22 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
     const { language, dir } = useLanguage();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    const { register, handleSubmit, formState: { errors, isValid }, reset, control } = useForm<MenuItemFormData>({
+    const { register, handleSubmit, formState: { errors, isSubmitting }, reset, control } = useForm<MenuItemFormData>({
         resolver: zodResolver(menuItemSchema),
-        mode: 'onChange', // Validate on change to enable/disable button
+        mode: 'onChange',
+        defaultValues: {
+            name: '',
+            name_en: '',
+            description: '',
+            description_en: '',
+            price: 0,
+            category: 'main',
+            offer: '',
+            offer_en: '',
+            image: '',
+            image_hint: '',
+            is_available: true,
+        }
     });
 
     useEffect(() => {
@@ -359,28 +329,33 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                     description: item.description || '',
                     description_en: item.description_en || '',
                     price: item.price,
-                    category: item.category as any, // Cast to any to satisfy enum
+                    category: item.category as MenuItemCategory,
                     offer: item.offer || '',
                     offer_en: item.offer_en || '',
+                    image: item.image || '',
+                    image_hint: item.image_hint || '',
+                    is_available: item.is_available,
                 });
             } else {
-                // Reset with default values for a new item
                 reset({
                     name: '',
                     name_en: '',
                     description: '',
                     description_en: '',
-                    price: 0,
-                    category: 'main', // Default category fix
+                    price: undefined,
+                    category: 'main',
                     offer: '',
                     offer_en: '',
+                    image: '',
+                    image_hint: '',
+                    is_available: true,
                 });
             }
         }
     }, [item, isOpen, reset]);
 
     const onSubmit = (data: MenuItemFormData) => {
-        onSave(data as Omit<MenuItem, 'id' | 'quantity'>);
+        onSave(data);
     };
 
     return (
@@ -401,7 +376,7 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="name_en">{t('الاسم (بالإنجليزية)', 'Name (English)')}*</Label>
+                                <Label htmlFor="name_en">{t('الاسم (بالإنجليزية)', 'Name (English)')}</Label>
                                 <Input id="name_en" {...register('name_en')} />
                                 {errors.name_en && <p className="text-xs text-destructive">{errors.name_en.message}</p>}
                             </div>
@@ -455,7 +430,10 @@ function MenuItemFormDialog({ isOpen, onOpenChange, item, onSave }: MenuItemForm
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
-                        <Button type="submit" disabled={!isValid}>{t('حفظ الصنف', 'Save Item')}</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
+                          {t('حفظ الصنف', 'Save Item')}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -471,3 +449,5 @@ export default function GuardedMenuManagementPage() {
         </AuthGuard>
     )
 }
+
+    

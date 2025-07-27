@@ -11,7 +11,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { Loader2 } from 'lucide-react';
 
 
-const statusPriority: Record<TableStatus, number> = {
+const statusPriority: Record<string, number> = {
     needs_attention: 1,
     new_order: 2,
     pending_cashier_approval: 3,
@@ -21,7 +21,6 @@ const statusPriority: Record<TableStatus, number> = {
     confirmed: 7,
     occupied: 8,
     available: 9,
-    // Add other statuses from your enum if needed
     needs_cleaning: 10,
     reserved: 11,
 };
@@ -102,3 +101,5 @@ export function DashboardClient() {
     </>
   );
 }
+
+    
