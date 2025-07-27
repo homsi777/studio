@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { type Table, type TableStatus, type Order as OrderType } from '@/types';
+import { type Table, type TableStatus } from '@/types';
 import { TableCard } from '@/components/dashboard/table-card';
 import { OrderDetailsSheet } from '@/components/dashboard/order-details-sheet';
 import { useOrderFlow } from '@/hooks/use-order-flow';
@@ -21,6 +21,9 @@ const statusPriority: Record<TableStatus, number> = {
     confirmed: 7,
     occupied: 8,
     available: 9,
+    // Add other statuses from your enum if needed
+    needs_cleaning: 10,
+    reserved: 11,
 };
 
 export function DashboardClient() {
@@ -42,7 +45,12 @@ export function DashboardClient() {
   
   const sortedTables = useMemo(() => {
     return [...tables].sort((a, b) => {
-        return (statusPriority[a.status] || 99) - (statusPriority[b.status] || 99) || a.id - b.id;
+        const priorityA = statusPriority[a.status as TableStatus] || 99;
+        const priorityB = statusPriority[b.status as TableStatus] || 99;
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return (parseInt(a.display_number || '0')) - (parseInt(b.display_number || '0'));
     });
   }, [tables]);
 

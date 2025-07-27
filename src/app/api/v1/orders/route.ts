@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const subtotal = orderData.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
 
     const newOrder = {
-      table_id: orderData.table_id, // Keep the numeric ID for reference if needed
+      table_id: orderData.table_id,
       table_uuid: orderData.table_uuid,
       session_id: orderData.session_id,
       items: orderData.items,

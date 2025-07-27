@@ -57,7 +57,7 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
     return null;
   }
 
-  const statusInfo = statusMap[table.status] || statusMap.available;
+  const statusInfo = statusMap[table.status as string] || statusMap.available;
   const order = table.order;
 
   const isCashierApprovalStep = table.status === 'pending_cashier_approval';
@@ -95,9 +95,9 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg w-full flex flex-col font-body bg-card">
-        <div id={`invoice-table-${table.id}`} className="print:bg-white print:text-black">
+        <div id={`invoice-table-${table.uuid}`} className="print:bg-white print:text-black">
           <SheetHeader className="text-start">
-            <SheetTitle className="font-headline text-2xl">{t('تفاصيل الطاولة', 'Table Details')} {table.id}</SheetTitle>
+            <SheetTitle className="font-headline text-2xl">{t('تفاصيل الطاولة', 'Table Details')} {table.display_number}</SheetTitle>
             <SheetDescription>
               <Badge variant="outline" className={`text-sm ${statusInfo.className}`}>{t(statusInfo.ar, statusInfo.en)}</Badge>
             </SheetDescription>
@@ -126,8 +126,8 @@ export function OrderDetailsSheet({ table, open, onOpenChange }: OrderDetailsShe
                 
                 {/* Items List */}
                 <div className="space-y-3">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
                       <div>
                         <p className="font-semibold">{language === 'ar' ? item.name : (item.name_en || item.name)}</p>
                         <p className="text-xs text-muted-foreground print:text-gray-600">

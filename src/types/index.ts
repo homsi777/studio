@@ -22,13 +22,12 @@ export enum UserRole {
 export interface Table {
   uuid: string; // المعرف الفريد للطاولة (Primary Key)
   is_active: boolean; // هل الطاولة نشطة
-  display_number: string | null; // رقم الطاولة للعرض (نصي، يمكن أن يكون NULLABLE حسب المخطط الأخير)
-  capacity: number | null; // سعة الطاولة (عدد الأشخاص، يمكن أن يكون NULLABLE حسب المخطط الأخير)
-  status: TableStatus | null; // حالة الطاولة باستخدام Enum (يمكن أن يكون NULLABLE حسب المخطط الأخير)
+  display_number: string | null; // رقم الطاولة للعرض (نصي، يمكن أن يكون NULLABLE حسب المخطط)
+  capacity: number | null; // سعة الطاولة (عدد الأشخاص، يمكن أن يكون NULLABLE حسب المخطط)
+  status: TableStatus | null; // حالة الطاولة باستخدام Enum (يمكن أن يكون NULLABLE حسب المخطط)
   current_order_id: string | null; // معرف الطلب الحالي المرتبط بالطاولة (Foreign Key to orders.id)
   assigned_user_id: string | null; // معرف المستخدم المسؤول عن الطاولة (REFERENCES auth.users(id))
-  // created_at و updated_at ليست في مخططك الأخير لجدول tables، لذا أزلتها من هنا
-  // إذا كانت موجودة في قاعدة البيانات فعلياً، فيجب إضافتها هنا.
+  // created_at و updated_at غير موجودة في مخطط جدول tables الذي قدمته، لذا لا يتم تضمينها هنا.
 }
 
 // واجهة لتمثيل عنصر من قائمة الطعام
@@ -38,8 +37,8 @@ export interface MenuItem {
   updated_at: string; // timestamp with time zone
   name: string; // اسم الصنف (عربي)
   name_en: string | null; // الاسم بالإنجليزية
-  description: string | null; // وصف الصنف (عربي)
-  description_en: string | null; // وصف الصنف (إنجليزي)
+  description: string | null; // الوصف
+  description_en: string | null; // الوصف بالإنجليزية
   price: number; // السعر (numeric)
   category: string; // الفئة (text, IN ('main', 'appetizer', 'drink', 'dessert'))
   is_available: boolean; // هل العنصر متاح
@@ -58,7 +57,6 @@ export interface OrderItem {
   name: string; // اسم العنصر (للتخزين السريع، ليس في المخطط ولكن مفيد)
   subtotal?: number; // الإجمالي (quantity * price) - ليس في المخطط ولكن مفيد
   notes?: string | null; // ملاحظات خاصة بالصنف (اختياري)
-  // لا يوجد id أو order_id أو created_at/updated_at هنا لأنها جزء من JSONB
 }
 
 // تعريف حالة الطلب كـ Enum
@@ -77,7 +75,7 @@ export interface Order {
   created_at: string; // timestamp with time zone
   session_id: string; // معرف جلسة الزبون (REFERENCES customer_sessions(id))
   table_uuid: string; // معرف الطاولة المرتبطة بالطلب (REFERENCES tables(uuid))
-  table_id: number; // رقم الطاولة (integer)
+  table_id: string | null; // <--- تم التعديل هنا: أصبح string | null بدلاً من number
   items: OrderItem[]; // مصفوفة من عناصر الطلب (تخزن كـ JSONB في DB)
   status: OrderStatus; // حالة الطلب (text)
   subtotal: number; // المجموع الفرعي (numeric)
@@ -88,7 +86,6 @@ export interface Order {
   cashier_approved_at: string | null; // وقت موافقة الكاشير (timestamp with time zone)
   customer_confirmed_at: string | null; // وقت تأكيد الزبون (timestamp with time zone)
   completed_at: string | null; // وقت اكتمال الطلب (timestamp with time zone)
-  // is_paid و customer_notes غير موجودة في مخططك الأخير لجدول orders، لذا لم أضفها
 }
 
 // واجهة لتمثيل جلسة الزبون بناءً على جدول public.customer_sessions

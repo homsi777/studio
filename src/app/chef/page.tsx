@@ -16,8 +16,8 @@ function ChefPage() {
   const { language } = useLanguage();
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-  const newOrders = useMemo(() => orders.filter(o => o.status === 'pending_chef_approval').sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)), [orders]);
-  const inProgressOrders = useMemo(() => orders.filter(o => o.status === 'confirmed').sort((a,b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)), [orders]);
+  const newOrders = useMemo(() => orders.filter(o => o.status === 'pending_chef_approval').sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()), [orders]);
+  const inProgressOrders = useMemo(() => orders.filter(o => o.status === 'confirmed').sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()), [orders]);
 
   const columns: { id: OrderStatus; title: string; en_title: string; orders: Order[] }[] = [
     { id: 'pending_chef_approval', title: 'طلبات بانتظار موافقتك', en_title: "Pending Approval", orders: newOrders },

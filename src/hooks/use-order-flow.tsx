@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation, OrderStatus, Expense } from '@/types';
+import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation, OrderStatus, Expense, UserProfile } from '@/types';
 import { useToast } from './use-toast';
 import { useAuth } from './use-auth';
 import { supabase } from '@/lib/supabase';
@@ -21,7 +22,7 @@ interface OrderFlowContextType {
     isSyncing: boolean;
     fetchAllData: (forceOnline?: boolean) => Promise<void>;
     // Order operations
-    submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp' | 'service_charge' | 'tax' | 'final_total' | 'created_at'>) => Promise<void>;
+    submitOrder: (order: Omit<Order, 'id' | 'status' | 'created_at' | 'service_charge' | 'tax' | 'final_total' | 'chef_approved_at' | 'cashier_approved_at' | 'customer_confirmed_at' | 'completed_at'>) => Promise<void>;
     approveOrderByChef: (orderId: string) => Promise<void>;
     approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
     confirmFinalOrder: (orderId: string) => Promise<void>;
@@ -31,8 +32,8 @@ interface OrderFlowContextType {
     requestBill: (orderId: string) => Promise<void>;
     requestAttention: (orderId: string) => Promise<void>;
     // Menu operations
-    addMenuItem: (itemData: Omit<MenuItem, 'id' | 'quantity'>) => Promise<void>;
-    updateMenuItem: (itemId: string, itemData: Partial<Omit<MenuItem, 'id' | 'quantity'>>) => Promise<void>;
+    addMenuItem: (itemData: Omit<MenuItem, 'id' | 'quantity' | 'created_at' | 'updated_at'>) => Promise<void>;
+    updateMenuItem: (itemId: string, itemData: Partial<Omit<MenuItem, 'id' | 'quantity' | 'created_at' | 'updated_at'>>) => Promise<void>;
     deleteMenuItem: (itemId: string) => Promise<void>;
     // Table operations
     addTable: () => Promise<void>;
@@ -44,19 +45,16 @@ const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefin
 // --- HELPER FUNCTION ---
 export const formatOrderFromDb = (dbOrder: any): Order => ({
     id: dbOrder.id,
+    created_at: dbOrder.created_at,
+    session_id: dbOrder.session_id,
+    table_uuid: dbOrder.table_uuid,
+    table_id: dbOrder.table_id,
     items: dbOrder.items || [],
+    status: dbOrder.status,
     subtotal: dbOrder.subtotal || 0,
     service_charge: dbOrder.service_charge || 0,
     tax: dbOrder.tax || 0,
     final_total: dbOrder.final_total || 0,
-    table_id: dbOrder.table_id,
-    table_uuid: dbOrder.table_uuid,
-    session_id: dbOrder.session_id,
-    status: dbOrder.status,
-    timestamp: new Date(dbOrder.created_at).getTime(),
-    confirmationTimestamp: dbOrder.customer_confirmed_at ? new Date(dbOrder.customer_confirmed_at).getTime() : undefined,
-    created_at: dbOrder.created_at,
-    updated_at: dbOrder.updated_at,
     chef_approved_at: dbOrder.chef_approved_at,
     cashier_approved_at: dbOrder.cashier_approved_at,
     customer_confirmed_at: dbOrder.customer_confirmed_at,
@@ -132,14 +130,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 }
     
                 if (!response.ok) {
-                    const errorBody = await response.json();
-                    // Handle duplicate key error specifically
-                    if (response.status === 500 && errorBody.code === '23505') {
-                        console.warn(`Operation ${op.id} (${op.operation}) failed due to duplicate key. Assuming it was already synced. Clearing from queue.`);
+                    const errorText = await response.text();
+                    // Handle duplicate key error specifically for addExpense
+                    if (op.operation === 'addExpense' && response.status === 500 && errorText.includes('23505')) {
+                        console.warn(`Operation ${op.id} (addExpense) failed due to duplicate key. Assuming it was already synced. Clearing from queue.`);
                         await clearSyncQueueItem(op.id);
                         continue; // Move to the next operation
                     }
-                    throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorBody) || 'Failed to sync'}`);
+                    throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to sync'}`);
                 }
     
                 await clearSyncQueueItem(op.id);
@@ -189,7 +187,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 setOrders(formattedOrders);
                 setMenuItems(menuItemsRes.data as MenuItem[]);
 
-                await saveToCache('tables', tablesRes.data as unknown as TableType[]);
+                await saveToCache('tables', tablesRes.data as unknown as UserProfile[]);
                 await saveToCache('orders', formattedOrders);
                 await saveToCache('menuItems', menuItemsRes.data);
                 await saveToCache('expenses', expensesRes.data as Expense[]);
@@ -236,13 +234,18 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     // Derived state for tables with their current orders/status
     const tablesWithStatus = useMemo(() => {
         const tableMap = new Map<string, Table>();
-
+        
+        // Initialize map with all tables
         for (const dbTable of tables) {
-            tableMap.set(dbTable.uuid, { ...dbTable, status: 'available', order: null });
+            tableMap.set(dbTable.uuid, { 
+                ...dbTable, 
+                status: 'available', 
+                order: null 
+            });
         }
-
+    
         const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
-
+    
         for (const order of activeOrders) {
             if (tableMap.has(order.table_uuid)) {
                 let status: TableStatus = 'occupied';
@@ -259,13 +262,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                   ...existingTable,
                   status: status,
                   order: order,
+                  // These are just illustrative; real logic might be more complex
                   seatingDuration: '10 min', 
-                  chefConfirmationTimestamp: order.confirmationTimestamp
+                  chefConfirmationTimestamp: order.customer_confirmed_at ? new Date(order.customer_confirmed_at).getTime() : undefined,
                 };
                 tableMap.set(order.table_uuid, tableData);
             }
         }
-        return Array.from(tableMap.values()).sort((a,b) => (a.table_number || 0) - (b.table_number || 0));
+        return Array.from(tableMap.values()).sort((a,b) => (parseInt(a.display_number || '999')) - (parseInt(b.display_number || '999')));
 
     }, [tables, orders]);
 
@@ -334,16 +338,19 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // --- Order Operations ---
-    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp' | 'service_charge' | 'tax' | 'final_total' | 'created_at'>) => {
+    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'created_at' | 'service_charge' | 'tax' | 'final_total' | 'chef_approved_at' | 'cashier_approved_at' | 'customer_confirmed_at' | 'completed_at'>) => {
         const tempId = uuidv4();
         const newOrder: Order = {
             id: tempId,
-            status: orderData.status || 'pending_chef_approval',
-            timestamp: Date.now(),
+            created_at: new Date().toISOString(),
+            status: 'pending_chef_approval',
             service_charge: 0, 
             tax: 0, 
             final_total: orderData.subtotal,
-            created_at: new Date().toISOString(),
+            chef_approved_at: null,
+            cashier_approved_at: null,
+            customer_confirmed_at: null,
+            completed_at: null,
             ...orderData,
         };
 
@@ -355,10 +362,10 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     }, [toast]);
 
     const updateOrderStatus = async (orderId: string, updates: Partial<Order>) => {
-        const order = orders.find(o => o.id === orderId);
-        if (!order) return false;
+        const orderIndex = orders.findIndex(o => o.id === orderId);
+        if (orderIndex === -1) return false;
 
-        const updatedOrder = { ...order, ...updates, updated_at: new Date().toISOString() };
+        const updatedOrder = { ...orders[orderIndex], ...updates };
         setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
         await db.orders.put(updatedOrder);
         await addToSyncQueue('orders', 'update', { id: orderId, ...updates });
@@ -377,7 +384,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         const finalTotal = order.subtotal + serviceCharge + tax;
         
         const updates = { 
-            status: 'pending_final_confirmation', 
+            status: 'awaiting_final_confirmation', 
             service_charge: serviceCharge, 
             tax: tax, 
             final_total: finalTotal,
@@ -418,9 +425,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // --- Menu Item Operations ---
-    const addMenuItem = async (itemData: Omit<MenuItem, 'id' | 'quantity'>) => {
+    const addMenuItem = async (itemData: Omit<MenuItem, 'id' | 'quantity' | 'created_at' | 'updated_at'>) => {
         const tempId = uuidv4();
-        const newItem: MenuItem = { id: tempId, quantity: 0, ...itemData };
+        const newItem: MenuItem = { 
+            id: tempId, 
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            ...itemData 
+        };
         
         setMenuItems(prev => [...prev, newItem].sort((a,b) => a.name.localeCompare(b.name)));
         await db.menuItems.put(newItem);
@@ -430,11 +442,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         requestBackgroundSync();
     };
 
-    const updateMenuItem = async (itemId: string, itemData: Partial<Omit<MenuItem, 'id' | 'quantity'>>) => {
-        const item = menuItems.find(i => i.id === itemId);
-        if (!item) return;
+    const updateMenuItem = async (itemId: string, itemData: Partial<Omit<MenuItem, 'id' | 'quantity' | 'created_at' | 'updated_at'>>) => {
+        const itemIndex = menuItems.findIndex(i => i.id === itemId);
+        if (itemIndex === -1) return;
 
-        const updatedItem = { ...item, ...itemData };
+        const updatedItem = { ...menuItems[itemIndex], ...itemData, updated_at: new Date().toISOString() };
         setMenuItems(prev => prev.map(i => i.id === itemId ? updatedItem : i));
         await db.menuItems.put(updatedItem);
         await addToSyncQueue('menu_items', 'update', { id: itemId, ...itemData });
@@ -455,11 +467,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     // --- Table Operations ---
     const addTable = async () => {
         const tempUuid = uuidv4();
-        const maxTableNumber = tables.reduce((max, t) => Math.max(t.table_number || 0), 0);
+        const maxDisplayNumber = tables.reduce((max, t) => Math.max(parseInt(t.display_number || '0')), 0);
         
         const newTableData = {
           uuid: tempUuid,
-          display_number: (maxTableNumber + 1).toString(),
+          display_number: (maxDisplayNumber + 1).toString(),
           capacity: 4, // Default capacity
           is_active: true,
           status: 'available',
@@ -467,10 +479,8 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         const newTableForLocal: Table = {
           ...newTableData,
-          id: maxTableNumber + 1, // This is temporary and for local reference only.
-          table_number: maxTableNumber + 1,
-          order: null,
-          created_at: new Date().toISOString(),
+          current_order_id: null,
+          assigned_user_id: null
         };
 
         setTables(prev => [...prev, newTableForLocal]);
@@ -528,5 +538,3 @@ export const useOrderFlow = () => {
     }
     return context;
 };
-
-    

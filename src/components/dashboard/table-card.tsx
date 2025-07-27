@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { type Table } from '@/types';
+import { type Table, TableStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Clock, AlertCircle, CheckCircle, Utensils, CreditCard, HelpCircle, Hourglass, Bell } from 'lucide-react';
@@ -75,7 +75,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     badge: 'border-transparent bg-blue-500/20 text-blue-500',
     shadow: 'shadow-blue-900/10'
   },
-  occupied: {
+  [TableStatus.OCCUPIED]: {
     bg: 'bg-card',
     border: 'border-yellow-500/50',
     iconColor: 'text-yellow-500',
@@ -95,7 +95,7 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
     badge: 'border-transparent bg-orange-500/20 text-orange-500',
     shadow: 'shadow-orange-900/10'
   },
-  available: {
+  [TableStatus.AVAILABLE]: {
     bg: 'bg-card/60 dark:bg-muted/10',
     border: 'border-dashed border-muted-foreground/20',
     iconColor: '',
@@ -110,8 +110,8 @@ const statusStyles: Record<string, { bg: string, border: string, iconColor: stri
 export function TableCard({ table, onSelect }: TableCardProps) {
   const { language } = useLanguage();
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-  const styles = statusStyles[table.status] || statusStyles.available;
-  const isClickable = table.status !== 'available';
+  const styles = statusStyles[table.status as string] || statusStyles.available;
+  const isClickable = table.status !== TableStatus.AVAILABLE;
 
   return (
     <Card
@@ -126,17 +126,17 @@ export function TableCard({ table, onSelect }: TableCardProps) {
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
         <CardTitle className="text-2xl font-headline font-bold">
-          {t('طاولة', 'Table')} {table.id}
+          {t('طاولة', 'Table')} {table.display_number}
         </CardTitle>
         {styles.icon && React.cloneElement(styles.icon as React.ReactElement, { className: cn((styles.icon as React.ReactElement).props.className, styles.iconColor) })}
       </CardHeader>
       <CardContent className="p-4 pt-0 text-center flex-1 flex flex-col justify-center items-center">
          <Badge variant="outline" className={cn('text-sm font-semibold', styles.badge)}>{t(styles.text_ar, styles.text_en)}</Badge>
       </CardContent>
-      {table.seatingDuration && (
+      {table.order?.created_at && (
         <CardFooter className="p-2 text-xs text-muted-foreground flex items-center justify-center gap-1 bg-black/10 dark:bg-black/20 rounded-b-xl">
           <Clock className="h-3 w-3" />
-          <span>{table.seatingDuration}</span>
+          <span>{new Date(table.order.created_at).toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', { hour: 'numeric', minute: '2-digit'})}</span>
         </CardFooter>
       )}
     </Card>

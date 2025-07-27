@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import type { MenuItem, Order } from '@/types';
+import type { MenuItem, Order, Table } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Minus, Plus, ShoppingCart, Trash2, CheckCircle, Loader2, PartyPopper, Check, ArrowLeft, Utensils, ReceiptText, Bell, HelpCircle } from 'lucide-react';
@@ -11,25 +11,22 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useLanguage } from '@/hooks/use-language';
 import { useRestaurantSettings } from '@/hooks/use-restaurant-settings';
 import { useOrderFlow } from '@/hooks/use-order-flow';
-import { uuidToTableMap } from '@/lib/utils';
-import { MenuItemCard } from '@/components/menu/menu-item-card';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { MenuItemCard } from '@/components/menu/menu-item-card';
 
 
 export default function MenuPage() {
     const params = useParams();
     const tableUuid = params.uuid as string;
-    const displayTableNumber = uuidToTableMap[tableUuid] || 'N/A';
-
+    
     const { language, dir } = useLanguage();
     const { settings } = useRestaurantSettings();
-    const { submitOrder, confirmFinalOrder, orders, requestBill, requestAttention } = useOrderFlow();
+    const { tables, submitOrder, confirmFinalOrder, orders, requestBill, requestAttention, menuItems: allMenuItems, loading } = useOrderFlow();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const { toast } = useToast();
-
-    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-    const [isLoadingMenu, setIsLoadingMenu] = useState(true);
+    
+    const [currentTable, setCurrentTable] = useState<Table | null>(null);
     const [cart, setCart] = useState<MenuItem[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
@@ -37,36 +34,27 @@ export default function MenuPage() {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState<MenuItem['category'] | 'all'>('all');
 
+    const displayTableNumber = useMemo(() => {
+        return currentTable?.display_number || 'N/A';
+    }, [currentTable]);
+    
+    // Set table from global state
     useEffect(() => {
-        const fetchMenuItems = async () => {
-            try {
-                setIsLoadingMenu(true);
-                const response = await fetch('/api/v1/menu-items');
-                if (!response.ok) throw new Error('Failed to fetch menu');
-                const data: MenuItem[] = await response.json();
-                setMenuItems(data.filter(item => item.is_available));
-            } catch (error) {
-                console.error(error);
-                toast({
-                    variant: "destructive",
-                    title: "Error",
-                    description: "Could not load the menu.",
-                })
-            } finally {
-                setIsLoadingMenu(false);
-            }
-        };
-        fetchMenuItems();
-    }, [toast]);
+        const foundTable = tables.find(t => t.uuid === tableUuid);
+        if (foundTable) {
+            setCurrentTable(foundTable);
+        }
+    }, [tables, tableUuid]);
+
 
     useEffect(() => {
-        let sid = sessionStorage.getItem('session_id');
+        let sid = sessionStorage.getItem(`session_id_${tableUuid}`);
         if (!sid) {
             sid = crypto.randomUUID();
-            sessionStorage.setItem('session_id', sid);
+            sessionStorage.setItem(`session_id_${tableUuid}`, sid);
         }
         setSessionId(sid);
-    }, []);
+    }, [tableUuid]);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -105,7 +93,7 @@ export default function MenuPage() {
     };
 
     const handleSendOrder = async () => {
-        if (!sessionId || !tableUuid || displayTableNumber === 'N/A' || cart.length === 0) {
+        if (!sessionId || !tableUuid || !currentTable || cart.length === 0) {
             toast({
                 variant: 'destructive',
                 title: t('خطأ', 'Error'),
@@ -115,8 +103,8 @@ export default function MenuPage() {
         }
 
         setIsSubmitting(true);
-        const newOrder: Omit<Order, 'id' | 'status' | 'timestamp' | 'serviceCharge' | 'tax' | 'finalTotal'> = {
-            table_id: parseInt(displayTableNumber),
+        const newOrder: Omit<Order, 'id' | 'status' | 'created_at' | 'service_charge' | 'tax' | 'final_total' | 'chef_approved_at' | 'cashier_approved_at' | 'customer_confirmed_at' | 'completed_at'> = {
+            table_id: currentTable.display_number,
             table_uuid: tableUuid,
             session_id: sessionId,
             items: cart.map(({ quantity, ...item }) => ({ ...item, quantity: quantity || 0 })),
@@ -142,10 +130,12 @@ export default function MenuPage() {
         { id: 'dessert', title: t('الحلويات', 'Desserts'), icon: <Utensils/> }
     ], [t]);
     
+    const availableMenuItems = useMemo(() => allMenuItems.filter(item => item.is_available), [allMenuItems]);
+    
     const filteredItems = useMemo(() => {
-        if (activeCategory === 'all') return menuItems;
-        return menuItems.filter(i => i.category === activeCategory);
-    }, [activeCategory, menuItems]);
+        if (activeCategory === 'all') return availableMenuItems;
+        return availableMenuItems.filter(i => i.category === activeCategory);
+    }, [activeCategory, availableMenuItems]);
 
     const handleRequestBill = () => {
         if (currentOrder) {
@@ -188,7 +178,7 @@ export default function MenuPage() {
             );
         }
 
-        if (currentOrder.status === 'pending_final_confirmation') {
+        if (currentOrder.status === 'awaiting_final_confirmation') {
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center" dir={dir}>
                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }} className="w-full max-w-md">
@@ -299,7 +289,7 @@ export default function MenuPage() {
             </nav>
 
             <main className="container mx-auto p-4 sm:p-6 pb-32">
-                 {isLoadingMenu ? (
+                 {loading ? (
                     <div className="flex justify-center items-center h-64">
                          <Loader2 className="h-12 w-12 animate-spin text-primary" />
                     </div>
