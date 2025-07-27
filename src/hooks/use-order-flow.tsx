@@ -295,8 +295,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             fetchAllData(true);
         };
         const handleOffline = () => setIsOnline(false);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+        }
 
         const tablesChannel = supabase.channel('realtime-tables').on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, () => fetchAllData(true)).subscribe();
         const ordersChannel = supabase.channel('realtime-orders').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAllData(true)).subscribe();
@@ -306,11 +309,13 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         syncTimeoutRef.current = setInterval(syncPendingOperations, SYNC_INTERVAL);
 
         return () => {
+            if (typeof window !== 'undefined') {
+              window.removeEventListener('online', handleOnline);
+              window.removeEventListener('offline', handleOffline);
+            }
             supabase.removeChannel(tablesChannel);
             supabase.removeChannel(ordersChannel);
             supabase.removeChannel(menuItemsChannel);
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
             if (syncTimeoutRef.current) clearInterval(syncTimeoutRef.current);
         };
     }, [isAuthenticated, fetchAllData, syncPendingOperations, toast]);
