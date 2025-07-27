@@ -10,7 +10,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
-  isRTL: boolean; // هل اللغة من اليمين لليسار (Right-To-Left)
+  dir: 'rtl' | 'ltr';
 }
 
 // إنشاء السياق بقيم افتراضية
@@ -28,13 +28,13 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const toggleLanguage = useCallback(() => {
-    setLanguage(prevLang => (prevLang === 'ar' ? 'en' : 'ar'));
-  }, [setLanguage]);
+    setLanguageState(prevLang => (prevLang === 'ar' ? 'en' : 'ar'));
+  }, []);
 
-  const isRTL = language === 'ar'; // العربية هي RTL
+  const dir = language === 'ar' ? 'rtl' : 'ltr';
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage, isRTL }}>
+    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage, dir }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -48,7 +48,3 @@ export const useLanguage = () => {
   }
   return context;
 };
-
-// هذا هو الـ Hook الذي قد يكون موجوداً لديك ويسبب التباساً
-// إذا كان لديك useIsMobile في نفس الملف، تأكد من تصديره بشكل منفصل
-// export const useIsMobile = () => { /* ... */ };
