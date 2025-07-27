@@ -363,7 +363,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             customer_confirmed_at: null,
             completed_at: null,
             ...orderData,
-            table_id: parseInt(orderData.table_id!.toString(), 10), // Ensure it is a number
+            table_id: orderData.table_id, // Ensure it is a number
         };
 
         setOrders(prev => [...prev, newOrder]);
