@@ -1,4 +1,3 @@
-
 // src/types/index.ts
 
 // تعريف حالة الطاولة كـ Enum لضمان القيم المحددة
@@ -142,5 +141,3 @@ export interface PendingSyncOperation {
   data: any;
   timestamp: number;
 }
-
-    

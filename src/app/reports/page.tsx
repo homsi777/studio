@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { FileText, FileSpreadsheet, FileCode, Printer, Building, Phone, Mail, TrendingUp, TrendingDown, DollarSign, ListOrdered, Wallet, Loader2 } from "lucide-react"
 import { AuthGuard } from "@/components/auth-guard"
 import { useRestaurantSettings } from "@/hooks/use-restaurant-settings"
-import type { Order, Expense } from '@/types';
+import type { Order, Expense, MenuItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useOrderFlow } from '@/hooks/use-order-flow';
 
@@ -49,9 +49,11 @@ function ReportsPage() {
     const [reportData, setReportData] = useState<ReportData>(initialReportData);
     const [isLoading, setIsLoading] = useState(true);
     const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [expensesLoading, setExpensesLoading] = useState(true);
 
     useEffect(() => {
         const fetchExpenses = async () => {
+            setExpensesLoading(true);
             try {
                 const expensesRes = await fetch('/api/v1/expenses');
                 if (!expensesRes.ok) {
@@ -66,6 +68,8 @@ function ReportsPage() {
                     title: t('خطأ في التقارير', 'Report Error'),
                     description: t('لم نتمكن من جلب بيانات المصاريف.', 'Could not fetch expense data for reports.'),
                 });
+            } finally {
+                setExpensesLoading(false);
             }
         };
 
@@ -74,35 +78,34 @@ function ReportsPage() {
 
 
     useEffect(() => {
-        if (orderFlowLoading) {
+        if (orderFlowLoading || expensesLoading) {
             setIsLoading(true);
             return;
         }
 
         const processData = () => {
             try {
-                // Ensure we only process REAL completed orders
                 const orders = allOrders.filter(o => o.status === 'completed');
 
                 const totalRevenue = orders.reduce((sum, order) => sum + (order.final_total || 0), 0);
-                const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+                const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
                 const netProfit = totalRevenue - totalExpenses;
                 const orderCount = orders.length;
                 const avgOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
 
-                const topItems: Record<string, {name: string, name_en: string, count: number}> = {};
+                const topItemsMap: Record<string, {name: string, name_en: string, count: number}> = {};
                 orders.forEach(order => {
                     (order.items || []).forEach(item => {
-                        const itemId = item.id || item.menu_item_id;
+                        const itemId = item.id || (item as any).menu_item_id;
                         if (!itemId) return;
-                        if (!topItems[itemId]) {
-                            topItems[itemId] = { name: item.name, name_en: item.name_en || '', count: 0 };
+                        if (!topItemsMap[itemId]) {
+                            topItemsMap[itemId] = { name: item.name, name_en: (item as any).name_en || '', count: 0 };
                         }
-                        topItems[itemId].count += item.quantity || 0;
+                        topItemsMap[itemId].count += item.quantity || 1;
                     });
                 });
                 
-                const topSellingItems = Object.values(topItems).sort((a, b) => b.count - a.count).slice(0, 5);
+                const topSellingItems = Object.values(topItemsMap).sort((a, b) => b.count - a.count).slice(0, 5);
 
                 const salesByDay: ReportData['salesByDay'] = [];
                 const expensesByDay: { [key: string]: number } = {};
@@ -112,7 +115,7 @@ function ReportsPage() {
                 expenses.forEach(expense => {
                     const day = dateToDay(expense.date);
                     if (!expensesByDay[day]) expensesByDay[day] = 0;
-                    expensesByDay[day] += expense.amount;
+                    expensesByDay[day] += expense.amount || 0;
                 });
 
                 const salesAndExpensesByDay: { [key: string]: { sales: number; expenses: number } } = {};
@@ -134,7 +137,7 @@ function ReportsPage() {
                 
                 const finalSalesByDay = sortedDays.map(day => {
                     const dateObj = new Date(day);
-                     const dayName = dateObj.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short' });
+                    const dayName = dateObj.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short' });
                     return {
                         date: dayName,
                         date_ar: dayName,
@@ -166,7 +169,7 @@ function ReportsPage() {
         };
 
         processData();
-    }, [allOrders, expenses, orderFlowLoading, t, toast, language]);
+    }, [allOrders, expenses, orderFlowLoading, expensesLoading, t, toast, language]);
 
 
     const chartConfig = {
@@ -371,5 +374,3 @@ export default function GuardedReportsPage() {
         </AuthGuard>
     )
 }
-
-    
