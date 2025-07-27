@@ -235,13 +235,6 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
     }, [toast, syncPendingOperations]);
     
-    const handleServiceWorkerMessage = useCallback((event: MessageEvent) => {
-        if (event.data && event.data.type === 'SYNC_REQUEST') {
-          console.log('[App] Received SYNC_REQUEST from Service Worker. Initiating sync.');
-          syncPendingOperations();
-        }
-    }, [syncPendingOperations]);
-
     // Derived state for tables with their current orders/status
     const tablesWithStatus = useMemo(() => {
         const tableMap = new Map<string, Table>();
@@ -296,15 +289,6 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         fetchAllData();
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => console.log('[App] Service Worker registered:', registration))
-                    .catch(error => console.error('[App] Service Worker registration failed:', error));
-            });
-             navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-        }
-
         const handleOnline = () => {
             setIsOnline(true);
             toast({ title: "متصل بالإنترنت", description: "تمت استعادة الاتصال. جاري المزامنة..." });
@@ -327,25 +311,14 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             supabase.removeChannel(menuItemsChannel);
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
-            navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
             if (syncTimeoutRef.current) clearInterval(syncTimeoutRef.current);
         };
-    }, [isAuthenticated, fetchAllData, syncPendingOperations, handleServiceWorkerMessage, toast]);
+    }, [isAuthenticated, fetchAllData, syncPendingOperations, toast]);
     
     // --- WRITE OPERATIONS ---
 
     const requestBackgroundSync = () => {
-        if ('serviceWorker' in navigator && 'SyncManager' in window) {
-            navigator.serviceWorker.ready.then(reg => {
-              if(reg.sync) {
-                reg.sync.register('sync-pending-operations');
-              } else {
-                 syncPendingOperations();
-              }
-            }).catch(() => syncPendingOperations());
-        } else if (navigator.onLine) {
-            syncPendingOperations();
-        }
+        syncPendingOperations();
     }
     
     // --- Order Operations ---
@@ -363,7 +336,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             customer_confirmed_at: null,
             completed_at: null,
             ...orderData,
-            table_id: orderData.table_id, // Ensure it is a number
+            table_id: parseInt(orderData.table_id as any, 10), // Ensure it is a number
         };
 
         setOrders(prev => [...prev, newOrder]);
@@ -491,6 +464,8 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         
         const newTableForLocal: Table = {
           ...newTableData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
           current_order_id: null,
           assigned_user_id: null
         };
