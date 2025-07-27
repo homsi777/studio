@@ -1,127 +1,132 @@
 // src/types/index.ts
-// هذه الأنواع تمثل البنية الموحدة لبياناتنا عبر النظام
 
-export type TableStatus =
-  | 'available'
-  | 'occupied'
-  | 'new_order'
-  | 'confirmed'
-  | 'needs_attention'
-  | 'paying'
-  | 'pending_cashier_approval'
-  | 'awaiting_final_confirmation'
-  | 'ready';
+// تعريف حالة الطاولة كـ Enum لضمان القيم المحددة
+export enum TableStatus {
+  AVAILABLE = 'available',
+  OCCUPIED = 'occupied',
+  NEEDS_CLEANING = 'needs_cleaning',
+  RESERVED = 'reserved'
+}
 
+// تعريف دور المستخدم كـ Enum
+export enum UserRole {
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  CHEF = 'chef',
+  ACCOUNTANT = 'accountant',
+  WAITER = 'waiter',
+  CASHIER = 'cashier'
+}
+
+// واجهة لتمثيل بيانات الطاولة بناءً على جدول public.tables
 export interface Table {
-  id: number; // The auto-incrementing serial key from Postgres
-  uuid: string; // The universally unique identifier
-  table_number: number;
-  status: TableStatus; // This is a client-side derived status
-  order: Order | null;
-  seatingDuration?: string;
-  chefConfirmationTimestamp?: number;
-  is_active?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  uuid: string; // المعرف الفريد للطاولة (Primary Key)
+  is_active: boolean; // هل الطاولة نشطة
+  display_number: string | null; // رقم الطاولة للعرض (نصي، يمكن أن يكون NULLABLE حسب المخطط الأخير)
+  capacity: number | null; // سعة الطاولة (عدد الأشخاص، يمكن أن يكون NULLABLE حسب المخطط الأخير)
+  status: TableStatus | null; // حالة الطاولة باستخدام Enum (يمكن أن يكون NULLABLE حسب المخطط الأخير)
+  current_order_id: string | null; // معرف الطلب الحالي المرتبط بالطاولة (Foreign Key to orders.id)
+  assigned_user_id: string | null; // معرف المستخدم المسؤول عن الطاولة (REFERENCES auth.users(id))
+  // created_at و updated_at ليست في مخططك الأخير لجدول tables، لذا أزلتها من هنا
+  // إذا كانت موجودة في قاعدة البيانات فعلياً، فيجب إضافتها هنا.
 }
 
-export type OrderStatus =
-  | 'pending_chef_approval'
-  | 'pending_cashier_approval'
-  | 'pending_final_confirmation'
-  | 'confirmed'
-  | 'ready'
-  | 'completed'
-  | 'cancelled'
-  | 'paying'
-  | 'needs_attention';
-
+// واجهة لتمثيل عنصر من قائمة الطعام
 export interface MenuItem {
-  id: string; // UUID
-  name: string;
-  name_en?: string;
-  price: number;
-  quantity: number; // This is a client-side addition, not in the DB table
-  description?: string;
-  description_en?: string;
-  category: MenuItemCategory;
-  is_available: boolean;
-  offer?: string;
-  offer_en?: string;
-  image?: string;
-  image_hint?: string;
-  created_at?: string;
-  updated_at?: string;
+  id: string; // معرف العنصر (uuid)
+  created_at: string; // timestamp with time zone
+  updated_at: string; // timestamp with time zone
+  name: string; // اسم الصنف (عربي)
+  name_en: string | null; // الاسم بالإنجليزية
+  description: string | null; // وصف الصنف (عربي)
+  description_en: string | null; // وصف الصنف (إنجليزي)
+  price: number; // السعر (numeric)
+  category: string; // الفئة (text, IN ('main', 'appetizer', 'drink', 'dessert'))
+  is_available: boolean; // هل العنصر متاح
+  offer: string | null; // العرض
+  offer_en: string | null; // العرض بالإنجليزية
+  image: string | null; // رابط الصورة (text)
+  image_hint: string | null; // تلميح الصورة (text)
 }
 
-export type MenuItemCategory = 'main' | 'appetizer' | 'drink' | 'dessert';
+// واجهة لتمثيل عنصر داخل الطلب (عندما يكون جزءاً من orders.items JSONB)
+// هذا يعكس قرار استخدام JSONB وليس جدولاً منفصلاً لـ OrderItem
+export interface OrderItem {
+  menu_item_id: string; // معرف العنصر في قائمة الطعام
+  quantity: number; // الكمية المطلوبة
+  price: number; // سعر الوحدة وقت الطلب
+  name: string; // اسم العنصر (للتخزين السريع، ليس في المخطط ولكن مفيد)
+  subtotal?: number; // الإجمالي (quantity * price) - ليس في المخطط ولكن مفيد
+  notes?: string | null; // ملاحظات خاصة بالصنف (اختياري)
+  // لا يوجد id أو order_id أو created_at/updated_at هنا لأنها جزء من JSONB
+}
 
+// تعريف حالة الطلب كـ Enum
+export enum OrderStatus {
+  PENDING_CHEF_APPROVAL = 'pending_chef_approval',
+  IN_PROGRESS = 'in_progress',
+  READY = 'ready',
+  SERVED = 'served',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled'
+}
 
+// واجهة لتمثيل الطلب بناءً على جدول public.orders
 export interface Order {
-  id: string; // UUID
-  items: MenuItem[]; // Stored as JSONB
-  subtotal: number;
-  service_charge: number;
-  tax: number;
-  final_total: number;
-  table_id: number;
-  table_uuid: string; // UUID
-  session_id: string; // UUID, Foreign key to CustomerSession
-  status: OrderStatus;
-  timestamp: number; // Converted from created_at
-  confirmationTimestamp?: number; // Converted from customer_confirmed_at
-  created_at: string;
-  updated_at?: string;
-  chef_approved_at?: string;
-  cashier_approved_at?: string;
-  customer_confirmed_at?: string;
-  completed_at?: string;
+  id: string; // معرف الطلب (uuid)
+  created_at: string; // timestamp with time zone
+  session_id: string; // معرف جلسة الزبون (REFERENCES customer_sessions(id))
+  table_uuid: string; // معرف الطاولة المرتبطة بالطلب (REFERENCES tables(uuid))
+  table_id: number; // رقم الطاولة (integer)
+  items: OrderItem[]; // مصفوفة من عناصر الطلب (تخزن كـ JSONB في DB)
+  status: OrderStatus; // حالة الطلب (text)
+  subtotal: number; // المجموع الفرعي (numeric)
+  service_charge: number; // رسوم الخدمة (numeric)
+  tax: number; // الضريبة (numeric)
+  final_total: number; // الإجمالي النهائي (numeric)
+  chef_approved_at: string | null; // وقت موافقة الشيف (timestamp with time zone)
+  cashier_approved_at: string | null; // وقت موافقة الكاشير (timestamp with time zone)
+  customer_confirmed_at: string | null; // وقت تأكيد الزبون (timestamp with time zone)
+  completed_at: string | null; // وقت اكتمال الطلب (timestamp with time zone)
+  // is_paid و customer_notes غير موجودة في مخططك الأخير لجدول orders، لذا لم أضفها
 }
 
-
-export type ExpenseCategory = 'rent' | 'bills' | 'salaries' | 'supplies' | 'maintenance' | 'other';
-export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer';
-
-export interface Expense {
-    id: string; // UUID
-    description: string;
-    description_en?: string;
-    amount: number;
-    date: string; // YYYY-MM-DD
-    category: ExpenseCategory;
-    payment_method?: PaymentMethod;
-    supplier?: string;
-    invoice_number?: string;
-    notes?: string;
-    user_id?: string; // UUID, Foreign key to auth.users
-    created_at?: string;
-    last_updated?: string;
-}
-
-export type UserRole = 'manager' | 'chef' | 'employee';
-
-export interface User {
-    id: string; // UUID from auth.users
-    username: string;
-    email: string;
-    role: UserRole;
-    password?: string; // Only for creating/updating, not stored
-}
-
+// واجهة لتمثيل جلسة الزبون بناءً على جدول public.customer_sessions
 export interface CustomerSession {
-    id: string; // UUID
-    table_uuid: string; // UUID, Foreign key to tables
-    created_at: string;
+  id: string; // معرف الجلسة (uuid)
+  table_uuid: string; // معرف الطاولة المرتبطة بالجلسة (REFERENCES tables(uuid))
+  created_at: string; // وقت إنشاء الجلسة (timestamp with time zone)
 }
 
+// واجهة لتمثيل ملف تعريف المستخدم بناءً على جدول public.user_profiles
+export interface UserProfile {
+  user_id: string; // معرف المستخدم (uuid, PRIMARY KEY, REFERENCES auth.users(id))
+  full_name: string; // الاسم الكامل (text)
+  phone_number: string | null; // رقم الهاتف (text)
+  role: UserRole; // دور المستخدم (user_role enum)
+  is_active: boolean | null; // هل الحساب نشط (boolean)
+  hire_date: string | null; // تاريخ التوظيف (timestamp with time zone)
+  last_login: string | null; // آخر تسجيل دخول (timestamp with time zone)
+  profile_image_url: string | null; // رابط صورة الملف الشخصي (text)
+  salary: number | null; // الراتب (numeric)
+  department: string | null; // القسم (text)
+  created_at: string | null; // timestamp with time zone
+  updated_at: string | null; // timestamp with time zone
+}
 
-// النوع الخاص بعمليات المزامنة المعلقة في IndexedDB
-export type SyncOperationType = 'insert' | 'update' | 'delete';
-
-export interface PendingSyncOperation {
-  id?: number; // مفتاح أساسي تلقائي الزيادة في IndexedDB (++id)
-  type: SyncOperationType; // نوع العملية: 'insert', 'update', 'delete'
-  tableName: 'tables' | 'orders' | 'menu_items' | 'expenses'; // اسم الجدول في Supabase و IndexedDB
-  payload: any; // حمولة البيانات: الكائن المراد إضافته/تعديله/حذفه
-  timestamp: string; // وقت إضافة العملية إلى قائمة الانتظار (مهم للترتيب وحل التعارضات)
+// واجهة لتمثيل المصاريف بناءً على جدول public.expenses
+export interface Expense {
+  id: string; // معرف المصروف (uuid)
+  created_at: string; // timestamp with time zone
+  last_updated: string; // timestamp with time zone
+  description: string; // الوصف (text)
+  description_en: string | null; // الوصف بالإنجليزية (text)
+  amount: number; // المبلغ (numeric)
+  date: string; // التاريخ (date)
+  category: string; // الفئة (text, IN ('rent', 'bills', 'salaries', 'supplies', 'maintenance', 'other'))
+  payment_method: string | null; // طريقة الدفع (text)
+  supplier: string | null; // المورد (text)
+  invoice_number: string | null; // رقم الفاتورة (text)
+  notes: string | null; // ملاحظات (text)
+  user_id: string | null; // معرف المستخدم الذي سجل المصروف (REFERENCES auth.users(id))
 }

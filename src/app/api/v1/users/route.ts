@@ -1,96 +1,81 @@
-'use server';
+// src/app/api/v1/user/route.ts
 
-import {type NextRequest, NextResponse} from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import type {User} from '@/types';
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { UserProfile } from '../../../../types'; // تأكد من المسار الصحيح
 
+// تهيئة Supabase Admin Client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-const ensureDefaultUsersExist = async () => {
-    try {
-        const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-        
-        if (listError) throw listError;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-        const defaultUsers = [
-            { email: 'admin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
-            { email: 'superadmin@alalamiya.com', password: '12345678', user_metadata: { role: 'manager' } },
-        ];
-
-        for (const defaultUser of defaultUsers) {
-            const userExists = users.some(u => u.email === defaultUser.email);
-            if (!userExists) {
-                console.log(`User ${defaultUser.email} not found, creating...`);
-                const { data, error } = await supabaseAdmin.auth.admin.createUser(defaultUser);
-                if (error) {
-                    console.error(`Error creating user ${defaultUser.email}:`, error);
-                } else {
-                    console.log(`User ${data.user.email} created successfully`);
-                }
-            }
-        }
-    } catch (error) {
-        console.error("Error in ensureDefaultUsersExist:", error);
-    }
-};
-
-export async function GET(request: NextRequest) {
+// POST: إضافة ملف تعريف مستخدم جديد
+export async function POST(request: Request) {
   try {
-    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (error) throw error;
+    const userData: Partial<UserProfile> = await request.json();
 
-    const responseData = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      role: user.user_metadata.role || 'employee',
-      username: user.email,
-    }));
+    // التحقق الأساسي من البيانات
+    if (!userData.full_name || !userData.role) {
+      return NextResponse.json({ message: 'Missing required user data (full_name, role).' }, { status: 400 });
+    }
 
-    return NextResponse.json(responseData);
+    // توليد user_id إذا لم يتم توفيره (للحالات التي لا ترتبط بـ Supabase Auth signUp مباشرة)
+    // يفضل أن يأتي user_id من auth.users.id بعد عملية تسجيل الدخول/الاشتراك
+    const userId = userData.user_id || crypto.randomUUID();
+
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles') // اسم الجدول في قاعدة البيانات يبقى user_profiles
+      .insert({
+        user_id: userId,
+        full_name: userData.full_name,
+        role: userData.role,
+        phone_number: userData.phone_number || null,
+        is_active: userData.is_active ?? true,
+        hire_date: userData.hire_date || new Date().toISOString(),
+        profile_image_url: userData.profile_image_url || null,
+        salary: userData.salary || null,
+        department: userData.department || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select();
+
+    if (error) {
+      console.error('Supabase insert error (user_profiles):', error);
+      if (error.code === '23505') { // Postgres unique violation (مثلاً user_id مكرر)
+        return NextResponse.json({ message: 'User with this ID already exists or a unique constraint was violated.' }, { status: 409 });
+      }
+      return NextResponse.json({ message: 'Failed to save user profile.', error: error.message }, { status: 500 });
+    }
+
+    console.log('User profile added successfully:', data[0]);
+    return NextResponse.json({ message: 'User profile added successfully.', userProfile: data[0] }, { status: 201 });
+
   } catch (error) {
-    console.error('Failed to fetch users:', error);
-    return NextResponse.json({message: 'Internal Server Error'}, {status: 500});
+    console.error('Error in POST /api/v1/user:', error); // تم تحديث رسالة الخطأ
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return NextResponse.json({ message: 'Internal Server Error', error: errorMessage }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+// GET: جلب جميع ملفات تعريف المستخدمين
+export async function GET(request: Request) {
   try {
-    // We can ensure defaults exist before trying to create a new one.
-    await ensureDefaultUsersExist();
-
-    const newUser = (await request.json()) as Omit<User, 'id'>;
-
-    if (!newUser.email || !newUser.password || !newUser.role) {
-      return NextResponse.json(
-        {message: 'Bad Request: Missing required fields.'},
-        {status: 400}
-      );
-    }
-    
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: newUser.email,
-        password: newUser.password,
-        email_confirm: true, // Auto-confirm email for simplicity
-        user_metadata: { role: newUser.role }
-    });
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles') // اسم الجدول في قاعدة البيانات يبقى user_profiles
+      .select('*');
 
     if (error) {
-        if (error.message.includes('already registered')) {
-             return NextResponse.json({ message: 'Email already exists.' }, { status: 409 });
-        }
-        throw error;
+      console.error('Supabase select error (user_profiles):', error);
+      return NextResponse.json({ message: 'Failed to fetch user profiles.', error: error.message }, { status: 500 });
     }
 
-    const responseData = {
-        id: data.user.id,
-        email: data.user.email,
-        role: data.user.user_metadata.role,
-        username: data.user.email
-    }
+    return NextResponse.json({ userProfiles: data }, { status: 200 });
 
-    return NextResponse.json(responseData, {status: 201});
   } catch (error) {
-    console.error('Failed to create user:', error);
-    return NextResponse.json({message: 'Internal Server Error'}, {status: 500});
+    console.error('Error in GET /api/v1/user:', error); // تم تحديث رسالة الخطأ
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return NextResponse.json({ message: 'Internal Server Error', error: errorMessage }, { status: 500 });
   }
 }

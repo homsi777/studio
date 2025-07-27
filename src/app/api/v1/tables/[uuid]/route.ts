@@ -1,67 +1,66 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { Table } from '@/types';
+import type { Order } from '@/types';
 
-// DELETE a specific table by UUID
-export async function DELETE(request: NextRequest, { params }: { params: { uuid: string } }) {
-    try {
-        const { uuid } = params;
+export async function POST(request: NextRequest) {
+  try {
+    const orderData = await request.json();
 
-        if (!uuid) {
-            return NextResponse.json({ message: 'Table UUID is required' }, { status: 400 });
-        }
-
-        const { error } = await supabaseAdmin
-            .from('tables')
-            .delete()
-            .eq('uuid', uuid);
-
-        if (error) {
-            console.error('Supabase delete error:', error);
-            // Handle case where UUID doesn't exist gracefully
-            if (error.code === '22P02') { // Invalid text representation for uuid
-                 return NextResponse.json({ message: 'Invalid UUID format.' }, { status: 400 });
-            }
-            return NextResponse.json({ message: 'Table not found or error deleting.' }, { status: 404 });
-        }
-        
-        return new NextResponse(null, { status: 204 });
-
-    } catch (error) {
-        console.error(`Failed to delete table with UUID ${params.uuid}:`, error);
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    // The client now sends tableId and tableUuid correctly.
+    if (!orderData.table_uuid || !orderData.items || !orderData.items.length || !orderData.session_id) {
+      return NextResponse.json({ message: 'Bad Request: Missing required fields.' }, { status: 400 });
     }
+    
+    const subtotal = orderData.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
+
+    const newOrder = {
+      table_id: orderData.table_id, // Keep the numeric ID for reference if needed
+      table_uuid: orderData.table_uuid,
+      session_id: orderData.session_id,
+      items: orderData.items,
+      status: 'pending_chef_approval',
+      subtotal: subtotal,
+      service_charge: 0,
+      tax: 0,
+      final_total: subtotal, // Initial final_total is the same as subtotal
+    };
+    
+    const { data, error } = await supabaseAdmin
+      .from('orders')
+      .insert(newOrder)
+      .select()
+      .single();
+
+    if (error) {
+        console.error("Supabase order insert error:", error);
+        throw error;
+    };
+
+    return NextResponse.json(data, { status: 201 });
+  } catch (error) {
+    console.error('Failed to create order in Supabase:', error);
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
 }
 
-// PUT to update a table by UUID
-export async function PUT(request: NextRequest, { params }: { params: { uuid: string } }) {
+export async function GET(request: NextRequest) {
     try {
-        const { uuid } = params;
-        const updatedData = await request.json() as Partial<Table>;
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
 
-        if (!uuid) {
-            return NextResponse.json({ message: 'Table UUID is required' }, { status: 400 });
-        }
-
-        const { data, error } = await supabaseAdmin
-            .from('tables')
-            .update({
-                ...updatedData,
-                updated_at: new Date().toISOString()
-            })
-            .eq('uuid', uuid)
-            .select()
-            .single();
+        let query = supabaseAdmin.from('orders').select('*');
         
-        if (error) {
-            console.error('Supabase update error:', error);
-            return NextResponse.json({ message: 'Table not found or error updating.' }, { status: 404 });
+        if (status) {
+            query = query.eq('status', status);
         }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
 
-        return NextResponse.json(data, { status: 200 });
+        if (error) throw error;
 
+        return NextResponse.json(data);
     } catch (error) {
-        console.error(`Failed to update table with UUID ${params.uuid}:`, error);
+        console.error('Failed to fetch orders:', error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

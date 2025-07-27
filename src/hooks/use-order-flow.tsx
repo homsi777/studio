@@ -1,11 +1,13 @@
-"use client"
+
+"use client";
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Order, Table, TableStatus, MenuItem, PendingSyncOperation, OrderStatus } from '@/types';
 import { useToast } from './use-toast';
 import { useAuth } from './use-auth';
 import { supabase } from '@/lib/supabase';
-import { db, getCachedData, saveToCache, addToSyncQueue, getSyncQueue, clearSyncQueueItem } from '@/lib/indexeddb';
+import { db, getFromCache, saveToCache, addToSyncQueue, getSyncQueue, clearSyncQueueItem, initializeDb } from '@/lib/indexeddb';
+import { v4 as uuidv4 } from 'uuid';
 
 const SYNC_INTERVAL = 10000; // Try to sync every 10 seconds
 
@@ -17,7 +19,9 @@ interface OrderFlowContextType {
     loading: boolean;
     isOnline: boolean;
     isSyncing: boolean;
-    submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp'>) => Promise<void>;
+    fetchAllData: (forceOnline?: boolean) => Promise<void>;
+    // Order operations
+    submitOrder: (order: Omit<Order, 'id' | 'status' | 'timestamp' | 'service_charge' | 'tax' | 'final_total' | 'created_at'>) => Promise<void>;
     approveOrderByChef: (orderId: string) => Promise<void>;
     approveOrderByCashier: (orderId: string, serviceCharge: number, tax: number) => Promise<void>;
     confirmFinalOrder: (orderId: string) => Promise<void>;
@@ -26,7 +30,13 @@ interface OrderFlowContextType {
     cancelOrder: (orderId: string) => Promise<void>;
     requestBill: (orderId: string) => Promise<void>;
     requestAttention: (orderId: string) => Promise<void>;
-    fetchAllData: (forceOnline?: boolean) => Promise<void>;
+    // Menu operations
+    addMenuItem: (itemData: Omit<MenuItem, 'id' | 'quantity'>) => Promise<void>;
+    updateMenuItem: (itemId: string, itemData: Partial<Omit<MenuItem, 'id' | 'quantity'>>) => Promise<void>;
+    deleteMenuItem: (itemId: string) => Promise<void>;
+    // Table operations
+    addTable: () => Promise<void>;
+    deleteTableByUuid: (uuid: string) => Promise<void>;
 }
 
 const OrderFlowContext = createContext<OrderFlowContextType | undefined>(undefined);
@@ -63,6 +73,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
     const [isOnline, setIsOnline] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const initialFetchCalled = useRef(false);
     
     const { toast } = useToast();
     const { isAuthenticated } = useAuth();
@@ -73,7 +84,73 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
+    const syncPendingOperations = useCallback(async () => {
+        if (!navigator.onLine || isSyncing) {
+            console.log('Not syncing: Offline or already syncing.');
+            return;
+        }
+
+        setIsSyncing(true);
+        const pendingOperations = await getSyncQueue();
+        if (pendingOperations.length === 0) {
+            setIsSyncing(false);
+            return;
+        }
+        
+        console.log(`Attempting to sync ${pendingOperations.length} pending operations.`);
+
+        let operationsSyncedCount = 0;
+        for (const op of pendingOperations) {
+            try {
+                // Ensure op.id exists to avoid errors with clearSyncQueueItem
+                if (op.id === undefined) {
+                    console.warn("Skipping operation without an ID:", op);
+                    continue;
+                }
+
+                const identifier = op.data.uuid || op.data.id;
+                
+                // Construct the URL carefully. For inserts, there's no identifier.
+                const url = op.operation === 'insert' 
+                    ? `/api/v1/${op.tableName}` 
+                    : `/api/v1/${op.tableName}/${identifier}`;
+
+                const method = op.operation === 'insert' ? 'POST' : op.operation === 'update' ? 'PUT' : 'DELETE';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: (method === 'POST' || method === 'PUT') ? JSON.stringify(op.data) : undefined,
+                });
+
+                if (!response.ok) {
+                    const result = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
+                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                }
+
+                await clearSyncQueueItem(op.id);
+                operationsSyncedCount++;
+                console.log(`Operation synced successfully: ${op.operation} on ${op.tableName}`);
+
+            } catch (error: any) {
+                console.error(`Failed to sync operation ${op.id} (${op.operation} on ${op.tableName}):`, error.message);
+                toast({ title: 'خطأ في المزامنة', description: `فشل مزامنة عملية. سيتم المحاولة لاحقاً.`, variant: 'destructive'});
+                break; 
+            }
+        }
+
+        setIsSyncing(false);
+
+        if (operationsSyncedCount > 0) {
+            toast({ title: 'نجاح المزامنة', description: `تم مزامنة ${operationsSyncedCount} تغيير بنجاح!` });
+            // Refetch all data after a successful sync to ensure UI consistency
+            // await fetchAllData(true);
+        }
+    }, [isSyncing, toast]);
+
+
     const fetchAllData = useCallback(async (forceOnline = false) => {
+        await initializeDb();
         const online = forceOnline || (typeof window !== 'undefined' && navigator.onLine);
         setIsOnline(online);
         setLoading(true);
@@ -108,9 +185,9 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 console.error('Error fetching data from Supabase:', error.message);
                 toast({ title: 'خطأ', description: `فشل جلب البيانات: ${error.message}`, variant: 'destructive' });
                 const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
-                    getCachedData<Table>('tables'),
-                    getCachedData<Order>('orders'),
-                    getCachedData<MenuItem>('menuItems'),
+                    getFromCache<Table>('tables'),
+                    getFromCache<Order>('orders'),
+                    getFromCache<MenuItem>('menuItems'),
                 ]);
                 setTables(cachedTables);
                 setOrders(cachedOrders);
@@ -119,9 +196,9 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         } else {
             console.log('Offline: Fetching from IndexedDB cache...');
             const [cachedTables, cachedOrders, cachedMenuItems] = await Promise.all([
-                getCachedData<Table>('tables'),
-                getCachedData<Order>('orders'),
-                getCachedData<MenuItem>('menuItems'),
+                getFromCache<Table>('tables'),
+                getFromCache<Order>('orders'),
+                getFromCache<MenuItem>('menuItems'),
             ]);
             setTables(cachedTables);
             setOrders(cachedOrders);
@@ -129,66 +206,8 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: 'تنبيه', description: 'أنت غير متصل بالإنترنت. البيانات المعروضة قد تكون غير محدثة.', variant: "default" });
         }
         setLoading(false);
-    }, [toast]);
+    }, [toast, syncPendingOperations]);
     
-    const syncPendingOperations = useCallback(async () => {
-        if (!navigator.onLine || isSyncing) {
-            console.log('Not syncing: Offline or already syncing.');
-            return;
-        }
-
-        setIsSyncing(true);
-        const pendingOperations = await getSyncQueue();
-        if (pendingOperations.length === 0) {
-            setIsSyncing(false);
-            return;
-        }
-        
-        console.log(`Attempting to sync ${pendingOperations.length} pending operations.`);
-
-        let operationsSyncedCount = 0;
-        for (const op of pendingOperations) {
-            try {
-                // Use uuid for tables, and id for other entities
-                const identifier = op.tableName === 'tables' ? op.payload.uuid : op.payload.id;
-                const url = `/api/v1/${op.tableName}${op.type === 'insert' ? '' : `/${identifier}`}`;
-                const method = op.type === 'insert' ? 'POST' : op.type === 'update' ? 'PUT' : 'DELETE';
-
-                if (!op.id) {
-                    console.warn(`Skipping invalid operation.`, op);
-                    continue;
-                }
-                
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: (method === 'POST' || method === 'PUT') ? JSON.stringify(op.payload) : undefined,
-                });
-
-                if (!response.ok) {
-                    const result = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
-                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
-                }
-
-                await clearSyncQueueItem(op.id);
-                operationsSyncedCount++;
-                console.log(`Operation synced successfully: ${op.type} on ${op.tableName}`);
-
-            } catch (error: any) {
-                console.error(`Failed to sync operation ${op.id} (${op.type} on ${op.tableName}):`, error.message);
-                toast({ title: 'خطأ في المزامنة', description: `فشل مزامنة عملية. سيتم المحاولة لاحقاً.`, variant: 'destructive'});
-                break; 
-            }
-        }
-
-        setIsSyncing(false);
-
-        if (operationsSyncedCount > 0) {
-            toast({ title: 'نجاح المزامنة', description: `تم مزامنة ${operationsSyncedCount} تغيير بنجاح!` });
-            await fetchAllData(true);
-        }
-    }, [isSyncing, toast, fetchAllData]);
-
     const handleServiceWorkerMessage = useCallback((event: MessageEvent) => {
         if (event.data && event.data.type === 'SYNC_REQUEST') {
           console.log('[App] Received SYNC_REQUEST from Service Worker. Initiating sync.');
@@ -228,90 +247,43 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
                 tableMap.set(order.table_uuid, tableData);
             }
         }
-        return Array.from(tableMap.values()).sort((a,b) => a.id - b.id);
+        return Array.from(tableMap.values()).sort((a,b) => (a.table_number || 0) - (b.table_number || 0));
 
     }, [tables, orders]);
 
     // Effect to fetch initial data and subscribe to changes
     useEffect(() => {
-        if (!isAuthenticated) {
-            setLoading(false);
+        if (!isAuthenticated || initialFetchCalled.current) {
+            if(!isAuthenticated) setLoading(false);
             return;
         }
-
+        
+        // This flag ensures the effect runs only once after authentication
+        initialFetchCalled.current = true;
+        
         fetchAllData();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => {
-                        console.log('[App] Service Worker registered:', registration);
-                    })
-                    .catch(error => {
-                        console.error('[App] Service Worker registration failed:', error);
-                    });
+                    .then(registration => console.log('[App] Service Worker registered:', registration))
+                    .catch(error => console.error('[App] Service Worker registration failed:', error));
             });
              navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-        } else {
-             console.warn('[App] Service Worker not supported by this browser.');
         }
 
         const handleOnline = () => {
             setIsOnline(true);
             toast({ title: "متصل بالإنترنت", description: "تمت استعادة الاتصال. جاري المزامنة..." });
             fetchAllData(true);
-            if ('serviceWorker' in navigator && 'SyncManager' in window) {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.sync.register('sync-pending-operations')
-                        .then(() => console.log('Background sync registered on network reconnect.'))
-                        .catch(err => console.error('Background sync registration failed:', err));
-                });
-            }
         };
         const handleOffline = () => setIsOnline(false);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
-        const tablesChannel = supabase
-            .channel('public:tables')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, (payload) => {
-                console.log('Realtime change in tables:', payload);
-                if (payload.eventType === 'UPDATE' && payload.old.status !== payload.new.status) {
-                    toast({
-                        title: 'تحديث حالة الطاولة',
-                        description: `الطاولة رقم ${payload.new.id} أصبحت: ${payload.new.status}`,
-                    });
-                }
-                fetchAllData(true);
-            })
-            .subscribe();
-
-        const ordersChannel = supabase
-            .channel('public:orders')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                console.log('Realtime change in orders:', payload);
-                 if (payload.eventType === 'INSERT') {
-                    toast({
-                        title: 'طلب جديد وصل!',
-                        description: `طلب جديد للطاولة رقم ${payload.new.table_id}.`,
-                        variant: 'default',
-                    });
-                }
-                if (payload.eventType === 'UPDATE' && payload.old.status !== payload.new.status) {
-                    const newStatus = payload.new.status as OrderStatus;
-                    let description = `حالة الطلب للطاولة رقم ${payload.new.table_id} تغيرت إلى: `;
-                    switch (newStatus) {
-                        case 'confirmed': description += 'قيد التحضير.'; break;
-                        case 'ready': description += 'جاهز للتسليم!'; break;
-                        case 'completed': description += 'مكتمل.'; break;
-                        case 'cancelled': description += 'ملغى.'; break;
-                        default: description += newStatus;
-                    }
-                    toast({ title: 'تحديث حالة الطلب', description });
-                }
-                fetchAllData(true);
-            })
-            .subscribe();
+        const tablesChannel = supabase.channel('realtime-tables').on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, () => fetchAllData(true)).subscribe();
+        const ordersChannel = supabase.channel('realtime-orders').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAllData(true)).subscribe();
+        const menuItemsChannel = supabase.channel('realtime-menu-items').on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, () => fetchAllData(true)).subscribe();
         
         if (syncTimeoutRef.current) clearInterval(syncTimeoutRef.current);
         syncTimeoutRef.current = setInterval(syncPendingOperations, SYNC_INTERVAL);
@@ -319,6 +291,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         return () => {
             supabase.removeChannel(tablesChannel);
             supabase.removeChannel(ordersChannel);
+            supabase.removeChannel(menuItemsChannel);
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
             navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
@@ -330,35 +303,38 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
 
     const requestBackgroundSync = () => {
         if ('serviceWorker' in navigator && 'SyncManager' in window) {
-            navigator.serviceWorker.ready.then(registration => {
-                registration.sync.register('sync-pending-operations')
-                    .then(() => console.log('Background sync registered.'))
-                    .catch(err => console.error('Background sync registration failed:', err));
-            });
-        } else {
-            if(navigator.onLine) syncPendingOperations();
+            navigator.serviceWorker.ready.then(reg => {
+              if(reg.sync) {
+                reg.sync.register('sync-pending-operations');
+              } else {
+                 syncPendingOperations();
+              }
+            }).catch(() => syncPendingOperations());
+        } else if (navigator.onLine) {
+            syncPendingOperations();
         }
     }
     
-    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp'>) => {
-        const tempId = `temp-order-${Date.now()}`;
+    // --- Order Operations ---
+    const submitOrder = useCallback(async (orderData: Omit<Order, 'id' | 'status' | 'timestamp' | 'service_charge' | 'tax' | 'final_total' | 'created_at'>) => {
+        const tempId = uuidv4();
         const newOrder: Order = {
             id: tempId,
-            status: 'pending_chef_approval',
+            status: orderData.status || 'pending_chef_approval',
             timestamp: Date.now(),
-            ...orderData,
-            service_charge: 0, tax: 0, final_total: orderData.subtotal,
+            service_charge: 0, 
+            tax: 0, 
+            final_total: orderData.subtotal,
             created_at: new Date().toISOString(),
+            ...orderData,
         };
 
         setOrders(prev => [...prev, newOrder]);
         await db.orders.put(newOrder);
-
-        await addToSyncQueue('insert', 'orders', { ...orderData, status: 'pending_chef_approval' }, new Date().toISOString());
-        
+        await addToSyncQueue('orders', 'insert', { ...newOrder, id:tempId });
         toast({ title: "تم إرسال الطلب", description: "سيتم مزامنة الطلب مع الخادم." });
         requestBackgroundSync();
-    }, [toast, syncPendingOperations]);
+    }, [toast]);
 
     const updateOrderStatus = async (orderId: string, updates: Partial<Order>) => {
         const order = orders.find(o => o.id === orderId);
@@ -367,8 +343,7 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
         const updatedOrder = { ...order, ...updates, updated_at: new Date().toISOString() };
         setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
         await db.orders.put(updatedOrder);
-
-        await addToSyncQueue('update', 'orders', { id: orderId, ...updates }, new Date().toISOString());
+        await addToSyncQueue('orders', 'update', { id: orderId, ...updates });
         requestBackgroundSync();
         return true;
     }
@@ -423,6 +398,80 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
        const success = await updateOrderStatus(orderId, { status: 'needs_attention' });
        if(success) toast({ title: 'تم طلب المساعدة', description: `الطلب ${orderId.substring(0,5)}... يحتاج مساعدة.` });
     }
+    
+    // --- Menu Item Operations ---
+    const addMenuItem = async (itemData: Omit<MenuItem, 'id' | 'quantity'>) => {
+        const tempId = uuidv4();
+        const newItem: MenuItem = { id: tempId, quantity: 0, ...itemData };
+        
+        setMenuItems(prev => [...prev, newItem].sort((a,b) => a.name.localeCompare(b.name)));
+        await db.menuItems.put(newItem);
+        await addToSyncQueue('menu_items', 'insert', { ...newItem });
+        
+        toast({ title: "تمت الإضافة محلياً", description: `تمت إضافة ${itemData.name}، وسيتم مزامنته قريباً.` });
+        requestBackgroundSync();
+    };
+
+    const updateMenuItem = async (itemId: string, itemData: Partial<Omit<MenuItem, 'id' | 'quantity'>>) => {
+        const item = menuItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        const updatedItem = { ...item, ...itemData };
+        setMenuItems(prev => prev.map(i => i.id === itemId ? updatedItem : i));
+        await db.menuItems.put(updatedItem);
+        await addToSyncQueue('menu_items', 'update', { id: itemId, ...itemData });
+        
+        toast({ title: "تم التحديث محلياً", description: `تم تحديث ${itemData.name || 'الصنف'}، وسيتم مزامنته قريباً.` });
+        requestBackgroundSync();
+    };
+
+    const deleteMenuItem = async (itemId: string) => {
+        setMenuItems(prev => prev.filter(i => i.id !== itemId));
+        await db.menuItems.delete(itemId);
+        await addToSyncQueue('menu_items', 'delete', { id: itemId });
+        
+        toast({ title: "تم الحذف محلياً", description: `تم حذف الصنف، وسيتم مزامنته قريباً.`, variant: "destructive" });
+        requestBackgroundSync();
+    };
+
+    // --- Table Operations ---
+    const addTable = async () => {
+        const tempUuid = uuidv4();
+        const maxTableNumber = tables.reduce((max, t) => Math.max(max, t.table_number || 0), 0);
+        
+        const newTableData = {
+          uuid: tempUuid,
+          display_number: (maxTableNumber + 1).toString(),
+          capacity: 4, // Default capacity
+          is_active: true,
+          status: 'available',
+        };
+        
+        const newTableForLocal: Table = {
+          ...newTableData,
+          id: maxTableNumber + 1, // This is temporary and for local reference only.
+          table_number: maxTableNumber + 1,
+          order: null,
+          created_at: new Date().toISOString(),
+        };
+
+        setTables(prev => [...prev, newTableForLocal]);
+        await db.tables.put(newTableForLocal);
+        
+        await addToSyncQueue('tables', 'insert', newTableData);
+        requestBackgroundSync();
+    };
+
+    const deleteTableByUuid = async (uuid: string) => {
+        const tableToDelete = tables.find(t => t.uuid === uuid);
+        if(!tableToDelete) return;
+        
+        setTables(prev => prev.filter(t => t.uuid !== uuid));
+        await db.tables.delete(uuid); // Dexie delete uses primary key
+        await addToSyncQueue('tables', 'delete', { uuid: uuid });
+        requestBackgroundSync();
+    };
+
 
     return (
         <OrderFlowContext.Provider value={{
@@ -442,6 +491,11 @@ export const OrderFlowProvider = ({ children }: { children: ReactNode }) => {
             cancelOrder,
             requestBill,
             requestAttention,
+            addMenuItem,
+            updateMenuItem,
+            deleteMenuItem,
+            addTable,
+            deleteTableByUuid,
         }}>
             {children}
         </OrderFlowContext.Provider>
