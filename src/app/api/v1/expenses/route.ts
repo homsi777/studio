@@ -18,11 +18,15 @@ export async function POST(request: Request) {
 
     // التحقق الأساسي من البيانات المطلوبة
     if (!expenseData.description || expenseData.amount === undefined || expenseData.amount === null || !expenseData.date || !expenseData.category) {
+      console.error('Missing required expense data:', expenseData); // تسجيل البيانات المفقودة
       return NextResponse.json({ message: 'Missing required expense data (description, amount, date, category).' }, { status: 400 });
     }
 
     // توليد UUID إذا لم يتم توفيره من الواجهة الأمامية
     const uuid = expenseData.id || crypto.randomUUID();
+
+    // تحويل التاريخ إلى تنسيق YYYY-MM-DD ليتناسب مع عمود 'date' في Postgres
+    const formattedDate = new Date(expenseData.date).toISOString().split('T')[0];
 
     const { data, error } = await supabaseAdmin
       .from('expenses')
@@ -31,13 +35,13 @@ export async function POST(request: Request) {
         description: expenseData.description,
         description_en: expenseData.description_en || null,
         amount: expenseData.amount,
-        date: expenseData.date, // يجب أن يكون بتنسيق ISO 8601 أو Date string
+        date: formattedDate, // <--- تم التعديل هنا لتنسيق التاريخ
         category: expenseData.category,
         payment_method: expenseData.payment_method || null,
         supplier: expenseData.supplier || null,
         invoice_number: expenseData.invoice_number || null,
         notes: expenseData.notes || null,
-        user_id: expenseData.user_id || null, // يمكن أن يكون مرتبطاً بالمستخدم الذي أضاف المصروف
+        user_id: expenseData.user_id || null, // <--- تم التأكد من التعامل مع user_id بشكل صحيح
         created_at: new Date().toISOString(),
         last_updated: new Date().toISOString(),
       })
@@ -45,7 +49,8 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Supabase insert error (expenses):', error);
-      return NextResponse.json({ message: 'Failed to save expense.', error: error.message }, { status: 500 });
+      // يمكن هنا فحص error.code لتحديد نوع الخطأ بدقة أكبر (مثلاً 23503 لـ foreign key violation)
+      return NextResponse.json({ message: 'Failed to save expense.', error: error.message, code: error.code }, { status: 500 });
     }
 
     console.log('Expense added successfully:', data[0]);
